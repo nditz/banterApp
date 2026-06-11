@@ -1,0 +1,82 @@
+using BanterApp.Api.Common;
+using BanterApp.Api.Data;
+using BanterApp.Api.Data.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace BanterApp.Api.Middleware;
+
+public sealed class AnonymousUserMiddleware(RequestDelegate next)
+{
+    public const string AnonymousIdHeader = "X-Anonymous-Id";
+    public const string AnonymousCookieName = "banter_anonymous_id";
+    public const string RecoveryCookieName = "banter_recovery_code";
+
+    public async Task InvokeAsync(HttpContext context, AppDbContext db, IUserContext userContext)
+    {
+        if (userContext is UserContext mutable && !mutable.IsAuthenticated)
+        {
+            var cookieId = ResolveCookieId(context);
+            var anonymousUser = await db.AnonymousUsers
+                .FirstOrDefaultAsync(a => a.CookieId == cookieId, context.RequestAborted);
+
+            if (anonymousUser is null)
+            {
+                var recoveryCode = GenerateRecoveryCode();
+                anonymousUser = new AnonymousUser
+                {
+                    Id = Guid.NewGuid(),
+                    CookieId = cookieId,
+                    RecoveryCode = recoveryCode
+                };
+                db.AnonymousUsers.Add(anonymousUser);
+                await db.SaveChangesAsync(context.RequestAborted);
+
+                context.Response.Cookies.Append(RecoveryCookieName, recoveryCode, new CookieOptions
+                {
+                    HttpOnly = true,
+                    SameSite = SameSiteMode.Lax,
+                    Secure = context.Request.IsHttps,
+                    MaxAge = TimeSpan.FromDays(365)
+                });
+            }
+
+            mutable.AnonymousUserId = anonymousUser.Id;
+            mutable.AnonymousCookieId = anonymousUser.CookieId;
+            context.Items["AnonymousUser"] = anonymousUser;
+            context.Items["RecoveryCode"] = anonymousUser.RecoveryCode;
+
+            if (!context.Request.Cookies.ContainsKey(AnonymousCookieName))
+            {
+                context.Response.Cookies.Append(AnonymousCookieName, cookieId, new CookieOptions
+                {
+                    HttpOnly = true,
+                    SameSite = SameSiteMode.Lax,
+                    Secure = context.Request.IsHttps,
+                    MaxAge = TimeSpan.FromDays(365)
+                });
+            }
+        }
+
+        await next(context);
+    }
+
+    private static string ResolveCookieId(HttpContext context)
+    {
+        if (context.Request.Headers.TryGetValue(AnonymousIdHeader, out var headerValue) &&
+            !string.IsNullOrWhiteSpace(headerValue))
+        {
+            return headerValue.ToString().Trim();
+        }
+
+        if (context.Request.Cookies.TryGetValue(AnonymousCookieName, out var cookieValue) &&
+            !string.IsNullOrWhiteSpace(cookieValue))
+        {
+            return cookieValue;
+        }
+
+        return Guid.NewGuid().ToString("N");
+    }
+
+    private static string GenerateRecoveryCode() =>
+        Convert.ToHexString(Guid.NewGuid().ToByteArray())[..12].ToUpperInvariant();
+}
