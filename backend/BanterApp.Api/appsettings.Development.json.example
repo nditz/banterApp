@@ -1,0 +1,38 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "postgresql://postgres.PROJECT_REF:[URL-ENCODED-PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:5432/postgres"
+  },
+  "Database": {
+    "TransactionUrl": "postgresql://postgres.PROJECT_REF:[URL-ENCODED-PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+  },
+  "Supabase": {
+    "Url": "https://YOUR_PROJECT_REF.supabase.co",
+    "AnonKey": "your-anon-key",
+    "JwtSecret": "your-jwt-secret",
+    "ServiceRoleKey": "your-service-role-key"
+  },
+  "Security": {
+    "SessionSecret": "generate-a-long-random-string-for-local-dev",
+    "TurnstileSecretKey": ""
+  },
+  "SportsData": {
+    "Provider": "mock",
+    "ApiKey": ""
+  },
+  "Sportmonks": {
+    "Token": ""
+  },
+  "FootballData": {
+    "Token": ""
+  },
+  "YouTube": {
+    "ApiKey": ""
+  },
+  "News": {
+    "ApiKey": ""
+  },
+  "Ai": {
+    "Provider": "stub",
+    "ApiKey": ""
+  }
+}

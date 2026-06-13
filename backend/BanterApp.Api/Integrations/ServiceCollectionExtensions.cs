@@ -1,6 +1,9 @@
 using BanterApp.Api.Integrations.Ai;
+using BanterApp.Api.Integrations.Common;
+using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.News;
 using BanterApp.Api.Integrations.SportsData;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -8,23 +11,43 @@ namespace BanterApp.Api.Integrations;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddBanterIntegrations(this IServiceCollection services)
+    public static IServiceCollection AddBanterIntegrations(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
-        var sportsProvider = Environment.GetEnvironmentVariable("SPORTS_API_PROVIDER")?.Trim().ToLowerInvariant()
-            ?? "mock";
+        services.Configure<BackgroundJobsOptions>(
+            configuration.GetSection(BackgroundJobsOptions.SectionName));
+        services.Configure<AiOptions>(configuration.GetSection(AiOptions.SectionName));
+        services.Configure<NewsIngestOptions>(
+            configuration.GetSection(NewsIngestOptions.SectionName));
+        services.Configure<NewsOptions>(configuration.GetSection(NewsOptions.SectionName));
+        services.Configure<SportsDataOptions>(
+            configuration.GetSection(SportsDataOptions.SectionName));
+        services.Configure<SportmonksOptions>(
+            configuration.GetSection(SportmonksOptions.SectionName));
+        services.Configure<FootballDataOptions>(
+            configuration.GetSection(FootballDataOptions.SectionName));
+        services.Configure<YouTubeOptions>(configuration.GetSection(YouTubeOptions.SectionName));
+        services.Configure<MediaIngestOptions>(configuration.GetSection(MediaIngestOptions.SectionName));
 
-        var sportsApiKey = Environment.GetEnvironmentVariable("SPORTS_API_KEY");
+        var sportsProvider = configuration["SportsData:Provider"]?.Trim().ToLowerInvariant() ?? "mock";
+        var sportsApiKey = configuration["SportsData:ApiKey"];
 
         services.Configure<SportsDataOptions>(options =>
         {
             options.Provider = sportsProvider;
-            options.ApiKey = string.IsNullOrWhiteSpace(sportsApiKey) ? null : sportsApiKey;
+            if (!string.IsNullOrWhiteSpace(sportsApiKey))
+            {
+                options.ApiKey = sportsApiKey;
+            }
         });
 
         switch (sportsProvider)
         {
             case "apifootball":
-                services.AddHttpClient<ISportsDataProvider, ApiFootballProvider>();
+                services.AddHttpClient<ApiFootballHttpClient>();
+                services.AddTransient<ISportsDataProvider, ApiFootballProvider>();
+                services.AddTransient<ISportsDataEnrichment, ApiFootballProvider>();
                 break;
 
             case "mock":
@@ -32,14 +55,18 @@ public static class ServiceCollectionExtensions
                 if (sportsProvider != "mock")
                 {
                     Console.Error.WriteLine(
-                        $"Unknown SPORTS_API_PROVIDER '{sportsProvider}'; falling back to mock.");
+                        $"Unknown SportsData:Provider '{sportsProvider}'; falling back to mock.");
                 }
 
                 services.TryAddSingleton<ISportsDataProvider, MockSportsDataProvider>();
+                services.TryAddSingleton<ISportsDataEnrichment, MockSportsDataProvider>();
                 break;
         }
 
-        var newsApiKey = Environment.GetEnvironmentVariable("NEWS_API_KEY");
+        services.AddHttpClient<ISportsDataFallbackProvider, SportmonksProvider>();
+        services.AddHttpClient<ISportsDataFallbackProvider, FootballDataProvider>();
+
+        var newsApiKey = configuration["News:ApiKey"];
         if (!string.IsNullOrWhiteSpace(newsApiKey))
         {
             services.AddHttpClient<INewsProvider, NewsApiProvider>();
@@ -49,8 +76,17 @@ public static class ServiceCollectionExtensions
             services.TryAddSingleton<INewsProvider, MockNewsProvider>();
         }
 
+        services.AddHttpClient<IYouTubeProvider, YouTubeProvider>();
+        services.AddHttpClient<IRssFeedProvider, RssFeedProvider>();
+
         services.TryAddSingleton<IContentGenerator, StubContentGenerator>();
-        services.AddHostedService<SportsDataSyncService>();
+        services.AddScoped<SyncRunTracker>();
+        services.AddScoped<ScoreSyncJob>();
+        services.AddScoped<StandingsSyncJob>();
+        services.AddScoped<MatchDetailsSyncJob>();
+        services.AddScoped<NewsIngestJob>();
+        services.AddScoped<MediaIngestJob>();
+        services.AddScoped<AiReactionJob>();
 
         return services;
     }

@@ -58,4 +58,13 @@ public interface IContentGenerator
         string? userId = null,
         bool isAnonymous = false,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Human-like pundit reaction to a news headline or match update for the rolling feed.
+    /// </summary>
+    Task<string> GenerateNewsReactionAsync(
+        string headline,
+        string summary,
+        string? category = null,
+        CancellationToken cancellationToken = default);
 }

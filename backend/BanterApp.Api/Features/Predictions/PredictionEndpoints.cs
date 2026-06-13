@@ -13,8 +13,10 @@ public static class PredictionEndpoints
         var group = app.MapGroup("/api/predictions").WithTags("Predictions");
 
         group.MapPost("/create", CreatePrediction)
+            .RequireRateLimiting("write")
             .WithValidation<CreatePredictionRequest>();
         group.MapPut("/update", UpdatePrediction)
+            .RequireRateLimiting("write")
             .WithValidation<UpdatePredictionRequest>();
         group.MapGet("/history", GetPredictionHistory);
 
@@ -26,11 +28,20 @@ public static class PredictionEndpoints
         AppDbContext db,
         IUserContext user,
         ScoringService scoring,
+        HttpContext http,
+        TurnstileService turnstile,
         CancellationToken ct)
     {
-        if (!user.IsAuthenticated && !user.IsAnonymous)
+        var guard = await SessionGuard.RequireActiveSessionAsync(user, http, db, ct);
+        if (guard is not null)
         {
-            return Results.Unauthorized();
+            return guard;
+        }
+
+        var ip = http.Connection.RemoteIpAddress?.ToString();
+        if (!await turnstile.VerifyAsync(request.TurnstileToken, ip, ct))
+        {
+            return Results.BadRequest(new { error = "Human verification failed." });
         }
 
         var match = await db.Matches.FindAsync([request.MatchId], ct);
@@ -39,9 +50,9 @@ public static class PredictionEndpoints
             return Results.NotFound(new { error = "Match not found." });
         }
 
-        if (match.Status == "FT" && match.KickoffTime <= DateTimeOffset.UtcNow)
+        if (MatchLockService.IsLocked(match))
         {
-            return Results.BadRequest(new { error = "Cannot predict on a finished match." });
+            return Results.BadRequest(new { error = MatchLockService.LockReason(match) });
         }
 
         var existing = await db.Predictions.FirstOrDefaultAsync(p =>
@@ -68,7 +79,7 @@ public static class PredictionEndpoints
         db.Predictions.Add(prediction);
         await db.SaveChangesAsync(ct);
 
-        return Results.Created($"/api/predictions/history", Map(prediction));
+        return Results.Created("/api/predictions/history", Map(prediction, match));
     }
 
     private static async Task<IResult> UpdatePrediction(
@@ -76,8 +87,22 @@ public static class PredictionEndpoints
         AppDbContext db,
         IUserContext user,
         ScoringService scoring,
+        HttpContext http,
+        TurnstileService turnstile,
         CancellationToken ct)
     {
+        var guard = await SessionGuard.RequireActiveSessionAsync(user, http, db, ct);
+        if (guard is not null)
+        {
+            return guard;
+        }
+
+        var ip = http.Connection.RemoteIpAddress?.ToString();
+        if (!await turnstile.VerifyAsync(request.TurnstileToken, ip, ct))
+        {
+            return Results.BadRequest(new { error = "Human verification failed." });
+        }
+
         var prediction = await db.Predictions
             .Include(p => p.Match)
             .FirstOrDefaultAsync(p => p.Id == request.PredictionId, ct);
@@ -92,9 +117,9 @@ public static class PredictionEndpoints
             return Results.Forbid();
         }
 
-        if (prediction.Match.Status == "FT")
+        if (prediction.LockedAt is not null || MatchLockService.IsLocked(prediction.Match))
         {
-            return Results.BadRequest(new { error = "Cannot update prediction for a finished match." });
+            return Results.BadRequest(new { error = MatchLockService.LockReason(prediction.Match) });
         }
 
         prediction.PredictionValue = request.PredictionValue.Trim();
@@ -103,30 +128,31 @@ public static class PredictionEndpoints
             prediction.PredictionType, prediction.PredictionValue, prediction.Match);
 
         await db.SaveChangesAsync(ct);
-        return Results.Ok(Map(prediction));
+        return Results.Ok(Map(prediction, prediction.Match));
     }
 
     private static async Task<IResult> GetPredictionHistory(
         AppDbContext db,
         IUserContext user,
+        HttpContext http,
         CancellationToken ct)
     {
-        if (!user.IsAuthenticated && !user.IsAnonymous)
+        var guard = await SessionGuard.RequireActiveSessionAsync(user, http, db, ct);
+        if (guard is not null)
         {
-            return Results.Unauthorized();
+            return guard;
         }
 
-        var query = db.Predictions.AsQueryable();
+        var query = db.Predictions.Include(p => p.Match).AsQueryable();
         query = user.IsAuthenticated
             ? query.Where(p => p.UserId == user.UserId)
             : query.Where(p => p.AnonymousUserId == user.AnonymousUserId);
 
         var predictions = await query
             .OrderByDescending(p => p.CreatedAt)
-            .Select(p => Map(p))
             .ToListAsync(ct);
 
-        return Results.Ok(predictions);
+        return Results.Ok(predictions.Select(p => Map(p, p.Match)));
     }
 
     private static bool OwnsPrediction(Prediction prediction, IUserContext user) =>
@@ -134,6 +160,15 @@ public static class PredictionEndpoints
             ? prediction.UserId == user.UserId
             : prediction.AnonymousUserId == user.AnonymousUserId;
 
-    private static PredictionResponse Map(Prediction p) =>
-        new(p.Id, p.MatchId, p.PredictionType, p.PredictionValue, p.PointsAwarded, p.CreatedAt, p.UpdatedAt);
+    private static PredictionResponse Map(Prediction p, Match match) =>
+        new(
+            p.Id,
+            p.MatchId,
+            p.PredictionType,
+            p.PredictionValue,
+            p.PointsAwarded,
+            p.CreatedAt,
+            p.UpdatedAt,
+            MatchLockService.IsLocked(match),
+            match.KickoffTime);
 }

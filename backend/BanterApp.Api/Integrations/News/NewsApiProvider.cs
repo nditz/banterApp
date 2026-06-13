@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace BanterApp.Api.Integrations.News;
 
@@ -19,10 +20,11 @@ public sealed class NewsApiProvider : INewsProvider
 
     public NewsApiProvider(
         HttpClient httpClient,
+        IOptions<NewsOptions> options,
         ILogger<NewsApiProvider> logger)
     {
         _httpClient = httpClient;
-        _apiKey = Environment.GetEnvironmentVariable("NEWS_API_KEY");
+        _apiKey = options.Value.ApiKey;
         _fallback = new MockNewsProvider();
         _logger = logger;
     }
@@ -33,7 +35,7 @@ public sealed class NewsApiProvider : INewsProvider
     {
         if (string.IsNullOrWhiteSpace(_apiKey))
         {
-            _logger.LogDebug("NEWS_API_KEY not set; using mock news provider.");
+            _logger.LogDebug("News:ApiKey not set; using mock news provider.");
             return await _fallback.GetLatestArticlesAsync(count, cancellationToken);
         }
 
@@ -57,7 +59,6 @@ public sealed class NewsApiProvider : INewsProvider
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
-            // TODO Phase 2: map NewsAPI articles JSON to NewsArticleDto list
             var articles = MapArticles(document);
             return articles.Count > 0
                 ? articles

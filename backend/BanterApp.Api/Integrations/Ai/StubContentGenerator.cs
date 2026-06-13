@@ -226,6 +226,34 @@ public sealed class StubContentGenerator : IContentGenerator
         }
     }
 
+    private static readonly string[] NewsReactionTemplates =
+    [
+        "Right, so {headline} — and honestly? That's exactly the kind of chaos we live for. {summary}",
+        "Breaking: {headline}. My take? The timeline is not ready for this. {summary}",
+        "I've seen a lot of football in my time, but {headline} has the group chat buzzing. {summary}",
+        "Hold up — {headline}. That's a headline you read twice. {summary}",
+        "The data desk just pinged me: {headline}. Football Twitter is going to have a field day with this one.",
+    ];
+
+    public Task<string> GenerateNewsReactionAsync(
+        string headline,
+        string summary,
+        string? category = null,
+        CancellationToken cancellationToken = default)
+    {
+        var template = PickTemplate(NewsReactionTemplates, headline, category ?? "news");
+        var body = template
+            .Replace("{headline}", headline.Trim(), StringComparison.Ordinal)
+            .Replace("{summary}", summary.Trim(), StringComparison.Ordinal);
+
+        if (!string.IsNullOrWhiteSpace(category) && category.StartsWith("match_", StringComparison.Ordinal))
+        {
+            body += " Lock in your picks before kickoff — I know ball, watch me.";
+        }
+
+        return Task.FromResult(body);
+    }
+
     private static string ResolveUserKey(string? userId, bool isAnonymous)
     {
         if (!isAnonymous)

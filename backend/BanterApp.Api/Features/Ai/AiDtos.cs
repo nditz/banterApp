@@ -18,6 +18,18 @@ public sealed record VideoScriptRequest(
     VideoScriptFormat Format = VideoScriptFormat.TikTok,
     VideoScriptDuration Duration = VideoScriptDuration.Thirty);
 
+public sealed record BroadcastPick(
+    string? MatchId,
+    string TeamA,
+    string TeamB,
+    string Prediction,
+    string? ActualResult = null,
+    int? PointsAwarded = null);
+
+public sealed record BroadcastScriptRequest(
+    string Phase,
+    List<BroadcastPick> Picks);
+
 public sealed record AiGenerationResponse(
     string Content,
     string Type,

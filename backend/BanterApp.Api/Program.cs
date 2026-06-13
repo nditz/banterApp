@@ -9,10 +9,17 @@ using BanterApp.Api.Features.Leaderboards;
 using BanterApp.Api.Features.Leagues;
 using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Features.Predictions;
+using BanterApp.Api.Features.Brackets;
+using BanterApp.Api.Features.Studio;
+using BanterApp.Api.Features.Health;
+using BanterApp.Api.Features.Sync;
 using BanterApp.Api.Integrations;
+using BanterApp.Api.Integrations.SportsData;
 using BanterApp.Api.Middleware;
 using BanterApp.Api.Services;
 using FluentValidation;
+using Hangfire;
+using Hangfire.InMemory;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -23,25 +30,25 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<IUserContext, UserContext>();
 builder.Services.AddSingleton<ScoringService>();
+builder.Services.AddSingleton<SessionTokenService>();
+builder.Services.AddScoped<TurnstileService>();
+builder.Services.AddHttpClient();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
-builder.Services.AddBanterIntegrations();
+builder.Services.AddBanterIntegrations(builder.Configuration);
 
-builder.Services.Configure<SupabaseOptions>(options =>
-{
-    options.Url = Environment.GetEnvironmentVariable("NEXT_PUBLIC_SUPABASE_URL")
-        ?? builder.Configuration["Supabase:Url"]
-        ?? string.Empty;
-    options.AnonKey = Environment.GetEnvironmentVariable("NEXT_PUBLIC_SUPABASE_ANON_KEY")
-        ?? builder.Configuration["Supabase:AnonKey"]
-        ?? string.Empty;
-    options.JwtSecret = Environment.GetEnvironmentVariable("SUPABASE_JWT_SECRET")
-        ?? builder.Configuration["Supabase:JwtSecret"]
-        ?? string.Empty;
-});
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseInMemoryStorage());
+// Two workers so live-score, news-ingest, and AI jobs don't block each other.
+builder.Services.AddHangfireServer(options => options.WorkerCount = 2);
+
+builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection("Supabase"));
 
 builder.Services.AddHttpClient<SupabaseAuthService>();
 
-var connectionString = ResolveConnectionString(builder.Configuration);
+var connectionString = DatabaseConnection.Resolve(builder.Configuration);
 if (!string.IsNullOrWhiteSpace(connectionString))
 {
     builder.Services.AddDbContext<AppDbContext>(options =>
@@ -53,10 +60,8 @@ else
         options.UseInMemoryDatabase("BanterApp"));
 }
 
-var jwtSecret = Environment.GetEnvironmentVariable("SUPABASE_JWT_SECRET")
-    ?? builder.Configuration["Supabase:JwtSecret"];
-var supabaseUrl = (Environment.GetEnvironmentVariable("NEXT_PUBLIC_SUPABASE_URL")
-    ?? builder.Configuration["Supabase:Url"])?.TrimEnd('/');
+var jwtSecret = builder.Configuration["Supabase:JwtSecret"];
+var supabaseUrl = builder.Configuration["Supabase:Url"]?.TrimEnd('/');
 
 var authBuilder = builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
 
@@ -86,6 +91,8 @@ builder.Services.AddAuthorization();
 
 var permitLimit = builder.Configuration.GetValue("RateLimiting:PermitLimit", 100);
 var windowSeconds = builder.Configuration.GetValue("RateLimiting:WindowSeconds", 60);
+var writePermitLimit = builder.Configuration.GetValue("RateLimiting:WritePermitLimit", 30);
+var authPermitLimit = builder.Configuration.GetValue("RateLimiting:AuthPermitLimit", 10);
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -96,14 +103,34 @@ builder.Services.AddRateLimiter(options =>
         limiter.Window = TimeSpan.FromSeconds(windowSeconds);
         limiter.QueueLimit = 0;
     });
+    options.AddFixedWindowLimiter("write", limiter =>
+    {
+        limiter.PermitLimit = writePermitLimit;
+        limiter.Window = TimeSpan.FromSeconds(windowSeconds);
+        limiter.QueueLimit = 0;
+    });
+    options.AddFixedWindowLimiter("auth", limiter =>
+    {
+        limiter.PermitLimit = authPermitLimit;
+        limiter.Window = TimeSpan.FromSeconds(windowSeconds);
+        limiter.QueueLimit = 0;
+    });
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+    {
+        var partitionKey = context.User.Identity?.IsAuthenticated == true
+            ? context.User.FindFirst("sub")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"
+            : context.Request.Headers["X-Anonymous-Id"].ToString() is { Length: > 0 } anonId
+                ? $"anon:{anonId}"
+                : context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: partitionKey,
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = permitLimit,
                 Window = TimeSpan.FromSeconds(windowSeconds)
-            }));
+            });
+    });
 });
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
@@ -158,38 +185,33 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseHangfireDashboard("/hangfire");
 }
 
+HangfireJobRegistration.RegisterRecurringJobs(app);
+
 app.UseCors("Frontend");
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseMiddleware<SupabaseJwtMiddleware>();
 app.UseMiddleware<AnonymousUserMiddleware>();
+app.UseMiddleware<CsrfMiddleware>();
 app.UseAuthorization();
 
 app.MapGet("/", () => Results.Redirect("/swagger"))
     .ExcludeFromDescription();
 
+app.MapHealthEndpoints();
+app.MapSyncEndpoints();
 app.MapMatchEndpoints();
 app.MapPredictionEndpoints();
+app.MapBracketEndpoints();
 app.MapLeagueEndpoints();
 app.MapLeaderboardEndpoints();
 app.MapFeedEndpoints();
+app.MapStudioEndpoints();
 app.MapAiEndpoints();
 app.MapAuthEndpoints();
 
 app.Run();
-
-static string? ResolveConnectionString(IConfiguration configuration)
-{
-    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-    if (!string.IsNullOrWhiteSpace(databaseUrl))
-    {
-        return databaseUrl;
-    }
-
-    var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
-        ?? configuration.GetConnectionString("DefaultConnection");
-
-    return string.IsNullOrWhiteSpace(connectionString) ? null : connectionString;
-}

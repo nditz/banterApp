@@ -14,5 +14,6 @@ public sealed class SportsDataOptions
 
     public int WorldCupSeason { get; set; } = 2026;
 
-    public int SyncIntervalMinutes { get; set; } = 30;
+    /// <summary>How often the Hangfire score sync job runs (minutes).</summary>
+    public int SyncIntervalMinutes { get; set; } = 5;
 }

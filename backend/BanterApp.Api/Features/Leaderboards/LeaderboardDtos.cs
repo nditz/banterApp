@@ -5,7 +5,13 @@ public sealed record LeaderboardEntry(
     string DisplayName,
     int TotalPoints,
     int PredictionsCount,
-    int Rank);
+    int Rank,
+    bool IsCurrentUser = false);
+
+public sealed record LeaderboardView(
+    IReadOnlyList<LeaderboardEntry> Top,
+    LeaderboardEntry? Me,
+    int TotalPlayers);
 
 public sealed record PunditLeaderboardEntry(
     Guid PunditId,

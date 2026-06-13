@@ -1,5 +1,7 @@
 namespace BanterApp.Api.Features.Feed;
 
+public sealed record FeedReactions(int Agree, int Stale, int Disagree);
+
 public sealed record FeedItemResponse(
     string Id,
     string Type,
@@ -9,7 +11,8 @@ public sealed record FeedItemResponse(
     string? Source,
     string? SourceUrl,
     DateTimeOffset PublishedAt,
-    int? Likes);
+    int? Likes,
+    FeedReactions? Reactions = null);
 
 public sealed record PaginatedFeedResponse(
     IReadOnlyList<FeedItemResponse> Items,
@@ -17,3 +20,5 @@ public sealed record PaginatedFeedResponse(
     int PageSize,
     int TotalCount,
     bool HasMore);
+
+public record FeedReactRequest(string Reaction);

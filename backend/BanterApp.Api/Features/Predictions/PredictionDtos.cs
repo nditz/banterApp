@@ -5,11 +5,13 @@ namespace BanterApp.Api.Features.Predictions;
 public sealed record CreatePredictionRequest(
     string MatchId,
     PredictionType PredictionType,
-    string PredictionValue);
+    string PredictionValue,
+    string? TurnstileToken = null);
 
 public sealed record UpdatePredictionRequest(
     Guid PredictionId,
-    string PredictionValue);
+    string PredictionValue,
+    string? TurnstileToken = null);
 
 public sealed record PredictionResponse(
     Guid Id,
@@ -18,4 +20,6 @@ public sealed record PredictionResponse(
     string PredictionValue,
     int PointsAwarded,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? UpdatedAt);
+    DateTimeOffset? UpdatedAt,
+    bool IsLocked,
+    DateTimeOffset KickoffTime);

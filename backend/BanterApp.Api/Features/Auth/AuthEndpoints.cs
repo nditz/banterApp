@@ -1,5 +1,7 @@
 using BanterApp.Api.Common;
 
+using BanterApp.Api.Features.Auth;
+
 namespace BanterApp.Api.Features.Auth;
 
 public static class AuthEndpoints
@@ -14,6 +16,8 @@ public static class AuthEndpoints
             .WithValidation<LoginRequest>();
         group.MapGet("/me", GetCurrentUser)
             .RequireAuthorization();
+
+        app.MapSessionEndpoints();
 
         return app;
     }

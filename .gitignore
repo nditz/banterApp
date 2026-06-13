@@ -17,10 +17,12 @@ obj/
 .env
 .env.local
 .env.*.local
+# Backend local secrets (copy from appsettings.Development.json.example)
 appsettings.Development.json
 appsettings.Local.json
 
 # IDE
+.vs/
 .vscode/
 .idea/
 *.user
@@ -38,6 +40,9 @@ npm-debug.log*
 
 # Supabase
 supabase/.temp/
+
+# Internal — data sourcing playbook (APIs, scrapers, key notes)
+docs/DATA-SOURCES-INTERNAL.md
 
 # Test / coverage
 coverage/

@@ -16,51 +16,41 @@ public sealed class AnonymousUserMiddleware(RequestDelegate next)
         if (userContext is UserContext mutable && !mutable.IsAuthenticated)
         {
             var cookieId = ResolveCookieId(context);
-            var anonymousUser = await db.AnonymousUsers
-                .FirstOrDefaultAsync(a => a.CookieId == cookieId, context.RequestAborted);
-
-            if (anonymousUser is null)
+            AnonymousUser? anonymousUser;
+            try
             {
-                var recoveryCode = GenerateRecoveryCode();
-                anonymousUser = new AnonymousUser
-                {
-                    Id = Guid.NewGuid(),
-                    CookieId = cookieId,
-                    RecoveryCode = recoveryCode
-                };
-                db.AnonymousUsers.Add(anonymousUser);
-                await db.SaveChangesAsync(context.RequestAborted);
-
-                context.Response.Cookies.Append(RecoveryCookieName, recoveryCode, new CookieOptions
-                {
-                    HttpOnly = true,
-                    SameSite = SameSiteMode.Lax,
-                    Secure = context.Request.IsHttps,
-                    MaxAge = TimeSpan.FromDays(365)
-                });
+                anonymousUser = await db.AnonymousUsers
+                    .FirstOrDefaultAsync(a => a.CookieId == cookieId, context.RequestAborted);
+            }
+            catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+            {
+                // Client disconnected or app is shutting down — not an application error.
+                return;
             }
 
-            mutable.AnonymousUserId = anonymousUser.Id;
-            mutable.AnonymousCookieId = anonymousUser.CookieId;
-            context.Items["AnonymousUser"] = anonymousUser;
-            context.Items["RecoveryCode"] = anonymousUser.RecoveryCode;
-
-            if (!context.Request.Cookies.ContainsKey(AnonymousCookieName))
+            if (anonymousUser is not null)
             {
-                context.Response.Cookies.Append(AnonymousCookieName, cookieId, new CookieOptions
+                mutable.AnonymousUserId = anonymousUser.Id;
+                mutable.AnonymousCookieId = anonymousUser.CookieId;
+                context.Items["AnonymousUser"] = anonymousUser;
+
+                if (!context.Request.Cookies.ContainsKey(AnonymousCookieName))
                 {
-                    HttpOnly = true,
-                    SameSite = SameSiteMode.Lax,
-                    Secure = context.Request.IsHttps,
-                    MaxAge = TimeSpan.FromDays(365)
-                });
+                    context.Response.Cookies.Append(AnonymousCookieName, cookieId, new CookieOptions
+                    {
+                        HttpOnly = true,
+                        SameSite = SameSiteMode.Lax,
+                        Secure = context.Request.IsHttps,
+                        MaxAge = TimeSpan.FromDays(365)
+                    });
+                }
             }
         }
 
         await next(context);
     }
 
-    private static string ResolveCookieId(HttpContext context)
+    public static string ResolveCookieId(HttpContext context)
     {
         if (context.Request.Headers.TryGetValue(AnonymousIdHeader, out var headerValue) &&
             !string.IsNullOrWhiteSpace(headerValue))
@@ -76,7 +66,4 @@ public sealed class AnonymousUserMiddleware(RequestDelegate next)
 
         return Guid.NewGuid().ToString("N");
     }
-
-    private static string GenerateRecoveryCode() =>
-        Convert.ToHexString(Guid.NewGuid().ToByteArray())[..12].ToUpperInvariant();
 }

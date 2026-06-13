@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text.Json;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 using Microsoft.Extensions.Logging;
@@ -7,110 +6,81 @@ using Microsoft.Extensions.Options;
 namespace BanterApp.Api.Integrations.SportsData;
 
 /// <summary>
-/// API-Football (api-football.com) provider skeleton.
+/// API-Football (api-football.com) provider for World Cup fixtures and enrichment data.
 /// Falls back to <see cref="MockSportsDataProvider"/> when the API key is missing or requests fail.
 /// </summary>
-public sealed class ApiFootballProvider : ISportsDataProvider
+public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrichment
 {
-    private readonly HttpClient _httpClient;
+    private readonly ApiFootballHttpClient _client;
     private readonly SportsDataOptions _options;
     private readonly MockSportsDataProvider _fallback;
     private readonly ILogger<ApiFootballProvider> _logger;
 
     public ApiFootballProvider(
-        HttpClient httpClient,
+        ApiFootballHttpClient client,
         IOptions<SportsDataOptions> options,
         ILogger<ApiFootballProvider> logger)
     {
-        _httpClient = httpClient;
+        _client = client;
         _options = options.Value;
         _fallback = new MockSportsDataProvider();
         _logger = logger;
     }
 
+    public async Task<IReadOnlyList<MatchDto>> GetAllFixturesAsync(CancellationToken cancellationToken = default)
+    {
+        var path =
+            $"fixtures?league={_options.WorldCupLeagueId}&season={_options.WorldCupSeason}";
+        return await FetchFixturesOrFallbackAsync(path, null, _fallback.GetAllFixturesAsync, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<MatchDto>> GetUpcomingFixturesAsync(
         CancellationToken cancellationToken = default)
     {
-        if (!HasApiKey())
-        {
-            return await _fallback.GetUpcomingFixturesAsync(cancellationToken);
-        }
-
-        try
-        {
-            var url =
-                $"{_options.BaseUrl}/fixtures?league={_options.WorldCupLeagueId}" +
-                $"&season={_options.WorldCupSeason}&status=NS-TBD";
-
-            var fixtures = await FetchFixturesAsync(url, cancellationToken);
-            return fixtures.Count > 0
-                ? fixtures
-                : await _fallback.GetUpcomingFixturesAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "API-Football upcoming fixtures request failed; using mock data.");
-            return await _fallback.GetUpcomingFixturesAsync(cancellationToken);
-        }
+        var path =
+            $"fixtures?league={_options.WorldCupLeagueId}&season={_options.WorldCupSeason}&status=NS-TBD";
+        return await FetchFixturesOrFallbackAsync(path, null, _fallback.GetUpcomingFixturesAsync, cancellationToken);
     }
 
     public async Task<IReadOnlyList<MatchDto>> GetResultsAsync(
         CancellationToken cancellationToken = default)
     {
-        if (!HasApiKey())
-        {
-            return await _fallback.GetResultsAsync(cancellationToken);
-        }
+        var path =
+            $"fixtures?league={_options.WorldCupLeagueId}&season={_options.WorldCupSeason}&status=FT";
+        return await FetchFixturesOrFallbackAsync(path, null, _fallback.GetResultsAsync, cancellationToken);
+    }
 
-        try
-        {
-            var url =
-                $"{_options.BaseUrl}/fixtures?league={_options.WorldCupLeagueId}" +
-                $"&season={_options.WorldCupSeason}&status=FT";
-
-            var fixtures = await FetchFixturesAsync(url, cancellationToken);
-            return fixtures.Count > 0
-                ? fixtures
-                : await _fallback.GetResultsAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "API-Football results request failed; using mock data.");
-            return await _fallback.GetResultsAsync(cancellationToken);
-        }
+    public async Task<IReadOnlyList<MatchDto>> GetLiveFixturesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return await FetchFixturesOrFallbackAsync(
+            "fixtures?live=all",
+            _options.WorldCupLeagueId,
+            _fallback.GetLiveFixturesAsync,
+            cancellationToken);
     }
 
     public async Task<MatchStatisticsDto?> GetMatchStatisticsAsync(
         string matchId,
         CancellationToken cancellationToken = default)
     {
-        if (!HasApiKey())
+        var fixtureId = ExtractFixtureId(matchId);
+        if (fixtureId is null || !_client.HasApiKey)
         {
             return await _fallback.GetMatchStatisticsAsync(matchId, cancellationToken);
         }
 
         try
         {
-            var url = $"{_options.BaseUrl}/fixtures/statistics?fixture={matchId}";
-            using var request = CreateRequest(url);
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning(
-                    "API-Football statistics returned {StatusCode} for match {MatchId}.",
-                    response.StatusCode,
-                    matchId);
-                return await _fallback.GetMatchStatisticsAsync(matchId, cancellationToken);
-            }
-
-            // TODO Phase 2: map API-Football statistics JSON to MatchStatisticsDto
-            _ = await response.Content.ReadAsStringAsync(cancellationToken);
-            return await _fallback.GetMatchStatisticsAsync(matchId, cancellationToken);
+            using var document = await _client.GetJsonAsync($"fixtures/statistics?fixture={fixtureId}", cancellationToken);
+            return document is null
+                ? await _fallback.GetMatchStatisticsAsync(matchId, cancellationToken)
+                : ApiFootballFixtureMapper.MapStatistics(document.RootElement, matchId)
+                  ?? await _fallback.GetMatchStatisticsAsync(matchId, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "API-Football statistics request failed for match {MatchId}.", matchId);
+            _logger.LogWarning(ex, "API-Football statistics request failed for {MatchId}; using mock data.", matchId);
             return await _fallback.GetMatchStatisticsAsync(matchId, cancellationToken);
         }
     }
@@ -119,60 +89,178 @@ public sealed class ApiFootballProvider : ISportsDataProvider
         string group,
         CancellationToken cancellationToken = default)
     {
-        if (!HasApiKey())
+        var all = await GetAllStandingsAsync(cancellationToken);
+        var key = group.Trim().ToUpperInvariant();
+        return all.TryGetValue(key, out var standings)
+            ? standings
+            : await _fallback.GetStandingsAsync(group, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TeamDto>> GetTeamsAsync(CancellationToken cancellationToken = default)
+    {
+        if (!_client.HasApiKey)
         {
-            return await _fallback.GetStandingsAsync(group, cancellationToken);
+            return [];
         }
 
         try
         {
-            var url =
-                $"{_options.BaseUrl}/standings?league={_options.WorldCupLeagueId}" +
-                $"&season={_options.WorldCupSeason}";
+            using var document = await _client.GetJsonAsync(
+                $"teams?league={_options.WorldCupLeagueId}&season={_options.WorldCupSeason}",
+                cancellationToken);
+            return document is null ? [] : ApiFootballFixtureMapper.MapTeams(document.RootElement);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "API-Football teams request failed.");
+            return [];
+        }
+    }
 
-            using var request = CreateRequest(url);
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
+    public async Task<TeamSquadDto?> GetTeamSquadAsync(
+        string teamProviderId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_client.HasApiKey)
+        {
+            return null;
+        }
 
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("API-Football standings returned {StatusCode}.", response.StatusCode);
-                return await _fallback.GetStandingsAsync(group, cancellationToken);
-            }
+        try
+        {
+            using var document = await _client.GetJsonAsync(
+                $"players/squads?team={teamProviderId}",
+                cancellationToken);
+            return document is null
+                ? null
+                : ApiFootballFixtureMapper.MapSquad(document.RootElement, teamProviderId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "API-Football squad request failed for team {TeamId}.", teamProviderId);
+            return null;
+        }
+    }
 
-            // TODO Phase 2: map API-Football standings JSON, filter by group
-            _ = await response.Content.ReadAsStringAsync(cancellationToken);
-            return await _fallback.GetStandingsAsync(group, cancellationToken);
+    public async Task<IReadOnlyDictionary<string, IReadOnlyList<StandingDto>>> GetAllStandingsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (!_client.HasApiKey)
+        {
+            return await BuildFallbackStandingsAsync(cancellationToken);
+        }
+
+        try
+        {
+            using var document = await _client.GetJsonAsync(
+                $"standings?league={_options.WorldCupLeagueId}&season={_options.WorldCupSeason}",
+                cancellationToken);
+            return document is null
+                ? await BuildFallbackStandingsAsync(cancellationToken)
+                : ApiFootballFixtureMapper.MapStandings(document.RootElement);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "API-Football standings request failed; using mock data.");
-            return await _fallback.GetStandingsAsync(group, cancellationToken);
+            return await BuildFallbackStandingsAsync(cancellationToken);
         }
     }
 
-    private bool HasApiKey() => !string.IsNullOrWhiteSpace(_options.ApiKey);
-
-    private HttpRequestMessage CreateRequest(string url)
+    public async Task<IReadOnlyList<MatchEventDto>> GetMatchEventsAsync(
+        string matchId,
+        CancellationToken cancellationToken = default)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("x-apisports-key", _options.ApiKey);
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        return request;
+        var fixtureId = ExtractFixtureId(matchId);
+        if (fixtureId is null || !_client.HasApiKey)
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = await _client.GetJsonAsync($"fixtures/events?fixture={fixtureId}", cancellationToken);
+            return document is null ? [] : ApiFootballFixtureMapper.MapEvents(document.RootElement);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "API-Football events request failed for {MatchId}.", matchId);
+            return [];
+        }
     }
 
-    private async Task<IReadOnlyList<MatchDto>> FetchFixturesAsync(
-        string url,
+    public async Task<IReadOnlyList<LineupPlayerDto>> GetMatchLineupsAsync(
+        string matchId,
+        CancellationToken cancellationToken = default)
+    {
+        var fixtureId = ExtractFixtureId(matchId);
+        if (fixtureId is null || !_client.HasApiKey)
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = await _client.GetJsonAsync($"fixtures/lineups?fixture={fixtureId}", cancellationToken);
+            return document is null ? [] : ApiFootballFixtureMapper.MapLineups(document.RootElement);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "API-Football lineups request failed for {MatchId}.", matchId);
+            return [];
+        }
+    }
+
+    private async Task<IReadOnlyList<MatchDto>> FetchFixturesOrFallbackAsync(
+        string path,
+        int? leagueIdFilter,
+        Func<CancellationToken, Task<IReadOnlyList<MatchDto>>> fallback,
         CancellationToken cancellationToken)
     {
-        using var request = CreateRequest(url);
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        if (!_client.HasApiKey)
+        {
+            return await fallback(cancellationToken);
+        }
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        try
+        {
+            using var document = await _client.GetJsonAsync(path, cancellationToken);
+            if (document is null)
+            {
+                return await fallback(cancellationToken);
+            }
 
-        // TODO Phase 2: map API-Football fixture response to MatchDto list
-        _ = document.RootElement;
-        return [];
+            var fixtures = ApiFootballFixtureMapper.MapFixtures(document.RootElement, leagueIdFilter);
+            return fixtures.Count > 0 ? fixtures : await fallback(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "API-Football fixtures request failed for {Path}; using mock data.", path);
+            return await fallback(cancellationToken);
+        }
+    }
+
+    private async Task<IReadOnlyDictionary<string, IReadOnlyList<StandingDto>>> BuildFallbackStandingsAsync(
+        CancellationToken cancellationToken)
+    {
+        var groups = new[] { "A", "B", "C", "D", "E", "F", "G", "H" };
+        var result = new Dictionary<string, IReadOnlyList<StandingDto>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in groups)
+        {
+            result[group] = await _fallback.GetStandingsAsync(group, cancellationToken);
+        }
+
+        return result;
+    }
+
+    private static string? ExtractFixtureId(string matchId)
+    {
+        const string prefix = "apifb-";
+        if (matchId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(matchId[prefix.Length..], out _))
+        {
+            return matchId[prefix.Length..];
+        }
+
+        return null;
     }
 }

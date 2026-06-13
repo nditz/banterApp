@@ -1,3 +1,4 @@
+using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,8 @@ namespace BanterApp.Api.Features.Leaderboards;
 
 public static class LeaderboardEndpoints
 {
+    private const int TopCount = 10;
+
     public static IEndpointRouteBuilder MapLeaderboardEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/leaderboards").WithTags("Leaderboards");
@@ -19,35 +22,66 @@ public static class LeaderboardEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetGlobalLeaderboard(AppDbContext db, CancellationToken ct)
+    private static async Task<IResult> GetGlobalLeaderboard(
+        AppDbContext db,
+        IUserContext userContext,
+        CancellationToken ct)
     {
-        var entries = await db.Users
+        var userEntries = await db.Users
             .Select(u => new
             {
-                u.Id,
+                Id = (Guid?)u.Id,
                 u.DisplayName,
                 TotalPoints = u.Predictions.Sum(p => p.PointsAwarded),
-                PredictionsCount = u.Predictions.Count
+                PredictionsCount = u.Predictions.Count,
+                IsAnonymous = false
             })
             .Where(x => x.PredictionsCount > 0)
-            .OrderByDescending(x => x.TotalPoints)
-            .ThenBy(x => x.DisplayName)
-            .Take(100)
             .ToListAsync(ct);
 
-        var ranked = entries
-            .Select((e, i) => new LeaderboardEntry(e.Id, e.DisplayName, e.TotalPoints, e.PredictionsCount, i + 1))
+        var anonEntries = await db.AnonymousUsers
+            .Select(a => new
+            {
+                Id = (Guid?)a.Id,
+                DisplayName = string.Empty,
+                TotalPoints = a.Predictions.Sum(p => p.PointsAwarded),
+                PredictionsCount = a.Predictions.Count,
+                IsAnonymous = true
+            })
+            .Where(x => x.PredictionsCount > 0)
+            .ToListAsync(ct);
+
+        var currentId = userContext.UserId ?? userContext.AnonymousUserId;
+
+        var ranked = userEntries.Concat(anonEntries)
+            .OrderByDescending(x => x.TotalPoints)
+            .ThenBy(x => x.DisplayName)
+            .Select((e, i) => new LeaderboardEntry(
+                e.Id,
+                e.Id == currentId
+                    ? "You"
+                    : (string.IsNullOrWhiteSpace(e.DisplayName)
+                        ? $"Guest-{e.Id.ToString()![..4].ToUpperInvariant()}"
+                        : e.DisplayName),
+                e.TotalPoints,
+                e.PredictionsCount,
+                i + 1,
+                e.Id == currentId))
             .ToList();
 
         if (ranked.Count == 0)
         {
-            ranked = GetMockGlobalLeaderboard();
+            return Results.Ok(BuildMockView(seed: 7, totalPlayers: 1842, myRank: 137, myPoints: 86));
         }
 
-        return Results.Ok(ranked);
+        return Results.Ok(ToView(ranked));
     }
 
-    private static async Task<IResult> GetLeagueLeaderboard(Guid leagueId, AppDbContext db, CancellationToken ct)
+    private static async Task<IResult> GetLeagueLeaderboard(
+        Guid leagueId,
+        AppDbContext db,
+        IUserContext userContext,
+        CancellationToken ct)
     {
         var league = await db.Leagues.FindAsync([leagueId], ct);
         if (league is null)
@@ -55,29 +89,28 @@ public static class LeaderboardEndpoints
             return Results.NotFound();
         }
 
-        var memberIds = await db.LeagueMembers
-            .Where(m => m.LeagueId == leagueId)
-            .Select(m => m.UserId)
-            .ToListAsync(ct);
+        var currentId = userContext.UserId ?? userContext.AnonymousUserId;
+        var standings = await Leagues.LeagueEndpoints.BuildStandingsAsync(db, leagueId, ct);
 
-        var entries = await db.Users
-            .Where(u => memberIds.Contains(u.Id))
-            .Select(u => new
-            {
-                u.Id,
-                u.DisplayName,
-                TotalPoints = u.Predictions.Sum(p => p.PointsAwarded),
-                PredictionsCount = u.Predictions.Count
-            })
-            .OrderByDescending(x => x.TotalPoints)
-            .ThenBy(x => x.DisplayName)
-            .ToListAsync(ct);
-
-        var ranked = entries
-            .Select((e, i) => new LeaderboardEntry(e.Id, e.DisplayName, e.TotalPoints, e.PredictionsCount, i + 1))
+        var ranked = standings
+            .Select((s, i) => new LeaderboardEntry(
+                s.UserId,
+                s.DisplayName,
+                s.TotalPoints,
+                s.PredictionsCount,
+                i + 1,
+                s.UserId == currentId))
             .ToList();
 
-        return Results.Ok(new { leagueId, leagueName = league.Name, standings = ranked });
+        var view = ToView(ranked);
+        return Results.Ok(new
+        {
+            leagueId,
+            leagueName = league.Name,
+            top = view.Top,
+            me = view.Me,
+            totalPlayers = view.TotalPlayers
+        });
     }
 
     private static async Task<IResult> GetPunditLeaderboard(AppDbContext db, ScoringService scoring, CancellationToken ct)
@@ -95,10 +128,12 @@ public static class LeaderboardEndpoints
         var entries = pundits
             .Select(p =>
             {
-                var finished = p.Predictions.Where(pp => pp.Match.Status == "FT").ToList();
+                var finished = p.Predictions
+                    .Where(pp => pp.Match is { Status: "FT" })
+                    .ToList();
                 var correct = finished.Count(pp =>
                 {
-                    var result = ScoringService.ResolveMatchResult(pp.Match);
+                    var result = ScoringService.ResolveMatchResult(pp.Match!);
                     return pp.Prediction.Contains(result, StringComparison.OrdinalIgnoreCase) ||
                            (result == "H" && pp.Prediction.Contains("Home", StringComparison.OrdinalIgnoreCase)) ||
                            (result == "A" && pp.Prediction.Contains("Away", StringComparison.OrdinalIgnoreCase)) ||
@@ -115,36 +150,53 @@ public static class LeaderboardEndpoints
         return Results.Ok(entries);
     }
 
-    private static IResult GetDefaultLeagueLeaderboard()
-    {
-        var ranked = new List<LeaderboardEntry>
-        {
-            new(Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1"), "Alex", 156, 16, 1),
-            new(Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2"), "You", 142, 16, 2),
-            new(Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb3"), "Sam", 128, 16, 3),
-        };
+    private static IResult GetDefaultLeagueLeaderboard() =>
+        Results.Ok(BuildMockView(seed: 21, totalPlayers: 64, myRank: 14, myPoints: 142));
 
-        return Results.Ok(ranked);
+    private static IResult GetFriendsLeaderboard() =>
+        Results.Ok(BuildMockView(seed: 42, totalPlayers: 18, myRank: 4, myPoints: 142));
+
+    /// <summary>Top 10 + the current user's pinned row + total player count (FPL-style).</summary>
+    private static LeaderboardView ToView(IReadOnlyList<LeaderboardEntry> ranked)
+    {
+        var top = ranked.Take(TopCount).ToList();
+        var me = ranked.FirstOrDefault(e => e.IsCurrentUser);
+        return new LeaderboardView(top, me, ranked.Count);
     }
 
-    private static IResult GetFriendsLeaderboard()
+    private static LeaderboardView BuildMockView(int seed, int totalPlayers, int myRank, int myPoints)
     {
-        var ranked = new List<LeaderboardEntry>
+        string[] names =
+        [
+            "WorldCupWizard", "PenaltyProphet", "GroupStageGuru", "GoldenBootGazer",
+            "OffsideOracle", "HatTrickHero", "VARVeteran", "CornerKickKing",
+            "NutmegNinja", "ExtraTimeExpert", "StoppageSage", "TopBinTactician"
+        ];
+
+        var random = new Random(seed);
+        var basePoints = 150 + random.Next(40);
+
+        var top = Enumerable.Range(0, Math.Min(TopCount, totalPlayers))
+            .Select(i => new LeaderboardEntry(
+                Guid.NewGuid(),
+                names[i % names.Length],
+                basePoints - i * (3 + random.Next(4)),
+                12 + random.Next(8),
+                i + 1))
+            .ToList();
+
+        LeaderboardEntry? me = null;
+        if (myRank > 0 && myRank <= totalPlayers)
         {
-            new(Guid.Parse("cccccccc-cccc-cccc-cccc-ccccccccccc1"), "Chris", 178, 16, 1),
-            new(Guid.Parse("cccccccc-cccc-cccc-cccc-ccccccccccc2"), "You", 142, 16, 2),
-            new(Guid.Parse("cccccccc-cccc-cccc-cccc-ccccccccccc3"), "Taylor", 119, 16, 3),
-        };
+            me = new LeaderboardEntry(null, "You", myPoints, 16, myRank, IsCurrentUser: true);
+            if (myRank <= TopCount)
+            {
+                top[myRank - 1] = me;
+            }
+        }
 
-        return Results.Ok(ranked);
+        return new LeaderboardView(top, me, totalPlayers);
     }
-
-    private static List<LeaderboardEntry> GetMockGlobalLeaderboard() =>
-    [
-        new(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"), "WorldCupWizard", 42, 12, 1),
-        new(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2"), "PenaltyProphet", 38, 11, 2),
-        new(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3"), "GroupStageGuru", 35, 10, 3),
-    ];
 
     private static List<PunditLeaderboardEntry> GetMockPunditLeaderboard() =>
     [

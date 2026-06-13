@@ -38,3 +38,22 @@ public sealed class VideoScriptRequestValidator : AbstractValidator<VideoScriptR
         RuleFor(x => x.Duration).IsInEnum();
     }
 }
+
+public sealed class BroadcastScriptRequestValidator : AbstractValidator<BroadcastScriptRequest>
+{
+    public BroadcastScriptRequestValidator()
+    {
+        RuleFor(x => x.Phase)
+            .NotEmpty()
+            .Must(p => p is "pre_match" or "post_match")
+            .WithMessage("Phase must be 'pre_match' or 'post_match'.");
+        RuleFor(x => x.Picks).NotNull();
+        RuleFor(x => x.Picks.Count).LessThanOrEqualTo(30);
+        RuleForEach(x => x.Picks).ChildRules(pick =>
+        {
+            pick.RuleFor(p => p.TeamA).NotEmpty().MaximumLength(100);
+            pick.RuleFor(p => p.TeamB).NotEmpty().MaximumLength(100);
+            pick.RuleFor(p => p.Prediction).NotEmpty().MaximumLength(100);
+        });
+    }
+}

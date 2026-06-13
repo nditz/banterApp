@@ -23,6 +23,8 @@ public static class AiEndpoints
             .WithValidation<MemeRequest>();
         group.MapPost("/video-script", GenerateVideoScript)
             .WithValidation<VideoScriptRequest>();
+        group.MapPost("/broadcast-script", GenerateBroadcastScript)
+            .WithValidation<BroadcastScriptRequest>();
 
         return app;
     }
@@ -121,6 +123,43 @@ public static class AiEndpoints
         await RecordGenerationAsync(db, user, GeneratedContentType.VideoScript, request.Context, content, ct);
 
         return Results.Ok(new AiGenerationResponse(content, "video-script", remaining));
+    }
+
+    private static async Task<IResult> GenerateBroadcastScript(
+        BroadcastScriptRequest request,
+        AppDbContext db,
+        IUserContext user,
+        ISportsDataProvider sports,
+        CancellationToken ct)
+    {
+        var (allowed, remaining, error) = await CheckAnonymousLimitAsync(db, user, ct);
+        if (!allowed)
+        {
+            return Results.Problem(error, statusCode: StatusCodes.Status429TooManyRequests);
+        }
+
+        // Pull match stats from the sports data provider for every pick we can
+        var statsByMatchId = new Dictionary<string, Integrations.SportsData.Dtos.MatchStatisticsDto>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var matchId in request.Picks
+            .Where(p => !string.IsNullOrWhiteSpace(p.MatchId))
+            .Select(p => p.MatchId!)
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var stats = await sports.GetMatchStatisticsAsync(matchId, ct);
+            if (stats is not null)
+            {
+                statsByMatchId[matchId] = stats;
+            }
+        }
+
+        var content = BroadcastScriptComposer.Compose(request.Phase, request.Picks, statsByMatchId);
+
+        await RecordGenerationAsync(db, user, GeneratedContentType.VideoScript,
+            $"broadcast:{request.Phase}:{request.Picks.Count} picks", content, ct);
+
+        return Results.Ok(new AiGenerationResponse(content, "broadcast-script", remaining));
     }
 
     private static async Task<(bool Allowed, int? Remaining, string? Error)> CheckAnonymousLimitAsync(
