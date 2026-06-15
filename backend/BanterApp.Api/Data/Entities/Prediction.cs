@@ -1,5 +1,9 @@
 namespace BanterApp.Api.Data.Entities;
 
+using System.Text.Json.Serialization;
+using BanterApp.Api.Common;
+
+[JsonConverter(typeof(PredictionTypeJsonConverter))]
 public enum PredictionType
 {
     Result = 0,

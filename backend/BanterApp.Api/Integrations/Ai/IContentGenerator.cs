@@ -67,4 +67,13 @@ public interface IContentGenerator
         string summary,
         string? category = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// DALL-E image URL for a feed reaction or meme (ephemeral OpenAI URL). Null when disabled or unavailable.
+    /// </summary>
+    Task<string?> GenerateReactionImageUrlAsync(
+        string headline,
+        string reactionText,
+        string? category = null,
+        CancellationToken cancellationToken = default);
 }

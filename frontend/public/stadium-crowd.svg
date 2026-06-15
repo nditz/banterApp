@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" preserveAspectRatio="xMidYMax slice">
+  <defs>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0c1e3a" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0c1e3a" stop-opacity="0.15"/>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="320" fill="url(#fade)"/>
+  <!-- stadium stand structure -->
+  <path fill="#0c1e3a" fill-opacity="0.08" d="M0 200 L0 320 L1440 320 L1440 180 Q1080 140 720 160 Q360 180 0 200 Z"/>
+  <!-- cheering crowd silhouettes -->
+  <g fill="#0c1e3a" fill-opacity="0.12">
+    <ellipse cx="80" cy="210" rx="14" ry="22"/><ellipse cx="110" cy="205" rx="12" ry="20"/>
+    <ellipse cx="140" cy="212" rx="15" ry="24"/><ellipse cx="175" cy="208" rx="13" ry="21"/>
+    <ellipse cx="210" cy="215" rx="14" ry="23"/><ellipse cx="245" cy="210" rx="12" ry="20"/>
+    <ellipse cx="280" cy="213" rx="15" ry="25"/><ellipse cx="320" cy="208" rx="13" ry="22"/>
+    <ellipse cx="360" cy="216" rx="14" ry="24"/><ellipse cx="400" cy="211" rx="12" ry="21"/>
+    <ellipse cx="440" cy="214" rx="15" ry="23"/><ellipse cx="480" cy="209" rx="13" ry="20"/>
+    <ellipse cx="520" cy="217" rx="14" ry="25"/><ellipse cx="560" cy="212" rx="12" ry="22"/>
+    <ellipse cx="600" cy="215" rx="15" ry="24"/><ellipse cx="640" cy="210" rx="13" ry="21"/>
+    <ellipse cx="680" cy="218" rx="14" ry="26"/><ellipse cx="720" cy="213" rx="12" ry="23"/>
+    <ellipse cx="760" cy="216" rx="15" ry="25"/><ellipse cx="800" cy="211" rx="13" ry="22"/>
+    <ellipse cx="840" cy="214" rx="14" ry="24"/><ellipse cx="880" cy="209" rx="12" ry="21"/>
+    <ellipse cx="920" cy="217" rx="15" ry="26"/><ellipse cx="960" cy="212" rx="13" ry="23"/>
+    <ellipse cx="1000" cy="215" rx="14" ry="24"/><ellipse cx="1040" cy="210" rx="12" ry="21"/>
+    <ellipse cx="1080" cy="218" rx="15" ry="25"/><ellipse cx="1120" cy="213" rx="13" ry="22"/>
+    <ellipse cx="1160" cy="216" rx="14" ry="24"/><ellipse cx="1200" cy="211" rx="12" ry="21"/>
+    <ellipse cx="1240" cy="214" rx="15" ry="23"/><ellipse cx="1280" cy="209" rx="13" ry="20"/>
+    <ellipse cx="1320" cy="217" rx="14" ry="25"/><ellipse cx="1360" cy="212" rx="12" ry="22"/>
+    <!-- raised arms -->
+    <path d="M75 195 L70 175 L80 180 Z M105 190 L100 168 L112 172 Z M135 198 L128 178 L142 182 Z"/>
+    <path d="M715 198 L708 175 L722 180 Z M745 193 L738 170 L752 175 Z M775 200 L768 178 L782 183 Z"/>
+    <path d="M1315 196 L1308 174 L1322 179 Z M1345 191 L1338 169 L1352 174 Z"/>
+  </g>
+</svg>

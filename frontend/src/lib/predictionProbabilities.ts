@@ -1,0 +1,67 @@
+import type { PredictionOutcome } from "@/lib/reactionEngine";
+
+function hashString(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function normalizeProbabilities(
+  home: number,
+  draw: number,
+  away: number
+): Record<PredictionOutcome, number> {
+  const total = home + draw + away;
+  if (total === 0) {
+    return { home: 34, draw: 33, away: 33 };
+  }
+
+  const scaled = {
+    home: Math.round((home / total) * 100),
+    draw: Math.round((draw / total) * 100),
+    away: Math.round((away / total) * 100),
+  };
+
+  const delta = 100 - (scaled.home + scaled.draw + scaled.away);
+  if (delta !== 0) {
+    const favorite = (Object.entries(scaled).sort((a, b) => b[1] - a[1])[0][0]) as PredictionOutcome;
+    scaled[favorite] += delta;
+  }
+
+  return scaled;
+}
+
+/**
+ * Deterministic fallback when provider probabilities are unavailable.
+ * Uses fixture identity so the same match always gets the same model.
+ */
+export function estimateFixtureProbabilities(
+  fixtureId: string,
+  homeTeamName: string,
+  awayTeamName: string
+): Record<PredictionOutcome, number> {
+  const seed = hashString(`${fixtureId}:${homeTeamName}:${awayTeamName}`);
+  const home = 30 + (seed % 35);
+  const away = 20 + ((seed >> 8) % 30);
+  const draw = 18 + ((seed >> 16) % 15);
+  return normalizeProbabilities(home, draw, away);
+}
+
+export function scorelineToOutcome(scoreline: string): PredictionOutcome | null {
+  const [homeRaw, awayRaw] = scoreline.split("-").map((part) => Number(part.trim()));
+  if (!Number.isFinite(homeRaw) || !Number.isFinite(awayRaw)) return null;
+  if (homeRaw > awayRaw) return "home";
+  if (homeRaw < awayRaw) return "away";
+  return "draw";
+}
+
+export function formatProbabilityContext(
+  probabilities: Record<PredictionOutcome, number>,
+  homeTeamName: string,
+  awayTeamName: string
+): string {
+  return `Model: ${homeTeamName} ${probabilities.home}% · Draw ${probabilities.draw}% · ${awayTeamName} ${probabilities.away}%`;
+}

@@ -8,5 +8,8 @@ public sealed class SportmonksOptions
 
     public string? Token { get; set; }
 
-    public int WorldCupLeagueId { get; set; } = 0;
+    public int WorldCupLeagueId { get; set; } = 732;
+
+    /// <summary>FIFA World Cup 2026 season on Sportmonks (fixtureSeasons filter).</summary>
+    public int WorldCupSeasonId { get; set; } = 26618;
 }

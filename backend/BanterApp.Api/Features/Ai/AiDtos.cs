@@ -33,4 +33,5 @@ public sealed record BroadcastScriptRequest(
 public sealed record AiGenerationResponse(
     string Content,
     string Type,
-    int? RemainingGenerations);
+    int? RemainingGenerations,
+    string? ImageUrl = null);

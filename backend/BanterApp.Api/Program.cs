@@ -1,5 +1,6 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using System.Text.Json.Serialization;
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Features.Ai;
@@ -34,6 +35,10 @@ builder.Services.AddSingleton<SessionTokenService>();
 builder.Services.AddScoped<TurnstileService>();
 builder.Services.AddHttpClient();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new PredictionTypeJsonConverter());
+});
 builder.Services.AddBanterIntegrations(builder.Configuration);
 
 builder.Services.AddHangfire(config => config

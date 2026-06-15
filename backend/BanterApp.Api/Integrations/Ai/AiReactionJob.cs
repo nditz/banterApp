@@ -71,6 +71,20 @@ public sealed class AiReactionJob
                 item.Category,
                 cancellationToken);
 
+            string? imageUrl = null;
+            try
+            {
+                imageUrl = await _ai.GenerateReactionImageUrlAsync(
+                    item.Title,
+                    reaction,
+                    item.Category,
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "AI image generation failed for feed item {ItemId}.", item.Id);
+            }
+
             _db.NewsFeedItems.Add(new NewsFeedItem
             {
                 Id = $"ai-{Guid.NewGuid():N}",
@@ -81,6 +95,7 @@ public sealed class AiReactionJob
                 Author = "BanterBot",
                 Category = "ai_reaction",
                 ParentItemId = item.Id,
+                ImageUrl = imageUrl,
                 PublishedAt = DateTimeOffset.UtcNow,
                 ViewCount = 0
             });

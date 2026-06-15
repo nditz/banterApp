@@ -16,11 +16,18 @@
     "TurnstileSecretKey": ""
   },
   "SportsData": {
-    "Provider": "mock",
-    "ApiKey": ""
+    "Provider": "apifootball",
+    "ApiKey": "",
+    "BaseUrl": "https://v3.football.api-sports.io",
+    "WorldCupLeagueId": 1,
+    "WorldCupSeason": 2026,
+    "SyncIntervalMinutes": 15
   },
   "Sportmonks": {
-    "Token": ""
+    "BaseUrl": "https://api.sportmonks.com/v3/football",
+    "Token": "",
+    "WorldCupLeagueId": 732,
+    "WorldCupSeasonId": 26618
   },
   "FootballData": {
     "Token": ""
@@ -32,7 +39,18 @@
     "ApiKey": ""
   },
   "Ai": {
-    "Provider": "stub",
-    "ApiKey": ""
+    "Provider": "openai",
+    "ApiKey": "",
+    "BaseUrl": "https://api.openai.com/v1",
+    "Model": "gpt-4o-mini",
+    "MaxTokens": 512,
+    "Temperature": 0.85,
+    "Enabled": true,
+    "AnonymousGenerationLimit": 3,
+    "EnableImageGeneration": true,
+    "ImageModel": "dall-e-3",
+    "ImageSize": "1024x1024",
+    "NewsReactionSystemPrompt": "You are a witty football pundit on a banter app. React to the news in 2-3 sentences like a TV journalist or online personality — opinionated, fun, PG-rated. Never encourage gambling.",
+    "MemeImagePrompt": "Funny football banter meme illustration, bold expressive cartoon style, single frozen frame like a viral sports GIF, PG-rated, no text in image."
   }
 }

@@ -254,6 +254,13 @@ public sealed class StubContentGenerator : IContentGenerator
         return Task.FromResult(body);
     }
 
+    public Task<string?> GenerateReactionImageUrlAsync(
+        string headline,
+        string reactionText,
+        string? category = null,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<string?>(null);
+
     private static string ResolveUserKey(string? userId, bool isAnonymous)
     {
         if (!isAnonymous)

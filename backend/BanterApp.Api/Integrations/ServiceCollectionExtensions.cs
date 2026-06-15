@@ -79,7 +79,21 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<IYouTubeProvider, YouTubeProvider>();
         services.AddHttpClient<IRssFeedProvider, RssFeedProvider>();
 
-        services.TryAddSingleton<IContentGenerator, StubContentGenerator>();
+        var aiProvider = configuration["Ai:Provider"]?.Trim().ToLowerInvariant() ?? "stub";
+        var aiApiKey = configuration["Ai:ApiKey"];
+        if ((aiProvider is "openai" or "chatgpt") && !string.IsNullOrWhiteSpace(aiApiKey))
+        {
+            services.AddHttpClient<IContentGenerator, OpenAiContentGenerator>();
+        }
+        else
+        {
+            if (aiProvider is "openai" or "chatgpt")
+            {
+                Console.Error.WriteLine("Ai:Provider is openai but Ai:ApiKey is missing; using stub content generator.");
+            }
+
+            services.TryAddSingleton<IContentGenerator, StubContentGenerator>();
+        }
         services.AddScoped<SyncRunTracker>();
         services.AddScoped<ScoreSyncJob>();
         services.AddScoped<StandingsSyncJob>();

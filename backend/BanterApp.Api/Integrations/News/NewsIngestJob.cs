@@ -136,6 +136,7 @@ public sealed class NewsIngestJob
                 Title = article.Title,
                 Summary = article.Summary,
                 Url = article.SourceUrl,
+                ImageUrl = article.ImageUrl,
                 Category = "sports_news",
                 PublishedAt = article.PublishedAt,
                 ViewCount = 0
@@ -143,11 +144,14 @@ public sealed class NewsIngestJob
             return (1, 0);
         }
 
-        var changed = existing.Title != article.Title || existing.Summary != article.Summary;
+        var changed = existing.Title != article.Title ||
+                        existing.Summary != article.Summary ||
+                        existing.ImageUrl != article.ImageUrl;
         if (changed)
         {
             existing.Title = article.Title;
             existing.Summary = article.Summary;
+            existing.ImageUrl = article.ImageUrl;
             existing.PublishedAt = article.PublishedAt;
             return (0, 1);
         }

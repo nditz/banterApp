@@ -32,4 +32,17 @@ public sealed class AiOptions
 
     /// <summary>Max AI generations per anonymous session (registered users unlimited).</summary>
     public int AnonymousGenerationLimit { get; set; } = 3;
+
+    /// <summary>Generate DALL-E images for feed reactions and meme banter.</summary>
+    public bool EnableImageGeneration { get; set; } = true;
+
+    public string ImageModel { get; set; } = "dall-e-3";
+
+    /// <summary>dall-e-3: 1024x1024, 1024x1792, or 1792x1024.</summary>
+    public string ImageSize { get; set; } = "1024x1024";
+
+    /// <summary>Prompt prefix for meme / GIF-style still frames in the feed.</summary>
+    public string MemeImagePrompt { get; set; } =
+        "Funny football banter meme illustration, bold expressive cartoon style, " +
+        "single frozen frame like a viral sports GIF, PG-rated, no text in image.";
 }

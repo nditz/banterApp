@@ -142,7 +142,7 @@ public static class FeedEndpoints
     private static FeedItemResponse MapFromEntity(Data.Entities.NewsFeedItem n)
     {
         var sid = n.Id.ToString();
-        return new(sid, "news", n.Title, n.Summary ?? n.Title, null, n.Source, n.Url, n.PublishedAt, n.ViewCount, GetReactions(sid));
+        return new(sid, "news", n.Title, n.Summary ?? n.Title, n.ImageUrl, n.Source, n.Url, n.PublishedAt, n.ViewCount, GetReactions(sid));
     }
 
     private static FeedItemResponse MapFromDto(NewsArticleDto a, int? likes = null) =>

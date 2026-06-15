@@ -49,8 +49,15 @@ public sealed class SportmonksProvider : ISportsDataFallbackProvider
 
         try
         {
+            var path = _options.WorldCupSeasonId > 0
+                ? $"fixtures?filters=fixtureSeasons:{_options.WorldCupSeasonId}"
+                : _options.WorldCupLeagueId > 0
+                    ? $"fixtures?filters=fixtureLeagues:{_options.WorldCupLeagueId}"
+                    : "fixtures";
+
             var url =
-                $"{_options.BaseUrl.TrimEnd('/')}/fixtures?api_token={_options.Token}" +
+                $"{_options.BaseUrl.TrimEnd('/')}/{path}" +
+                $"&api_token={_options.Token}" +
                 "&include=participants;scores;league;season;stage;round";
             using var response = await _httpClient.GetAsync(url, cancellationToken);
             if (!response.IsSuccessStatusCode)
@@ -70,13 +77,36 @@ public sealed class SportmonksProvider : ISportsDataFallbackProvider
         }
     }
 
-    public Task<IReadOnlyDictionary<string, IReadOnlyList<StandingDto>>> GetStandingsAsync(
+    public async Task<IReadOnlyDictionary<string, IReadOnlyList<StandingDto>>> GetStandingsAsync(
         CancellationToken cancellationToken = default)
     {
-        // TODO: wire season-specific standings when WorldCupLeagueId/season_id is configured.
-        _logger.LogDebug("Sportmonks standings not configured for season_id; returning empty.");
-        return Task.FromResult<IReadOnlyDictionary<string, IReadOnlyList<StandingDto>>>(
-            new Dictionary<string, IReadOnlyList<StandingDto>>());
+        if (!IsConfigured || _options.WorldCupSeasonId <= 0)
+        {
+            return new Dictionary<string, IReadOnlyList<StandingDto>>();
+        }
+
+        try
+        {
+            var url =
+                $"{_options.BaseUrl.TrimEnd('/')}/standings/seasons/{_options.WorldCupSeasonId}" +
+                $"?api_token={_options.Token}" +
+                "&include=participant;group;details";
+            using var response = await _httpClient.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Sportmonks standings request failed: {Status}", (int)response.StatusCode);
+                return new Dictionary<string, IReadOnlyList<StandingDto>>();
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            return MapStandings(document.RootElement);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Sportmonks standings request failed.");
+            return new Dictionary<string, IReadOnlyList<StandingDto>>();
+        }
     }
 
     private static IReadOnlyList<MatchDto> MapFixtures(JsonElement root)
@@ -173,7 +203,112 @@ public sealed class SportmonksProvider : ISportsDataFallbackProvider
     {
         var id = participant.TryGetProperty("id", out var idEl) ? idEl.GetInt32().ToString() : fallbackId;
         var name = participant.TryGetProperty("name", out var nameEl) ? nameEl.GetString() ?? "TBD" : "TBD";
-        var code = name.Length >= 3 ? name[..3].ToUpperInvariant() : "TBD";
+        var code = participant.TryGetProperty("short_code", out var codeEl) &&
+                   !string.IsNullOrWhiteSpace(codeEl.GetString())
+            ? codeEl.GetString()!.ToUpperInvariant()
+            : name.Length >= 3 ? name[..3].ToUpperInvariant() : "TBD";
         return new TeamDto(id, name, code, code);
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<StandingDto>> MapStandings(JsonElement root)
+    {
+        if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array)
+        {
+            return new Dictionary<string, IReadOnlyList<StandingDto>>();
+        }
+
+        var result = new Dictionary<string, List<StandingDto>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in data.EnumerateArray())
+        {
+            if (!item.TryGetProperty("participant", out var participant))
+            {
+                continue;
+            }
+
+            var groupKey = ResolveGroupKey(item);
+            var team = MapParticipant(participant, "sm-team");
+            var position = item.TryGetProperty("position", out var posEl) ? posEl.GetInt32() : 0;
+            var points = item.TryGetProperty("points", out var ptsEl) ? ptsEl.GetInt32() : 0;
+            var (played, won, drawn, lost, goalsFor, goalsAgainst) = MapStandingDetails(item);
+
+            if (!result.TryGetValue(groupKey, out var rows))
+            {
+                rows = [];
+                result[groupKey] = rows;
+            }
+
+            rows.Add(new StandingDto(
+                position,
+                team,
+                played,
+                won,
+                drawn,
+                lost,
+                goalsFor,
+                goalsAgainst,
+                goalsFor - goalsAgainst,
+                points));
+        }
+
+        return result.ToDictionary(
+            k => k.Key,
+            v => (IReadOnlyList<StandingDto>)v.Value,
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveGroupKey(JsonElement item)
+    {
+        if (item.TryGetProperty("group", out var group) &&
+            group.TryGetProperty("name", out var groupNameEl))
+        {
+            var name = groupNameEl.GetString() ?? string.Empty;
+            var trimmed = name
+                .Replace("Group ", "", StringComparison.OrdinalIgnoreCase)
+                .Trim();
+            if (!string.IsNullOrWhiteSpace(trimmed))
+            {
+                return trimmed.ToUpperInvariant();
+            }
+        }
+
+        if (item.TryGetProperty("group_id", out var groupIdEl))
+        {
+            return $"G{groupIdEl.GetInt32()}";
+        }
+
+        return "A";
+    }
+
+    private static (int Played, int Won, int Drawn, int Lost, int GoalsFor, int GoalsAgainst) MapStandingDetails(
+        JsonElement item)
+    {
+        if (!item.TryGetProperty("details", out var details) || details.ValueKind != JsonValueKind.Array)
+        {
+            return (0, 0, 0, 0, 0, 0);
+        }
+
+        int played = 0, won = 0, drawn = 0, lost = 0, goalsFor = 0, goalsAgainst = 0;
+        foreach (var detail in details.EnumerateArray())
+        {
+            if (!detail.TryGetProperty("type_id", out var typeEl) ||
+                !detail.TryGetProperty("value", out var valueEl) ||
+                valueEl.ValueKind != JsonValueKind.Number)
+            {
+                continue;
+            }
+
+            var value = valueEl.GetInt32();
+            switch (typeEl.GetInt32())
+            {
+                case 129: played = value; break;
+                case 130: won = value; break;
+                case 131: drawn = value; break;
+                case 132: lost = value; break;
+                case 133: goalsFor = value; break;
+                case 134: goalsAgainst = value; break;
+            }
+        }
+
+        return (played, won, drawn, lost, goalsFor, goalsAgainst);
     }
 }

@@ -97,10 +97,15 @@ public static class AiEndpoints
 
         var userKey = ResolveUserKey(user);
         var content = await generator.GenerateMemeCaptionAsync(request.Context, userKey, isAnonymous: false, ct);
+        var imageUrl = await generator.GenerateReactionImageUrlAsync(
+            request.Context,
+            content,
+            "meme",
+            ct);
 
         await RecordGenerationAsync(db, user, GeneratedContentType.Meme, request.Context, content, ct);
 
-        return Results.Ok(new AiGenerationResponse(content, "meme", remaining));
+        return Results.Ok(new AiGenerationResponse(content, "meme", remaining, imageUrl));
     }
 
     private static async Task<IResult> GenerateVideoScript(

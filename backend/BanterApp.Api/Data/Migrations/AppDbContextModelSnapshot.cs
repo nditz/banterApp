@@ -523,6 +523,9 @@ namespace BanterApp.Api.Data.Migrations
                     b.Property<string>("Category")
                         .HasColumnType("text");
 
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("ParentItemId")
                         .HasColumnType("text");
 

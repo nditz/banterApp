@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="42%" r="65%">
+      <stop offset="0%" stop-color="#ff3b3b" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#2b0505"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <style>
+      .pulse{animation:pulse 1.4s ease-in-out infinite; transform-origin:256px 240px;}
+      .float{animation:float 2.2s ease-in-out infinite;}
+      .spark{animation:spark 1.1s ease-in-out infinite alternate;}
+      @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+      @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+      @keyframes spark{0%{opacity:.25; transform:scale(.8)}100%{opacity:1; transform:scale(1.25)}}
+    </style>
+  </defs>
+  <rect width="512" height="512" rx="64" fill="url(#g)"/>
+  <circle class="spark" cx="110" cy="110" r="8" fill="white" opacity=".8"/>
+  <circle class="spark" cx="410" cy="130" r="6" fill="white" opacity=".7"/>
+  <circle class="spark" cx="390" cy="370" r="10" fill="white" opacity=".5"/>
+  <text class="pulse" x="256" y="270" text-anchor="middle" font-size="132" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji">🚨</text>
+  <text class="float" x="256" y="414" text-anchor="middle" font-size="34" font-weight="900" fill="white" font-family="Inter, Arial">CHAOS PICK</text>
+  <rect x="34" y="34" width="444" height="444" rx="54" fill="none" stroke="white" stroke-opacity=".18" stroke-width="3"/>
+</svg>
