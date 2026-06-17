@@ -20,8 +20,6 @@ public static class BracketEngine
                 index + 1,
                 BracketSlotKind.GroupMatch,
                 null,
-                null,
-                null,
                 null))
             .ToList();
     }
@@ -106,25 +104,41 @@ public static class BracketEngine
                 true);
         }
 
-        if (slot.QualifierA is not null || slot.QualifierB is not null)
-        {
-            var teamA = slot.QualifierA is not null
-                ? GroupStandingsService.GetQualifier(slot.QualifierA.Group, slot.QualifierA.Rank, groupMatches, picks)
-                : ResolveKnockoutTeam(slot.SourceSlotAId, matches, groupMatches, picks);
-            var teamB = slot.QualifierB is not null
-                ? GroupStandingsService.GetQualifier(slot.QualifierB.Group, slot.QualifierB.Rank, groupMatches, picks)
-                : ResolveKnockoutTeam(slot.SourceSlotBId, matches, groupMatches, picks);
-
-            return (teamA, teamB, teamA is not null && teamB is not null);
-        }
-
-        var knockoutA = ResolveKnockoutTeam(slot.SourceSlotAId, matches, groupMatches, picks);
-        var knockoutB = ResolveKnockoutTeam(slot.SourceSlotBId, matches, groupMatches, picks);
-        return (knockoutA, knockoutB, knockoutA is not null && knockoutB is not null);
+        var thirdPlaceAssignments = ThirdPlaceQualificationService.BuildBracketAssignments(groupMatches, picks);
+        var teamA = ResolveTeamSource(slot.TeamSourceA, slot.SlotId, "A", matches, groupMatches, picks, thirdPlaceAssignments);
+        var teamB = ResolveTeamSource(slot.TeamSourceB, slot.SlotId, "B", matches, groupMatches, picks, thirdPlaceAssignments);
+        return (teamA, teamB, teamA is not null && teamB is not null);
     }
 
-    private static BracketTeamInfo? ResolveKnockoutTeam(
-        string? sourceSlotId,
+    private static BracketTeamInfo? ResolveTeamSource(
+        TeamSource? source,
+        string slotId,
+        string side,
+        IReadOnlyDictionary<string, Match> matches,
+        IReadOnlyList<Match> groupMatches,
+        IReadOnlyDictionary<string, string> picks,
+        IReadOnlyDictionary<string, BracketTeamInfo> thirdPlaceAssignments)
+    {
+        return source switch
+        {
+            GroupRankSource group => GroupStandingsService.GetQualifier(
+                group.Group, group.Rank, groupMatches, picks),
+            ThirdPlaceSource => thirdPlaceAssignments.TryGetValue($"{slotId}:{side}", out var third)
+                ? third
+                : null,
+            AnnexCThirdSource => thirdPlaceAssignments.TryGetValue($"{slotId}:{side}", out var annexThird)
+                ? annexThird
+                : null,
+            SlotWinnerSource winner => ResolveKnockoutWinner(
+                winner.SlotId, matches, groupMatches, picks),
+            SlotLoserSource loser => ResolveKnockoutLoser(
+                loser.SlotId, matches, groupMatches, picks),
+            _ => null
+        };
+    }
+
+    private static BracketTeamInfo? ResolveKnockoutWinner(
+        string sourceSlotId,
         IReadOnlyDictionary<string, Match> matches,
         IReadOnlyList<Match> groupMatches,
         IReadOnlyDictionary<string, string> picks)
@@ -149,6 +163,42 @@ public static class BracketEngine
         if (teamB is not null && string.Equals(teamB.Code, winnerCode, StringComparison.OrdinalIgnoreCase))
         {
             return teamB;
+        }
+
+        return null;
+    }
+
+    private static BracketTeamInfo? ResolveKnockoutLoser(
+        string sourceSlotId,
+        IReadOnlyDictionary<string, Match> matches,
+        IReadOnlyList<Match> groupMatches,
+        IReadOnlyDictionary<string, string> picks)
+    {
+        if (string.IsNullOrWhiteSpace(sourceSlotId) ||
+            !BracketTemplate.BySlotId.TryGetValue(sourceSlotId, out var sourceSlot))
+        {
+            return null;
+        }
+
+        if (!picks.TryGetValue(sourceSlotId, out var winnerCode))
+        {
+            return null;
+        }
+
+        var (teamA, teamB, ready) = ResolveTeams(sourceSlot, matches, groupMatches, picks);
+        if (!ready)
+        {
+            return null;
+        }
+
+        if (teamA is not null && string.Equals(teamA.Code, winnerCode, StringComparison.OrdinalIgnoreCase))
+        {
+            return teamB;
+        }
+
+        if (teamB is not null && string.Equals(teamB.Code, winnerCode, StringComparison.OrdinalIgnoreCase))
+        {
+            return teamA;
         }
 
         return null;

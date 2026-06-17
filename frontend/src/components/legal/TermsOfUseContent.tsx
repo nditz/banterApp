@@ -74,7 +74,7 @@ export function TermsEntertainmentNotice({ className }: { className?: string }) 
       )}
     >
       <strong className="text-foreground">Entertainment only — not gambling.</strong>{" "}
-      BanterApp is a free-to-play social predictions game intended for banter, entertainment,
+      Ball Knowledge is a free-to-play social predictions game intended for banter, entertainment,
       and friendly competition among friends and family. No real money is wagered, won, or lost.
       This platform does not encourage, promote, or facilitate gambling in any form. If you or
       someone you know is affected by problem gambling, please seek support at{" "}

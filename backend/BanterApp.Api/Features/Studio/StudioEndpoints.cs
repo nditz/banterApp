@@ -1,6 +1,7 @@
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace BanterApp.Api.Features.Studio;
@@ -38,6 +39,7 @@ public static class StudioEndpoints
     private static async Task<IResult> GetComparison(
         AppDbContext db,
         IUserContext user,
+        TournamentBonusScoringService bonusScoring,
         CancellationToken ct)
     {
         // 1. Fetch the current user's predictions with match data
@@ -92,11 +94,15 @@ public static class StudioEndpoints
             // Rough rank: count how many members have more total points
             if (leagueTotal > 1)
             {
-                var standings = await Leagues.LeagueEndpoints.BuildStandingsAsync(db, firstLeagueId, ct);
-                var myEntry = standings.FirstOrDefault(s => s.UserId == myId);
-                myLeagueRank = myEntry is not null
-                    ? standings.OrderByDescending(s => s.TotalPoints).ToList().FindIndex(s => s.UserId == myId) + 1
-                    : null;
+                var league = await db.Leagues.FindAsync([firstLeagueId], ct);
+                if (league is not null)
+                {
+                    var standings = await Leagues.LeagueEndpoints.BuildStandingsAsync(db, league, bonusScoring, ct);
+                    var myEntry = standings.FirstOrDefault(s => s.UserId == myId);
+                    myLeagueRank = myEntry is not null
+                        ? standings.OrderByDescending(s => s.TotalPoints).ToList().FindIndex(s => s.UserId == myId) + 1
+                        : null;
+                }
             }
         }
 

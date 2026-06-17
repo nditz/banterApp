@@ -18,7 +18,7 @@ public sealed class CsrfMiddleware(RequestDelegate next)
         {
             var path = context.Request.Path.Value ?? string.Empty;
             if (path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("/api/sync/trigger", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/api/sync/", StringComparison.OrdinalIgnoreCase) ||
                 path.Equals("/api/auth/session/consent", StringComparison.OrdinalIgnoreCase) ||
                 path.Equals("/api/auth/session/recover", StringComparison.OrdinalIgnoreCase))
             {

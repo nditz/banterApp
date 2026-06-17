@@ -51,6 +51,9 @@ export function LeagueCard({ league }: LeagueCardProps) {
           <Users className="size-3.5" aria-hidden />
           {league.memberCount}
           {league.maxMembers ? ` / ${league.maxMembers}` : ""} players
+          {league.bonusPointsEnabled && (
+            <span className="ml-1 text-gold-foreground">· bonus picks on</span>
+          )}
           {league.myDisplayName && ` · You play as ${league.myDisplayName}`}
         </CardDescription>
       </CardHeader>

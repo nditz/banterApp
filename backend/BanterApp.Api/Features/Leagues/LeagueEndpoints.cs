@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace BanterApp.Api.Features.Leagues;
@@ -177,6 +178,7 @@ public static class LeagueEndpoints
         HttpContext http,
         AppDbContext db,
         IUserContext user,
+        TournamentBonusScoringService bonusScoring,
         CancellationToken ct)
     {
         if (!user.IsAuthenticated && !user.IsAnonymous)
@@ -216,23 +218,35 @@ public static class LeagueEndpoints
             .ToListAsync(ct);
         var countMap = memberCounts.ToDictionary(x => x.LeagueId, x => x.Count);
 
-        var myPoints = await GetIdentityPointsAsync(db, user, ct);
+        var matchPoints = await GetIdentityMatchPointsAsync(db, user, ct);
+        var bonusPoints = await bonusScoring.GetBonusPointsAsync(db, user, ct);
 
         var response = memberships
             .OrderBy(m => KindSortOrder(m.League.Kind))
             .ThenByDescending(m => m.JoinedAt)
-            .Select(m => new MyLeagueResponse(
-                m.League.Id,
-                m.League.Name,
-                m.League.InviteCode,
-                countMap.GetValueOrDefault(m.LeagueId, 1),
-                m.League.MaxMembers,
-                m.IsAdmin,
-                m.DisplayName,
-                myPoints,
-                m.League.CreatedAt,
-                m.League.Kind.ToString().ToLowerInvariant(),
-                m.League.CountryCode))
+            .Select(m =>
+            {
+                var memberCount = countMap.GetValueOrDefault(m.LeagueId, 1);
+                var leaguePoints = matchPoints;
+                if (TournamentBonusScoringService.BonusPointsApplyToLeague(m.League, memberCount))
+                {
+                    leaguePoints += bonusPoints;
+                }
+
+                return new MyLeagueResponse(
+                    m.League.Id,
+                    m.League.Name,
+                    m.League.InviteCode,
+                    memberCount,
+                    m.League.MaxMembers,
+                    m.IsAdmin,
+                    m.DisplayName,
+                    leaguePoints,
+                    m.League.CreatedAt,
+                    m.League.Kind.ToString().ToLowerInvariant(),
+                    m.League.CountryCode,
+                    TournamentBonusScoringService.BonusPointsApplyToLeague(m.League, memberCount));
+            })
             .ToList();
 
         return Results.Ok(new MyLeaguesResponse(response, limits));
@@ -274,6 +288,7 @@ public static class LeagueEndpoints
         Guid? leagueId,
         string? inviteCode,
         AppDbContext db,
+        TournamentBonusScoringService bonusScoring,
         CancellationToken ct)
     {
         League? league = null;
@@ -292,19 +307,25 @@ public static class LeagueEndpoints
             return Results.BadRequest(new { error = "Provide leagueId or inviteCode query parameter." });
         }
 
-        var standings = await BuildStandingsAsync(db, league.Id, ct);
-        return Results.Ok(new LeagueStandingsResponse(league.Id, league.Name, standings));
+        await bonusScoring.LockPicksIfNeededAsync(db, ct);
+        await bonusScoring.RescoreAllPicksAsync(db, ct);
+
+        var standings = await BuildStandingsAsync(db, league, bonusScoring, ct);
+        return Results.Ok(new LeagueStandingsResponse(league.Id, league.Name, standings, league.Kind == LeagueKind.Custom));
     }
 
     /// <summary>Standings across both registered and guest members, by league display name.</summary>
     public static async Task<IReadOnlyList<LeagueStandingEntry>> BuildStandingsAsync(
         AppDbContext db,
-        Guid leagueId,
+        League league,
+        TournamentBonusScoringService bonusScoring,
         CancellationToken ct)
     {
         var members = await db.LeagueMembers
-            .Where(m => m.LeagueId == leagueId)
+            .Where(m => m.LeagueId == league.Id)
             .ToListAsync(ct);
+
+        var includeBonus = TournamentBonusScoringService.BonusPointsApplyToLeague(league, members.Count);
 
         var userIds = members.Where(m => m.UserId.HasValue).Select(m => m.UserId!.Value).ToList();
         var anonIds = members.Where(m => m.AnonymousUserId.HasValue).Select(m => m.AnonymousUserId!.Value).ToList();
@@ -324,6 +345,10 @@ public static class LeagueEndpoints
         var userMap = userPoints.ToDictionary(x => x.Id);
         var anonMap = anonPoints.ToDictionary(x => x.Id);
 
+        Dictionary<Guid, int> bonusMap = includeBonus
+            ? await bonusScoring.GetBonusPointsByIdentityAsync(db, members, ct)
+            : [];
+
         return members
             .Select(m =>
             {
@@ -333,18 +358,25 @@ public static class LeagueEndpoints
                         ? anonMap.GetValueOrDefault(m.AnonymousUserId.Value)
                         : null;
 
+                var identityId = m.UserId ?? m.AnonymousUserId;
+                var matchPoints = stats?.Points ?? 0;
+                var bonus = identityId.HasValue && includeBonus
+                    ? bonusMap.GetValueOrDefault(identityId.Value)
+                    : 0;
+
                 return new LeagueStandingEntry(
-                    m.UserId ?? m.AnonymousUserId,
+                    identityId,
                     m.DisplayName,
-                    stats?.Points ?? 0,
-                    stats?.Count ?? 0);
+                    matchPoints + bonus,
+                    stats?.Count ?? 0,
+                    bonus);
             })
             .OrderByDescending(s => s.TotalPoints)
             .ThenBy(s => s.DisplayName)
             .ToList();
     }
 
-    private static async Task<int> GetIdentityPointsAsync(
+    private static async Task<int> GetIdentityMatchPointsAsync(
         AppDbContext db,
         IUserContext user,
         CancellationToken ct)

@@ -14,6 +14,7 @@ public static class BracketEndpoints
         var group = app.MapGroup("/api/brackets").WithTags("Brackets");
 
         group.MapGet("/template", GetBracketTemplate);
+        group.MapGet("/rules", GetQualificationRules);
         group.MapGet("/mine", GetMyBracket).RequireRateLimiting("api");
         group.MapPut("/pick", SaveBracketPick)
             .RequireRateLimiting("write")
@@ -21,6 +22,13 @@ public static class BracketEndpoints
 
         return app;
     }
+
+    private static IResult GetQualificationRules() =>
+        Results.Ok(new BracketQualificationRulesResponse(
+            ThirdPlaceQualificationService.RulesSummary,
+            ThirdPlaceQualificationService.RankingCriteria,
+            AnnexCMatrix.GroupWinnerSlotKeys,
+            "FIFA World Cup 2026 Competition Regulations — Annex C (495 third-place combinations)"));
 
     private static async Task<IResult> GetBracketTemplate(AppDbContext db, CancellationToken ct)
     {
@@ -174,6 +182,7 @@ public static class BracketEndpoints
         IReadOnlyList<BracketPick>? picks = null)
     {
         var slots = BracketEngine.GetAllSlots(groupMatches);
+        var qualification = ThirdPlaceQualificationService.ComputeSnapshot(groupMatches, pickMap);
         var rounds = slots
             .GroupBy(s => s.RoundOrder)
             .OrderBy(g => g.Key)
@@ -183,10 +192,12 @@ public static class BracketEndpoints
                 var label = g.Key switch
                 {
                     0 => "Group stage",
-                    1 => "Round of 16",
-                    2 => "Quarter-finals",
-                    3 => "Semi-finals",
-                    4 => "Final",
+                    1 => "Round of 32",
+                    2 => "Round of 16",
+                    3 => "Quarter-finals",
+                    4 => "Semi-finals",
+                    5 => "Third-place play-off",
+                    6 => "Final",
                     _ => g.First().Round
                 };
                 var orderedSlots = g.Key == 0
@@ -197,7 +208,7 @@ public static class BracketEndpoints
                     label,
                     g.Key,
                     orderedSlots
-                        .Select(slot => MapSlot(slot, matchMap, groupMatches, pickMap))
+                        .Select(slot => MapSlot(slot, matchMap, groupMatches, pickMap, qualification))
                         .ToList(),
                     phase);
             })
@@ -224,14 +235,46 @@ public static class BracketEndpoints
             .Select(p => new BracketPickResponse(p.SlotId, p.MatchId, p.WinnerTeamCode, p.LockedAt))
             .ToList();
 
-        return new BracketStateResponse(rounds, pickResponses, standings);
+        return new BracketStateResponse(
+            rounds,
+            pickResponses,
+            standings,
+            MapQualification(qualification));
     }
+
+    private static BracketQualificationResponse MapQualification(ThirdPlaceQualificationSnapshot snapshot) =>
+        new(
+            snapshot.RulesSummary,
+            snapshot.RankingCriteria,
+            snapshot.GroupsComplete,
+            snapshot.TotalGroups,
+            snapshot.IsComplete,
+            snapshot.AnnexCResolved,
+            snapshot.CombinationKey,
+            snapshot.AllThirdPlaceTeams.Select(t => new ThirdPlaceTeamResponse(
+                t.Group,
+                t.TeamCode,
+                t.TeamName,
+                t.Points,
+                t.GoalDifference,
+                t.GoalsFor,
+                t.RankAmongThirds,
+                t.Qualified,
+                t.GroupComplete)).ToList(),
+            snapshot.QualifiedTeams.Select(t => t.Group).ToList(),
+            snapshot.SlotAssignments is null
+                ? null
+                : snapshot.SlotAssignments.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value is null ? null : $"3{kvp.Value}",
+                    StringComparer.OrdinalIgnoreCase));
 
     private static BracketSlotResponse MapSlot(
         BracketSlotDefinition slot,
         IReadOnlyDictionary<string, Match> matches,
         IReadOnlyList<Match> groupMatches,
-        IReadOnlyDictionary<string, string> picks)
+        IReadOnlyDictionary<string, string> picks,
+        ThirdPlaceQualificationSnapshot qualification)
     {
         matches.TryGetValue(slot.MatchId, out var match);
         var (teamA, teamB, ready) = BracketEngine.ResolveTeams(slot, matches, groupMatches, picks);
@@ -252,9 +295,36 @@ public static class BracketEndpoints
             locked,
             match?.KickoffTime,
             match?.Venue ?? string.Empty,
-            slot.QualifierA is null ? null : $"{slot.QualifierA.Group}{slot.QualifierA.Rank}",
-            slot.SourceSlotAId,
-            slot.SourceSlotBId);
+            FormatMatchupLabel(slot, qualification));
+    }
+
+    private static string FormatMatchupLabel(
+        BracketSlotDefinition slot,
+        ThirdPlaceQualificationSnapshot qualification)
+    {
+        if (slot.Kind == BracketSlotKind.GroupMatch)
+        {
+            return slot.Round;
+        }
+
+        var left = BracketTemplate.FormatTeamSource(slot.TeamSourceA);
+        var right = FormatRightSource(slot, qualification);
+        return $"{left} v {right}";
+    }
+
+    private static string FormatRightSource(
+        BracketSlotDefinition slot,
+        ThirdPlaceQualificationSnapshot qualification)
+    {
+        if (slot.TeamSourceB is AnnexCThirdSource annex &&
+            qualification.SlotAssignments is not null &&
+            qualification.SlotAssignments.TryGetValue($"1{annex.GroupWinnerLetter}", out var thirdGroup) &&
+            !string.IsNullOrWhiteSpace(thirdGroup))
+        {
+            return $"3{thirdGroup}";
+        }
+
+        return BracketTemplate.FormatTeamSource(slot.TeamSourceB);
     }
 
     private static async Task<List<BracketPick>> LoadPicks(AppDbContext db, IUserContext user, CancellationToken ct)
@@ -335,7 +405,37 @@ public record BracketTemplateResponse(
 public record BracketStateResponse(
     IReadOnlyList<BracketRoundResponse> Rounds,
     IReadOnlyList<BracketPickResponse> Picks,
-    IReadOnlyDictionary<string, IReadOnlyList<GroupStandingResponse>> Standings);
+    IReadOnlyDictionary<string, IReadOnlyList<GroupStandingResponse>> Standings,
+    BracketQualificationResponse Qualification);
+
+public record BracketQualificationRulesResponse(
+    string Summary,
+    IReadOnlyList<string> RankingCriteria,
+    IReadOnlyList<string> AnnexCGroupWinnerSlots,
+    string Source);
+
+public record BracketQualificationResponse(
+    string RulesSummary,
+    IReadOnlyList<string> RankingCriteria,
+    int GroupsComplete,
+    int TotalGroups,
+    bool IsComplete,
+    bool AnnexCResolved,
+    string? CombinationKey,
+    IReadOnlyList<ThirdPlaceTeamResponse> ThirdPlaceRanking,
+    IReadOnlyList<string> QualifiedGroups,
+    IReadOnlyDictionary<string, string?>? AnnexCSlotMapping);
+
+public record ThirdPlaceTeamResponse(
+    string Group,
+    string TeamCode,
+    string TeamName,
+    int Points,
+    int GoalDifference,
+    int GoalsFor,
+    int RankAmongThirds,
+    bool Qualified,
+    bool GroupComplete);
 
 public record BracketRoundResponse(
     string Label,
@@ -357,9 +457,7 @@ public record BracketSlotResponse(
     bool IsLocked,
     DateTimeOffset? KickoffTime,
     string Venue,
-    string? QualifierLabel,
-    string? SourceSlotAId,
-    string? SourceSlotBId);
+    string? QualifierLabel);
 
 public record BracketTeamResponse(string Code, string Name);
 

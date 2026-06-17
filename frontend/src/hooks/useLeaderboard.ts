@@ -180,6 +180,7 @@ function normalizeLeague(raw: Record<string, unknown>): League {
       typeof raw.myDisplayName === "string" ? raw.myDisplayName : undefined,
     points: raw.myPoints !== undefined ? Number(raw.myPoints) : undefined,
     kind,
+    bonusPointsEnabled: raw.bonusPointsEnabled === true,
     countryCode:
       typeof raw.countryCode === "string"
         ? raw.countryCode

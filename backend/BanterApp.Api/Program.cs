@@ -11,6 +11,7 @@ using BanterApp.Api.Features.Leagues;
 using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Features.Predictions;
 using BanterApp.Api.Features.Brackets;
+using BanterApp.Api.Features.TournamentBonuses;
 using BanterApp.Api.Features.Studio;
 using BanterApp.Api.Features.Health;
 using BanterApp.Api.Features.Sync;
@@ -30,7 +31,9 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<IUserContext, UserContext>();
+builder.Services.AddScoped<LiveDataResetService>();
 builder.Services.AddSingleton<ScoringService>();
+builder.Services.AddSingleton<TournamentBonusScoringService>();
 builder.Services.AddSingleton<SessionTokenService>();
 builder.Services.AddScoped<TurnstileService>();
 builder.Services.AddHttpClient();
@@ -38,6 +41,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new PredictionTypeJsonConverter());
+    options.SerializerOptions.Converters.Add(new TournamentBonusCategoryJsonConverter());
 });
 builder.Services.AddBanterIntegrations(builder.Configuration);
 
@@ -212,6 +216,7 @@ app.MapSyncEndpoints();
 app.MapMatchEndpoints();
 app.MapPredictionEndpoints();
 app.MapBracketEndpoints();
+app.MapTournamentBonusEndpoints();
 app.MapLeagueEndpoints();
 app.MapLeaderboardEndpoints();
 app.MapFeedEndpoints();

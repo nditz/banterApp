@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Calendar, MapPin } from "lucide-react";
 import { FixtureStatusBadge } from "@/components/prediction/FixtureStatusBadge";
 import { PredictionButtons } from "@/components/prediction/PredictionButtons";
 import { Badge } from "@/components/ui/badge";
 import { isMatchLocked } from "@/lib/anonymous";
+import { usePredictionHistory } from "@/hooks/usePredictions";
 import type { Match } from "@/lib/types";
 
 interface MatchCardProps {
@@ -26,6 +27,11 @@ function formatKickoff(iso: string): string {
 export function MatchCard({ match }: MatchCardProps) {
   const [selectedPrediction, setSelectedPrediction] = useState<string | null>(
     null
+  );
+  const { data: predictions } = usePredictionHistory();
+  const matchPredictions = useMemo(
+    () => predictions?.filter((p) => p.matchId === match.id) ?? [],
+    [predictions, match.id]
   );
   const locked = isMatchLocked(match);
 
@@ -68,6 +74,7 @@ export function MatchCard({ match }: MatchCardProps) {
           teamA={match.teamA}
           teamB={match.teamB}
           isLocked={locked}
+          existingPredictions={matchPredictions}
           selectedValue={selectedPrediction}
           onSelect={setSelectedPrediction}
         />

@@ -8,9 +8,9 @@ export default function BracketsPage() {
         <header className="mb-4">
           <h1 className="text-xl font-bold">Tournament bracket</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Predict the full World Cup path — group stage through the Final. Pick group winners to
-            populate the knockout tree, then call the champion. Fixtures sync from API-Football when
-            configured; flags show each nation.
+            Predict the full 2026 World Cup path — 12 groups, Round of 32, through the Final. Pick
+            group results to populate the knockout tree, then call the champion. Fixtures sync from
+            OpenFootball when live data is enabled.
           </p>
         </header>
 

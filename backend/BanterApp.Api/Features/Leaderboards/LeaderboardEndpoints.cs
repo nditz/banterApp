@@ -81,6 +81,7 @@ public static class LeaderboardEndpoints
         Guid leagueId,
         AppDbContext db,
         IUserContext userContext,
+        TournamentBonusScoringService bonusScoring,
         CancellationToken ct)
     {
         var league = await db.Leagues.FindAsync([leagueId], ct);
@@ -90,7 +91,7 @@ public static class LeaderboardEndpoints
         }
 
         var currentId = userContext.UserId ?? userContext.AnonymousUserId;
-        var standings = await Leagues.LeagueEndpoints.BuildStandingsAsync(db, leagueId, ct);
+        var standings = await Leagues.LeagueEndpoints.BuildStandingsAsync(db, league, bonusScoring, ct);
 
         var ranked = standings
             .Select((s, i) => new LeaderboardEntry(

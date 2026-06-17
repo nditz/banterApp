@@ -226,16 +226,33 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
             using var document = await _client.GetJsonAsync(path, cancellationToken);
             if (document is null)
             {
-                return await fallback(cancellationToken);
+                return [];
             }
 
             var fixtures = ApiFootballFixtureMapper.MapFixtures(document.RootElement, leagueIdFilter);
-            return fixtures.Count > 0 ? fixtures : await fallback(cancellationToken);
+            LogApiErrors(document.RootElement);
+            return fixtures;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "API-Football fixtures request failed for {Path}; using mock data.", path);
-            return await fallback(cancellationToken);
+            _logger.LogWarning(ex, "API-Football fixtures request failed for {Path}.", path);
+            return [];
+        }
+    }
+
+    private void LogApiErrors(JsonElement root)
+    {
+        if (!root.TryGetProperty("errors", out var errors) || errors.ValueKind != JsonValueKind.Object)
+        {
+            return;
+        }
+
+        foreach (var property in errors.EnumerateObject())
+        {
+            _logger.LogWarning(
+                "API-Football: {Key} = {Value}",
+                property.Name,
+                property.Value.ToString());
         }
     }
 

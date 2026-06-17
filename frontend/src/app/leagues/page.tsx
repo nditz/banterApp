@@ -21,7 +21,8 @@ export default function LeaguesPage() {
           Create private leagues for office mates, family or friends — up to 50
           players per league. You can belong to up to 3 custom leagues (5 total
           including the Global and Country leagues you join automatically).
-          No signup required.
+          Private leagues with at least 3 members unlock tournament bonus picks
+          (Player of the Tournament, Golden Boot, and more). No signup required.
         </p>
       </div>
 

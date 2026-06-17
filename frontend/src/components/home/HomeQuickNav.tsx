@@ -5,6 +5,7 @@ import {
   Clapperboard,
   Grid3x3,
   MessageSquareQuote,
+  Sparkles,
   Target,
   Trophy,
 } from "lucide-react";
@@ -13,6 +14,7 @@ const sections = [
   { href: "#predictions", label: "Picks", icon: Target },
   { href: "#banter-feed", label: "Banter", icon: MessageSquareQuote },
   { href: "#rankings", label: "Rankings", icon: Trophy },
+  { href: "/bonuses", label: "Bonuses", icon: Sparkles },
   { href: "/brackets", label: "Bracket", icon: Grid3x3 },
   { href: "/studio", label: "Studio", icon: Clapperboard },
 ] as const;

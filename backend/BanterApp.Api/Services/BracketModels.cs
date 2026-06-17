@@ -6,7 +6,18 @@ public enum BracketSlotKind
     Knockout
 }
 
-public sealed record GroupQualifierRef(string Group, int Rank);
+public abstract record TeamSource;
+
+public sealed record GroupRankSource(string Group, int Rank) : TeamSource;
+
+public sealed record ThirdPlaceSource(params string[] CandidateGroups) : TeamSource;
+
+/// <summary>Third-placed team assigned by FIFA Annex C to face the group winner (e.g. 1A).</summary>
+public sealed record AnnexCThirdSource(string GroupWinnerLetter) : TeamSource;
+
+public sealed record SlotWinnerSource(string SlotId) : TeamSource;
+
+public sealed record SlotLoserSource(string SlotId) : TeamSource;
 
 public sealed record BracketSlotDefinition(
     string SlotId,
@@ -15,10 +26,8 @@ public sealed record BracketSlotDefinition(
     int RoundOrder,
     int Position,
     BracketSlotKind Kind,
-    string? SourceSlotAId,
-    string? SourceSlotBId,
-    GroupQualifierRef? QualifierA,
-    GroupQualifierRef? QualifierB);
+    TeamSource? TeamSourceA,
+    TeamSource? TeamSourceB);
 
 public sealed record GroupStandingEntry(
     string TeamCode,

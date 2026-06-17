@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Lock } from "lucide-react";
 import { PredictionCelebration } from "@/components/prediction/PredictionCelebration";
 import { ScoreCounter } from "@/components/prediction/ScoreCounter";
@@ -19,6 +19,7 @@ import {
 } from "@/lib/predictionReactions";
 import type { PredictionReaction } from "@/lib/reactionEngine";
 import { Button } from "@/components/ui/button";
+import type { Prediction } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface PredictionButtonsProps {
@@ -26,6 +27,7 @@ interface PredictionButtonsProps {
   teamA: string;
   teamB: string;
   isLocked?: boolean;
+  existingPredictions?: Prediction[];
   selectedValue?: string | null;
   onSelect?: (value: string) => void;
   userDisplayName?: string;
@@ -62,11 +64,18 @@ function doubleChanceOptions(teamA: string, teamB: string) {
   ];
 }
 
+function parseScoreline(value: string): [number, number] | null {
+  const match = /^(\d+)-(\d+)$/.exec(value.trim());
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2])];
+}
+
 export function PredictionButtons({
   matchId,
   teamA,
   teamB,
   isLocked = false,
+  existingPredictions = [],
   selectedValue,
   onSelect,
   userDisplayName = "You",
@@ -75,9 +84,28 @@ export function PredictionButtons({
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
   const [savedReaction, setSavedReaction] = useState<SavedReactionState | null>(null);
-  const [doubleSelection, setDoubleSelection] = useState<string | null>(null);
   const [justSelected, setJustSelected] = useState<string | null>(null);
-  const { createPrediction } = usePredictions();
+  const { savePrediction, isSaving } = usePredictions();
+
+  const existingByType = useMemo(() => {
+    const map = new Map<Mode, Prediction>();
+    for (const prediction of existingPredictions) {
+      map.set(prediction.predictionType, prediction);
+    }
+    return map;
+  }, [existingPredictions]);
+
+  const savedValueForMode = (type: Mode) => existingByType.get(type)?.predictionValue ?? null;
+
+  useEffect(() => {
+    const savedScore = savedValueForMode("correct_score");
+    if (!savedScore) return;
+    const parsed = parseScoreline(savedScore);
+    if (parsed) {
+      setHomeScore(parsed[0]);
+      setAwayScore(parsed[1]);
+    }
+  }, [existingByType]);
   const { award } = useAura();
   const banterMode = useBanterMode();
   const { data: myLeagues } = useMyLeagues();
@@ -123,30 +151,25 @@ export function PredictionButtons({
   };
 
   const handleSubmit = async (value: string, type: Mode) => {
-    const previousValue = selectedValue;
+    const previousValue = savedValueForMode(type) ?? selectedValue;
     onSelect?.(value);
     setJustSelected(value);
-    if (type === "double_chance") {
-      setDoubleSelection(value);
-    }
 
     showReaction(value, type);
 
     try {
-      await createPrediction.mutateAsync({
+      await savePrediction({
         matchId,
         predictionType: type,
         predictionValue: value,
       });
     } catch {
       if (previousValue) onSelect?.(previousValue);
-      setDoubleSelection(previousValue ?? null);
-      setSavedReaction(null);
       setJustSelected(null);
     }
   };
 
-  const activeValue = selectedValue;
+  const activeValue = savedValueForMode(mode) ?? selectedValue;
 
   return (
     <div className="space-y-2.5">
@@ -174,11 +197,7 @@ export function PredictionButtons({
                 type="button"
                 variant={mode === key ? "default" : "ghost"}
                 size="sm"
-                onClick={() => {
-                  setMode(key);
-                  setSavedReaction(null);
-                  setJustSelected(null);
-                }}
+                onClick={() => setMode(key)}
                 role="tab"
                 aria-selected={mode === key}
                 className={cn(
@@ -206,7 +225,7 @@ export function PredictionButtons({
                   <button
                     key={value}
                     type="button"
-                    disabled={createPrediction.isPending}
+                    disabled={isSaving}
                     onClick={() => handleSubmit(value, "result")}
                     className={cn(
                       "pick-btn flex h-auto min-h-10 flex-col gap-0 py-2 leading-tight",
@@ -242,7 +261,7 @@ export function PredictionButtons({
                   type="button"
                   size="sm"
                   className="btn-tournament h-8 cursor-pointer text-xs"
-                  disabled={createPrediction.isPending}
+                  disabled={isSaving}
                   onClick={() =>
                     handleSubmit(`${homeScore}-${awayScore}`, "correct_score")
                   }
@@ -260,8 +279,7 @@ export function PredictionButtons({
               aria-label="Double chance prediction"
             >
               {dcOptions.map((option) => {
-                const isSelected =
-                  doubleSelection === option.value || activeValue === option.value;
+                const isSelected = activeValue === option.value;
                 const isJustSelected = justSelected === option.value;
                 return (
                   <button
@@ -269,7 +287,7 @@ export function PredictionButtons({
                     type="button"
                     role="radio"
                     aria-checked={isSelected}
-                    disabled={createPrediction.isPending}
+                    disabled={isSaving}
                     onClick={() => handleSubmit(option.value, "double_chance")}
                     className={cn(
                       "pick-btn flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left",
@@ -296,7 +314,7 @@ export function PredictionButtons({
 
           {savedReaction && (
             <PredictionCelebration
-              key={`${savedReaction.reaction.key}-${savedReaction.pickLabel}`}
+              key={`${matchId}-${savedReaction.pickLabel}`}
               reaction={savedReaction.reaction}
               userName={userDisplayName}
               fixture={`${teamA} vs ${teamB}`}

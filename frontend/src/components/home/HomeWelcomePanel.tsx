@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Clapperboard, Sparkles, Trophy } from "lucid
 import { CumulativeScriptExport } from "@/components/content/CumulativeScriptExport";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
+import { BRAND } from "@/lib/brand";
 import { HOME_WELCOME_SLIDES } from "@/lib/scoring-rules";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +29,7 @@ function WelcomeSlide({
   return (
     <div className="relative z-[1] flex h-full flex-col justify-center space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="wc-badge border-gold/35 bg-gold/12 text-gold">
+        <span className="wc-badge">
           <Trophy className="size-3" aria-hidden />
           {slide.subtitle}
         </span>
@@ -38,12 +39,10 @@ function WelcomeSlide({
         </span>
       </div>
       <div className="space-y-2">
-        <h1 className="font-display text-2xl font-semibold leading-[1.15] sm:text-3xl lg:text-[2rem]">
-          Predict. Banter.{" "}
-          <span className="neon-gold-text bg-gradient-to-r from-gold via-pitch to-gold bg-clip-text text-transparent">
-            Create content.
-          </span>
+        <h1 className="font-display text-3xl leading-none sm:text-4xl lg:text-[2.5rem]">
+          {BRAND.name}
         </h1>
+        <p className="text-base font-semibold text-pitch sm:text-lg">{BRAND.tagline}</p>
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
           {slide.body}
         </p>
@@ -62,7 +61,7 @@ function WelcomeSlide({
           href="#predictions"
           className={cn(
             buttonVariants({ variant: "outline", size: "sm" }),
-            "h-9 border-pitch/30 px-4 text-xs transition-colors duration-200 hover:border-pitch/50 hover:bg-pitch/5"
+            "h-9 border-electric/30 px-4 text-xs font-bold uppercase tracking-wider transition-colors duration-200 hover:border-electric/50 hover:bg-electric/5"
           )}
         >
           <Sparkles className="size-3.5" aria-hidden />
@@ -93,7 +92,7 @@ function ConceptSlide({ slide }: { slide: Slide }) {
       >
         {slide.subtitle}
       </p>
-      <h2 className="font-display text-lg font-semibold leading-snug sm:text-xl">{slide.title}</h2>
+      <h2 className="font-display text-xl leading-none sm:text-2xl">{slide.title}</h2>
       <p className="text-sm leading-relaxed text-muted-foreground">{slide.body}</p>
       {slide.id === "content" && (
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -126,7 +125,7 @@ export function HomeWelcomePanel() {
 
   return (
     <section
-      className="welcome-panel mb-4 rounded-2xl border border-border/80 p-5 shadow-md sm:p-6 lg:p-7"
+      className="welcome-panel mb-4 rounded-lg p-5 sm:p-6 lg:p-7"
       aria-roledescription="carousel"
       aria-label="Welcome — turn your predictions into content"
       onMouseEnter={() => setPaused(true)}
@@ -161,7 +160,7 @@ export function HomeWelcomePanel() {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-2 border-t border-border pt-3">
+      <div className="mt-4 flex items-center justify-between gap-2 border-t border-logo-green/35 pt-3">
         <div className="flex gap-1.5" role="tablist" aria-label="Slides">
           {slides.map((s, i) => (
             <button
@@ -174,7 +173,7 @@ export function HomeWelcomePanel() {
               className={cn(
                 "cursor-pointer rounded-full transition-all duration-300",
                 i === index
-                  ? "h-1.5 w-6 bg-gradient-to-r from-gold to-pitch"
+                  ? "h-1.5 w-6 bg-gradient-to-r from-electric to-pitch"
                   : "h-1.5 w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/60"
               )}
             />

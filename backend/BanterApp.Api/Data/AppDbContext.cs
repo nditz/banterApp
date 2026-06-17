@@ -16,6 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<GeneratedContent> GeneratedContents => Set<GeneratedContent>();
     public DbSet<NewsFeedItem> NewsFeedItems => Set<NewsFeedItem>();
     public DbSet<BracketPick> BracketPicks => Set<BracketPick>();
+    public DbSet<TournamentBonusPick> TournamentBonusPicks => Set<TournamentBonusPick>();
+    public DbSet<TournamentAwardResult> TournamentAwardResults => Set<TournamentAwardResult>();
     public DbSet<ExternalId> ExternalIds => Set<ExternalId>();
     public DbSet<SyncRun> SyncRuns => Set<SyncRun>();
     public DbSet<SyncError> SyncErrors => Set<SyncError>();
@@ -131,6 +133,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.User).WithMany(u => u.BracketPicks).HasForeignKey(x => x.UserId);
             e.HasOne(x => x.AnonymousUser).WithMany(a => a.BracketPicks).HasForeignKey(x => x.AnonymousUserId);
             e.HasOne(x => x.Match).WithMany().HasForeignKey(x => x.MatchId);
+        });
+
+        modelBuilder.Entity<TournamentBonusPick>(e =>
+        {
+            e.ToTable("tournament_bonus_picks");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.UserId, x.Category });
+            e.HasIndex(x => new { x.AnonymousUserId, x.Category });
+            e.Property(x => x.PickValue).HasMaxLength(100);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
+            e.HasOne(x => x.AnonymousUser).WithMany().HasForeignKey(x => x.AnonymousUserId);
+        });
+
+        modelBuilder.Entity<TournamentAwardResult>(e =>
+        {
+            e.ToTable("tournament_award_results");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Category).IsUnique();
+            e.Property(x => x.AnswerValue).HasMaxLength(100);
+            e.Property(x => x.AnswerDisplay).HasMaxLength(120);
         });
 
         modelBuilder.Entity<ExternalId>(e =>

@@ -4,7 +4,7 @@ import {
 } from "@/reactions/reactionContent";
 
 const BANTER_FEED_KEY = "banter_local_feed";
-const MAX_ENTRIES = 12;
+const MAX_ENTRIES = 50;
 
 export interface LocalBanterEntry {
   id: string;

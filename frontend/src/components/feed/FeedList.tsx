@@ -10,9 +10,11 @@ import { useFeed } from "@/hooks/useFeed";
 
 interface FeedListProps {
   embedded?: boolean;
+  /** When true, only auto-load on scroll — no manual "Load more" button */
+  autoLoad?: boolean;
 }
 
-export function FeedList({ embedded = false }: FeedListProps) {
+export function FeedList({ embedded = false, autoLoad = false }: FeedListProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
     useFeed();
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -27,7 +29,7 @@ export function FeedList({ embedded = false }: FeedListProps) {
           fetchNextPage();
         }
       },
-      { rootMargin: "200px" }
+      { rootMargin: "400px" }
     );
 
     observer.observe(element);
@@ -81,7 +83,7 @@ export function FeedList({ embedded = false }: FeedListProps) {
         {isFetchingNextPage && (
           <Loader2 className="size-5 animate-spin text-muted-foreground" aria-label="Loading more" />
         )}
-        {hasNextPage && !isFetchingNextPage && (
+        {hasNextPage && !isFetchingNextPage && !autoLoad && (
           <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => fetchNextPage()}>
             Load more
           </Button>

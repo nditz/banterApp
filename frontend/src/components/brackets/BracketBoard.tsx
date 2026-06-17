@@ -9,6 +9,7 @@ import {
   type GroupStanding,
 } from "@/hooks/useBrackets";
 import { TermsAcceptPanel } from "@/components/session/TermsAcceptPanel";
+import { BracketQualificationPanel } from "@/components/brackets/BracketQualificationPanel";
 import { TeamLabel } from "@/components/brackets/TeamFlag";
 import { useNeedsTerms } from "@/hooks/useNeedsTerms";
 import { ApiError } from "@/lib/api";
@@ -39,7 +40,10 @@ function GroupStandingsTable({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.teamCode} className={cn(row.rank <= 2 && "font-semibold text-foreground")}>
+            <tr key={row.teamCode} className={cn(
+              row.rank <= 2 && "font-semibold text-foreground",
+              row.rank === 3 && "text-muted-foreground"
+            )}>
               <td className="py-0.5 pr-1">{row.rank}</td>
               <td className="py-0.5">
                 <TeamLabel code={row.teamCode} name={row.teamName} compact />
@@ -200,10 +204,13 @@ export function BracketBoard() {
 
   return (
     <div className="space-y-6">
+      {data.qualification && <BracketQualificationPanel qualification={data.qualification} />}
+
       <section>
         <h2 className="mb-3 text-sm font-bold text-foreground">Group stage predictions</h2>
         <p className="mb-4 text-xs text-muted-foreground">
-          Pick every group match. Standings update live and the top two from each group fill the Round of 16 automatically.
+          Pick every group match across 12 groups (A–L). Top two per group qualify automatically;
+          the eight best third-place teams are ranked and placed via FIFA Annex C (see above).
         </p>
 
         <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -240,7 +247,8 @@ export function BracketBoard() {
       <section>
         <h2 className="mb-3 text-sm font-bold text-foreground">Knockout bracket</h2>
         <p className="mb-4 text-xs text-muted-foreground">
-          Winners propagate round by round through the Final. Changing an earlier pick clears downstream selections.
+          Round of 32 → Round of 16 → quarter-finals → semi-finals → Final (plus third-place play-off).
+          Winners propagate round by round; changing an earlier pick clears downstream selections.
         </p>
         <div className="overflow-x-auto pb-2">
           <div className="flex min-w-max gap-4">

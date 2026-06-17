@@ -37,10 +37,6 @@ public static class DatabaseSeeder
         {
             await SeedMatchesAsync(db, sports, cancellationToken);
         }
-        else
-        {
-            await SeedMissingKnockoutMatchesAsync(db, sports, cancellationToken);
-        }
 
         if (!await db.NewsFeedItems.AnyAsync(cancellationToken))
         {
@@ -74,7 +70,9 @@ public static class DatabaseSeeder
             });
         }
 
-        if (!await db.Pundits.AnyAsync(cancellationToken))
+        var useLiveSports = sports is not MockSportsDataProvider;
+
+        if (!useLiveSports && !await db.Pundits.AnyAsync(cancellationToken))
         {
             var pundits = new[]
             {

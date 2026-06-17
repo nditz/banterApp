@@ -5,10 +5,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-dm-sans);
+  --font-sans: var(--font-barlow);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-fraunces);
-  --font-display: var(--font-fraunces);
+  --font-heading: var(--font-barlow-condensed);
+  --font-display: var(--font-barlow-condensed);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-muted: var(--brand-muted);
@@ -23,6 +23,7 @@
   --color-chaos: var(--chaos);
   --color-aura: var(--aura);
   --color-electric: var(--electric);
+  --color-logo-green: var(--logo-green);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -59,61 +60,62 @@
   --radius-2xl: calc(var(--radius) * 1.8);
 }
 
-/* BanterApp — warm neutral: stone, soft slate, pitch & gold accents */
+/* Ball Knowledge UI — Midnight Broadcast: cool slate, navy header, cyan + pitch green */
 :root {
-  --background: #f3efe6;
-  --foreground: #2c2926;
-  --card: #fffcf7;
-  --card-foreground: #2c2926;
-  --popover: #fffcf7;
-  --popover-foreground: #2c2926;
-  --brand: #3d4f5c;
-  --brand-foreground: #faf7f2;
-  --brand-muted: #4a5d6b;
-  --gold: #c9922a;
-  --gold-foreground: #2c2926;
-  --pitch: #2d8a62;
+  --background: #e4eaf2;
+  --foreground: #0c1425;
+  --card: #ffffff;
+  --card-foreground: #0c1425;
+  --popover: #ffffff;
+  --popover-foreground: #0c1425;
+  --brand: #2a4668;
+  --brand-foreground: #f1f5f9;
+  --brand-muted: #3d5f85;
+  --gold: #f59e0b;
+  --gold-foreground: #0c1425;
+  --pitch: #22c55e;
   --pitch-foreground: #ffffff;
-  --flare: #d4624a;
-  --smart: #047857;
-  --safe: #b45309;
-  --underdog: #6d28d9;
-  --chaos: #be123c;
-  --aura: #ca8a04;
-  --electric: #2563eb;
-  --primary: #2d6a4f;
+  --flare: #ef4444;
+  --smart: #059669;
+  --safe: #d97706;
+  --underdog: #8b5cf6;
+  --chaos: #dc2626;
+  --aura: #eab308;
+  --electric: #06b6d4;
+  --logo-green: #9fdc03;
+  --primary: #0891b2;
   --primary-foreground: #ffffff;
-  --secondary: #e8e2d8;
-  --secondary-foreground: #2c2926;
-  --muted: #e8e2d8;
-  --muted-foreground: #6b6560;
-  --accent: #c9922a;
-  --accent-foreground: #2c2926;
-  --destructive: #c53030;
-  --border: #d4cdc2;
-  --input: #fffcf7;
-  --ring: #2d8a62;
-  --chart-1: #3d4f5c;
-  --chart-2: #c9922a;
-  --chart-3: #2d8a62;
-  --chart-4: #d4624a;
-  --chart-5: #2563eb;
-  --radius: 0.75rem;
-  --sidebar: #fffcf7;
-  --sidebar-foreground: #2c2926;
-  --sidebar-primary: #2d6a4f;
+  --secondary: #dce4ef;
+  --secondary-foreground: #0c1425;
+  --muted: #dce4ef;
+  --muted-foreground: #5a6b82;
+  --accent: #06b6d4;
+  --accent-foreground: #0c1425;
+  --destructive: #dc2626;
+  --border: #c5d0e0;
+  --input: #ffffff;
+  --ring: #06b6d4;
+  --chart-1: #0891b2;
+  --chart-2: #f59e0b;
+  --chart-3: #22c55e;
+  --chart-4: #ef4444;
+  --chart-5: #8b5cf6;
+  --radius: 0.5rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0c1425;
+  --sidebar-primary: #0891b2;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e8e2d8;
-  --sidebar-accent-foreground: #2c2926;
-  --sidebar-border: #d4cdc2;
-  --sidebar-ring: #2d8a62;
+  --sidebar-accent: #dce4ef;
+  --sidebar-accent-foreground: #0c1425;
+  --sidebar-border: #c5d0e0;
+  --sidebar-ring: #06b6d4;
   --strip-gradient: linear-gradient(
     105deg,
-    #3d4f5c 0%,
-    #4a6270 50%,
-    #2d6a4f 100%
+    #2a4668 0%,
+    #3d5f85 45%,
+    #0891b2 100%
   );
-  --hero-glow: rgba(201, 146, 42, 0.14);
+  --hero-glow: rgba(6, 182, 212, 0.14);
 }
 
 @layer base {
@@ -131,8 +133,10 @@
   }
 
   h1, h2, h3, h4 {
-    font-family: var(--font-fraunces), Georgia, serif;
-    font-weight: 600;
+    font-family: var(--font-barlow-condensed), system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
   }
 
   .stadium-bg::before {
@@ -172,7 +176,7 @@
 
 @layer utilities {
   .welcome-slide-viewport {
-    height: 18.5rem; /* fixed so carousel does not jump between slides */
+    height: 18.5rem;
     overflow: hidden;
   }
 
@@ -189,72 +193,78 @@
   }
 
   .font-display {
-    font-family: var(--font-fraunces), var(--font-dm-sans), Georgia, serif;
-    font-optical-sizing: auto;
+    font-family: var(--font-barlow-condensed), system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
   }
 
   .neon-gold-text {
-    text-shadow: none;
+    text-shadow: 0 0 24px color-mix(in srgb, var(--electric) 30%, transparent);
   }
 
-  /* Hero panel: glass over the stadium photo with a gold→pitch signature bar */
   .welcome-panel {
     position: relative;
     overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--logo-green) 55%, transparent);
     background:
-      radial-gradient(ellipse at 85% 15%, var(--hero-glow), transparent 50%),
-      radial-gradient(ellipse at 10% 90%, color-mix(in srgb, var(--pitch) 12%, transparent), transparent 45%),
-      color-mix(in srgb, var(--card) 86%, transparent);
-    backdrop-filter: blur(12px) saturate(1.2);
-    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+      radial-gradient(ellipse at 90% 10%, var(--hero-glow), transparent 55%),
+      radial-gradient(ellipse at 5% 95%, color-mix(in srgb, var(--pitch) 10%, transparent), transparent 50%),
+      var(--card);
     box-shadow:
-      0 1px 0 color-mix(in srgb, var(--gold) 25%, transparent) inset,
-      0 8px 32px color-mix(in srgb, var(--brand) 8%, transparent);
+      0 1px 0 color-mix(in srgb, var(--electric) 20%, transparent) inset,
+      0 12px 40px color-mix(in srgb, var(--brand) 10%, transparent);
   }
 
   .welcome-panel::before {
     content: "";
     position: absolute;
     inset: 0 0 auto 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--gold), var(--pitch), var(--gold));
+    height: 4px;
+    background: linear-gradient(90deg, var(--logo-green), color-mix(in srgb, var(--logo-green) 70%, white), var(--logo-green));
     z-index: 2;
   }
 
   .welcome-panel::after {
     content: "";
     position: absolute;
-    inset: 0;
+    top: 0;
+    right: 0;
+    width: 40%;
+    height: 100%;
     pointer-events: none;
-    opacity: 0.35;
-    background-image:
-      linear-gradient(color-mix(in srgb, var(--border) 40%, transparent) 1px, transparent 1px),
-      linear-gradient(90deg, color-mix(in srgb, var(--border) 40%, transparent) 1px, transparent 1px);
-    background-size: 24px 24px;
-    mask-image: radial-gradient(ellipse at 50% 30%, black 0%, transparent 72%);
+    opacity: 0.04;
+    background: repeating-linear-gradient(
+      -55deg,
+      transparent,
+      transparent 6px,
+      var(--brand) 6px,
+      var(--brand) 7px
+    );
+    mask-image: linear-gradient(to left, black, transparent);
   }
 
   .home-stat-card {
-    @apply relative overflow-hidden rounded-lg border border-border px-3 py-2.5 transition-colors duration-200;
-    background: color-mix(in srgb, var(--card) 88%, transparent);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    @apply relative overflow-hidden rounded-md border border-logo-green/50 px-3 py-2.5 transition-all duration-200;
+    background: var(--card);
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--brand) 6%, transparent);
   }
 
   .home-stat-card:hover {
-    border-color: color-mix(in srgb, var(--gold) 35%, var(--border));
+    border-color: color-mix(in srgb, var(--logo-green) 75%, transparent);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--logo-green) 12%, transparent);
+    transform: translateY(-1px);
   }
 
   .home-quick-nav-pill {
-    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors duration-200;
-    background: color-mix(in srgb, var(--card) 85%, transparent);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-logo-green/45 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground transition-all duration-200;
+    background: var(--card);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--brand) 5%, transparent);
   }
 
   .home-quick-nav-pill:hover {
-    @apply border-pitch/40 text-pitch;
-    background: color-mix(in srgb, var(--pitch) 8%, var(--card));
+    @apply border-logo-green/70 text-logo-green;
+    background: color-mix(in srgb, var(--logo-green) 8%, var(--card));
   }
 
   .home-quick-nav-pill:focus-visible {
@@ -262,42 +272,41 @@
   }
 
   .home-section-label {
-    @apply mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground;
+    @apply mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground;
   }
 
   .home-section-label::before {
     content: "";
-    @apply h-px w-4 bg-gradient-to-r from-gold to-pitch;
+    @apply h-0.5 w-5 bg-logo-green;
   }
 
   .content-panel {
-    @apply overflow-hidden rounded-xl border border-border shadow-sm;
-    background: color-mix(in srgb, var(--card) 86%, transparent);
-    backdrop-filter: blur(10px) saturate(1.15);
-    -webkit-backdrop-filter: blur(10px) saturate(1.15);
+    @apply overflow-hidden rounded-lg border border-logo-green/50;
+    background: var(--card);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--brand) 6%, transparent);
     transition: box-shadow 0.25s ease, border-color 0.25s ease;
   }
 
   .content-panel:hover {
-    @apply shadow-md;
-    border-color: color-mix(in srgb, var(--panel-accent, var(--gold)) 35%, var(--border));
+    border-color: color-mix(in srgb, var(--panel-accent, var(--logo-green)) 70%, transparent);
     box-shadow:
-      0 4px 24px color-mix(in srgb, var(--panel-accent, var(--gold)) 6%, transparent),
-      0 1px 0 color-mix(in srgb, var(--panel-accent, var(--gold)) 15%, transparent) inset;
+      0 6px 24px color-mix(in srgb, var(--panel-accent, var(--logo-green)) 10%, transparent),
+      0 1px 0 color-mix(in srgb, var(--panel-accent, var(--logo-green)) 15%, transparent) inset;
   }
 
   .content-panel-header {
-    @apply relative border-b border-border bg-brand px-4 py-2.5;
+    @apply relative border-b border-logo-green/35 px-4 py-3;
+    background: linear-gradient(135deg, var(--brand-muted) 0%, var(--brand) 100%);
   }
 
   .content-panel-header::before {
     content: "";
     @apply absolute bottom-0 left-0 top-0 w-1;
-    background: var(--panel-accent, var(--gold));
+    background: var(--panel-accent, var(--logo-green));
   }
 
   .content-panel-title {
-    @apply text-sm font-semibold text-brand-foreground;
+    @apply text-sm font-bold uppercase tracking-wider text-brand-foreground;
   }
 
   .content-panel-body {
@@ -317,8 +326,9 @@
   }
 
   .tournament-strip {
-    @apply relative mb-4 overflow-hidden rounded-xl border border-border shadow-sm;
+    @apply relative mb-4 overflow-hidden rounded-lg border border-logo-green/50;
     background: var(--strip-gradient);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--brand) 15%, transparent);
   }
 
   .tournament-strip-inner {
@@ -327,7 +337,7 @@
 
   .tournament-strip::after {
     content: "";
-    @apply pointer-events-none absolute inset-0 opacity-[0.07];
+    @apply pointer-events-none absolute inset-0 opacity-[0.06];
     background-image: repeating-linear-gradient(
       -45deg,
       transparent,
@@ -338,11 +348,11 @@
   }
 
   .wc-badge {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gold;
+    @apply inline-flex items-center gap-1.5 rounded-md border border-electric/40 bg-electric/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-electric;
   }
 
   .live-chip {
-    @apply inline-flex items-center gap-1 rounded-full bg-pitch/20 px-2 py-0.5 text-[10px] font-semibold text-pitch;
+    @apply inline-flex items-center gap-1 rounded-md bg-pitch/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pitch;
   }
 
   .live-chip-dot {
@@ -357,38 +367,35 @@
   }
 
   .match-card {
-    @apply cursor-default rounded-xl border border-border transition-all duration-200;
-    background: color-mix(in srgb, var(--card) 88%, transparent);
-    backdrop-filter: blur(10px) saturate(1.15);
-    -webkit-backdrop-filter: blur(10px) saturate(1.15);
+    @apply cursor-default rounded-lg border border-logo-green/50 transition-all duration-200;
+    background: var(--card);
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--brand) 5%, transparent);
   }
 
   .match-card:hover {
-    border-color: color-mix(in srgb, var(--pitch) 35%, var(--border));
+    border-color: color-mix(in srgb, var(--logo-green) 75%, transparent);
     box-shadow:
-      0 4px 20px color-mix(in srgb, var(--pitch) 8%, transparent),
-      0 1px 0 color-mix(in srgb, var(--gold) 12%, transparent) inset;
+      0 6px 20px color-mix(in srgb, var(--logo-green) 12%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--logo-green) 20%, transparent) inset;
   }
 
   .match-card-featured {
-    @apply border-t-2 border-t-gold;
+    @apply border-t-[3px] border-t-logo-green;
   }
 
   .glass-card {
-    background: color-mix(in srgb, var(--card) 82%, transparent);
-    backdrop-filter: blur(12px) saturate(1.2);
-    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    background: var(--card);
     box-shadow:
-      0 1px 0 color-mix(in srgb, var(--foreground) 6%, transparent) inset,
-      0 8px 32px color-mix(in srgb, var(--background) 40%, transparent);
+      0 1px 0 color-mix(in srgb, var(--foreground) 4%, transparent) inset,
+      0 8px 32px color-mix(in srgb, var(--brand) 8%, transparent);
   }
 
   .pick-btn {
-    @apply cursor-pointer rounded-lg border border-border bg-card/80 text-[11px] font-medium transition-all duration-200;
+    @apply cursor-pointer rounded-md border border-border bg-card text-[11px] font-semibold uppercase tracking-wide transition-all duration-200;
   }
 
   .pick-btn:hover:not(:disabled) {
-    @apply border-pitch/40 bg-pitch/5;
+    @apply border-pitch/50 bg-pitch/5;
   }
 
   .pick-btn:active:not(:disabled) {
@@ -396,12 +403,13 @@
   }
 
   .pick-btn-selected {
-    @apply border-pitch bg-pitch/15 font-semibold text-pitch ring-2 ring-pitch/40;
-    box-shadow: 0 0 16px color-mix(in srgb, var(--pitch) 25%, transparent);
+    @apply border-pitch bg-pitch/15 font-bold text-pitch ring-2 ring-pitch/40;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--pitch) 25%, transparent);
   }
 
   .pick-btn-just-selected {
     animation: pick-success-glow 2.4s ease-out forwards;
+    box-shadow: 0 0 12px color-mix(in srgb, var(--pitch) 20%, transparent);
   }
 
   @keyframes pick-success-glow {
@@ -431,7 +439,7 @@
   .pick-btn-chaos { @apply border-chaos/50 bg-chaos/10 text-chaos ring-chaos/40; }
 
   .mobile-bottom-nav {
-    box-shadow: 0 -4px 24px color-mix(in srgb, var(--background) 60%, transparent);
+    box-shadow: 0 -4px 24px color-mix(in srgb, var(--brand) 12%, transparent);
   }
 
   .mobile-nav-item {
@@ -447,36 +455,34 @@
   }
 
   .feed-card {
-    @apply rounded-xl border border-border transition-all duration-200;
-    background: color-mix(in srgb, var(--card) 90%, transparent);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    @apply rounded-lg border border-logo-green/50 transition-all duration-200;
+    background: var(--card);
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--brand) 4%, transparent);
   }
 
   .feed-card:hover {
-    border-color: color-mix(in srgb, var(--panel-accent, var(--flare)) 30%, var(--border));
+    border-color: color-mix(in srgb, var(--panel-accent, var(--flare)) 35%, var(--border));
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--flare) 6%, transparent);
   }
 
   .banter-line {
-    @apply rounded-xl border border-border px-3 py-2.5 text-sm transition-colors duration-200;
-    background: color-mix(in srgb, var(--card) 85%, transparent);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    @apply rounded-lg border border-logo-green/50 px-3 py-2.5 text-sm transition-all duration-200;
+    background: var(--card);
   }
 
   .banter-line:hover {
-    border-color: color-mix(in srgb, var(--flare) 35%, var(--border));
+    border-color: color-mix(in srgb, var(--flare) 40%, var(--border));
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--flare) 6%, transparent);
   }
 
   .aura-badge-glow {
-    box-shadow: 0 0 20px color-mix(in srgb, var(--aura) 30%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--aura) 35%, transparent);
   }
 
   .reaction-card-themed {
-    @apply rounded-xl border p-4;
-    background: color-mix(in srgb, var(--card) 88%, transparent);
-    backdrop-filter: blur(10px) saturate(1.15);
-    -webkit-backdrop-filter: blur(10px) saturate(1.15);
+    @apply rounded-lg border border-logo-green/50 p-4;
+    background: var(--card);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--brand) 5%, transparent);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -487,14 +493,23 @@
     .pick-btn-just-selected {
       animation: none;
     }
+
+    .home-stat-card:hover {
+      transform: none;
+    }
   }
 
   .btn-tournament {
-    @apply bg-gold font-semibold text-gold-foreground shadow-sm hover:bg-gold/90;
+    @apply bg-logo-green font-bold uppercase tracking-wider text-[#050805] shadow-md hover:brightness-105;
+    box-shadow: 0 2px 12px color-mix(in srgb, var(--logo-green) 35%, transparent);
+  }
+
+  .header-accent-rule {
+    @apply h-1 bg-gradient-to-r from-transparent via-logo-green to-transparent;
   }
 
   .header-gold-rule {
-    @apply h-0.5 bg-gradient-to-r from-gold via-pitch to-gold;
+    @apply h-1 bg-gradient-to-r from-transparent via-logo-green to-transparent;
   }
 
   .feed-accent-banter {
@@ -506,7 +521,7 @@
   }
 
   .feed-accent-news {
-    @apply border-l-[3px] border-l-blue-600;
+    @apply border-l-[3px] border-l-electric;
   }
 
   .feed-accent-leaderboard {
@@ -518,15 +533,15 @@
   }
 
   .rank-gold {
-    @apply bg-gold/10;
+    @apply bg-gold/12;
   }
 
   .rank-silver {
-    @apply bg-stone-200/70;
+    @apply bg-slate-200/80;
   }
 
   .rank-bronze {
-    @apply bg-orange-100/90;
+    @apply bg-orange-100;
   }
 
   @keyframes pulse-dot {
@@ -541,23 +556,21 @@
     }
   }
 
-  /* Score prediction slider */
   .score-slider {
-    @apply h-1.5 cursor-pointer appearance-none rounded-full bg-border accent-pitch outline-none;
+    @apply h-1.5 cursor-pointer appearance-none rounded-full bg-border accent-electric outline-none;
     &::-webkit-slider-thumb {
-      @apply size-4 appearance-none rounded-full bg-pitch shadow ring-2 ring-pitch/30 transition-transform active:scale-110;
+      @apply size-4 appearance-none rounded-full bg-electric shadow ring-2 ring-electric/30 transition-transform active:scale-110;
     }
     &::-moz-range-thumb {
-      @apply size-4 rounded-full border-0 bg-pitch shadow ring-2 ring-pitch/30;
+      @apply size-4 rounded-full border-0 bg-electric shadow ring-2 ring-electric/30;
     }
     &:focus-visible::-webkit-slider-thumb {
-      @apply ring-pitch ring-offset-2;
+      @apply ring-electric ring-offset-2;
     }
   }
 
-  /* Feed reaction buttons */
   .reaction-btn {
-    @apply inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-all duration-150 hover:border-pitch/40 hover:text-pitch;
+    @apply inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground transition-all duration-150 hover:border-electric/50 hover:text-electric;
     &.active-agree  { @apply border-pitch/60 bg-pitch/10 text-pitch; }
     &.active-stale  { @apply border-muted-foreground/40 bg-muted/50 text-muted-foreground; }
     &.active-disagree { @apply border-flare/60 bg-flare/10 text-flare; }

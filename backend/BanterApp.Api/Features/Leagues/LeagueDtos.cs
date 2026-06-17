@@ -23,7 +23,8 @@ public sealed record MyLeagueResponse(
     int MyPoints,
     DateTimeOffset CreatedAt,
     string Kind,
-    string? CountryCode = null);
+    string? CountryCode = null,
+    bool BonusPointsEnabled = false);
 
 public sealed record LeagueLimitsResponse(
     int CustomLeaguesUsed,
@@ -47,9 +48,11 @@ public sealed record LeagueStandingEntry(
     Guid? UserId,
     string DisplayName,
     int TotalPoints,
-    int PredictionsCount);
+    int PredictionsCount,
+    int BonusPoints = 0);
 
 public sealed record LeagueStandingsResponse(
     Guid LeagueId,
     string LeagueName,
-    IReadOnlyList<LeagueStandingEntry> Standings);
+    IReadOnlyList<LeagueStandingEntry> Standings,
+    bool BonusPointsEnabled = false);

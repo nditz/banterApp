@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BRAND } from "@/lib/brand";
 import { CONCEPT_SLIDES } from "@/lib/scoring-rules";
 import { cn } from "@/lib/utils";
 
@@ -124,7 +125,7 @@ export function ConceptSlider({
       <div
         className={cn("bg-card", className)}
         aria-roledescription="carousel"
-        aria-label="BanterApp core concepts"
+        aria-label={`${BRAND.name} core concepts`}
       >
         {slideContent}
       </div>
@@ -134,11 +135,11 @@ export function ConceptSlider({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-md border border-border bg-card shadow-sm",
+        "relative overflow-hidden rounded-md border border-logo-green/50 bg-card shadow-sm",
         className
       )}
       aria-roledescription="carousel"
-      aria-label="BanterApp core concepts"
+      aria-label={`${BRAND.name} core concepts`}
     >
       {slideContent}
     </section>

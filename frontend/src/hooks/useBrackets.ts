@@ -24,8 +24,6 @@ export interface BracketSlot {
   kickoffTime: string | null;
   venue: string;
   qualifierLabel: string | null;
-  sourceSlotAId: string | null;
-  sourceSlotBId: string | null;
 }
 
 export interface BracketRound {
@@ -49,6 +47,29 @@ export interface GroupStanding {
   rank: number;
 }
 
+export interface BracketQualification {
+  rulesSummary: string;
+  rankingCriteria: string[];
+  groupsComplete: number;
+  totalGroups: number;
+  isComplete: boolean;
+  annexCResolved: boolean;
+  combinationKey: string | null;
+  thirdPlaceRanking: Array<{
+    group: string;
+    teamCode: string;
+    teamName: string;
+    points: number;
+    goalDifference: number;
+    goalsFor: number;
+    rankAmongThirds: number;
+    qualified: boolean;
+    groupComplete: boolean;
+  }>;
+  qualifiedGroups: string[];
+  annexCSlotMapping: Record<string, string | null> | null;
+}
+
 export interface BracketState {
   rounds: BracketRound[];
   picks: Array<{
@@ -58,6 +79,7 @@ export interface BracketState {
     lockedAt: string | null;
   }>;
   standings: Record<string, GroupStanding[]>;
+  qualification: BracketQualification;
 }
 
 export function useBracket() {

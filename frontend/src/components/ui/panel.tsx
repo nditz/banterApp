@@ -34,7 +34,7 @@ export function Panel({
       className={cn("content-panel", accentClass[accent], className)}
       aria-labelledby={id}
     >
-      <div className="content-panel-header flex items-center justify-between gap-2 bg-gradient-to-r from-brand to-brand-muted">
+      <div className="content-panel-header flex items-center justify-between gap-2">
         <div>
           <h2 id={id} className="content-panel-title font-display font-semibold">
             {title}

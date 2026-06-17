@@ -2,20 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Clapperboard,
-  Grid3x3,
-  History,
-  Home,
-  Trophy,
-} from "lucide-react";
+import { Clapperboard, Grid3x3, History, Home, Sparkles, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/#predictions", label: "Picks", icon: Grid3x3 },
-  { href: "/brackets", label: "Bracket", icon: Trophy },
-  { href: "/studio", label: "Studio", icon: Clapperboard },
+  { href: "/bonuses", label: "Bonuses", icon: Sparkles },
+  { href: "/brackets", label: "Knockout", icon: Trophy },
   { href: "/predictions/history", label: "Receipts", icon: History },
 ] as const;
 
@@ -30,7 +24,7 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-card/90 backdrop-blur-xl lg:hidden"
+      className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card lg:hidden"
       aria-label="Mobile navigation"
     >
       <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom,0px)]">
@@ -41,17 +35,17 @@ export function MobileBottomNav() {
               key={href}
               href={href}
               className={cn(
-                "mobile-nav-item flex min-h-[3.25rem] min-w-[3.5rem] flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[10px] font-medium transition-colors duration-200",
+                "mobile-nav-item flex min-h-[3.25rem] min-w-[3.5rem] flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors duration-200",
                 active
-                  ? "text-pitch"
+                  ? "text-electric"
                   : "text-muted-foreground hover:text-foreground"
               )}
               aria-current={active ? "page" : undefined}
             >
               <span
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-xl transition-all duration-200",
-                  active && "bg-pitch/15 ring-1 ring-pitch/30"
+                  "flex size-8 items-center justify-center rounded-md transition-all duration-200",
+                  active && "bg-electric/12 ring-1 ring-electric/30"
                 )}
               >
                 <Icon className="size-[18px]" aria-hidden />

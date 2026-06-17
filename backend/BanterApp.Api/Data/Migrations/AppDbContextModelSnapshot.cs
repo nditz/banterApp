@@ -835,6 +835,76 @@ namespace BanterApp.Api.Data.Migrations
                     b.ToTable("sync_runs", (string)null);
                 });
 
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.TournamentAwardResult", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AnnouncedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AnswerDisplay")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("AnswerValue")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Category")
+                        .IsUnique();
+
+                    b.ToTable("tournament_award_results", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.TournamentBonusPick", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AnonymousUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LockedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PickValue")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("PointsAwarded")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnonymousUserId", "Category");
+
+                    b.HasIndex("UserId", "Category");
+
+                    b.ToTable("tournament_bonus_picks", (string)null);
+                });
+
             modelBuilder.Entity("BanterApp.Api.Data.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1027,6 +1097,21 @@ namespace BanterApp.Api.Data.Migrations
                         .HasForeignKey("SyncRunId");
 
                     b.Navigation("SyncRun");
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.TournamentBonusPick", b =>
+                {
+                    b.HasOne("BanterApp.Api.Data.Entities.AnonymousUser", "AnonymousUser")
+                        .WithMany()
+                        .HasForeignKey("AnonymousUserId");
+
+                    b.HasOne("BanterApp.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("AnonymousUser");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.AnonymousUser", b =>

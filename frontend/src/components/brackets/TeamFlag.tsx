@@ -12,7 +12,7 @@ interface TeamFlagProps {
 }
 
 export function TeamFlag({ code, name, size = 20, className }: TeamFlagProps) {
-  const url = getFlagUrl(code, size <= 20 ? 20 : 40);
+  const url = getFlagUrl(code, size <= 20 ? 20 : 40, name);
 
   if (!url) {
     return (

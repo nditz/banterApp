@@ -29,8 +29,8 @@ SPORTS_API_KEY=your-api-football-key
 
 1. **Group stage** — one slot per group fixture (`grp-{matchId}`). User picks a winner.
 2. **Standings** — `GroupStandingsService` scores picks (+3 for predicted win) and merges finished real results.
-3. **Round of 16** — slots use `GroupQualifierRef` (e.g. Group A 1st vs Group B 2nd). Teams appear when every match in those groups is picked or locked.
-4. **Knockout** — QF → SF → Final resolve winners from upstream slot picks; changing a pick clears downstream selections.
+3. **Round of 32** — 16 slots: 8× winner vs runner-up (other groups), 8× winner vs third-placed team. Third-placers ranked globally (pts → GD → GF); FIFA **Annex C** (`Data/fifa-2026-annex-c-assignments.json`, 495 rows) maps the qualifying eight groups to R32 opponents.
+4. **Round of 16 → Final** — winners propagate; third-place play-off uses semi-final losers.
 
 ## Flags
 

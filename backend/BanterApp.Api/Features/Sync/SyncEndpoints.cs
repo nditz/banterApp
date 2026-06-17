@@ -109,5 +109,52 @@ public static class SyncEndpoints
             recurring.Trigger(jobId);
             return Results.Ok(new { triggered = jobId });
         });
+
+        group.MapPost("/reset-demo-data", async (
+            LiveDataResetService reset,
+            IWebHostEnvironment env,
+            CancellationToken ct) =>
+        {
+            if (!env.IsDevelopment())
+            {
+                return Results.NotFound();
+            }
+
+            var result = await reset.ResetDemoDataAsync(ct);
+            return Results.Ok(result);
+        });
+
+        group.MapPost("/refresh-all", async (
+            LiveDataResetService reset,
+            IWebHostEnvironment env,
+            IRecurringJobManager recurring,
+            CancellationToken ct) =>
+        {
+            if (!env.IsDevelopment())
+            {
+                return Results.NotFound();
+            }
+
+            var cleared = await reset.ResetDemoDataAsync(ct);
+
+            foreach (var jobId in new[]
+                     {
+                         ScoreSyncJob.JobId,
+                         StandingsSyncJob.JobId,
+                         MatchDetailsSyncJob.JobId,
+                         Integrations.News.NewsIngestJob.JobId,
+                         MediaIngestJob.JobId,
+                         Integrations.Ai.AiReactionJob.JobId
+                     })
+            {
+                recurring.Trigger(jobId);
+            }
+
+            return Results.Ok(new
+            {
+                cleared,
+                message = "Demo data cleared; live ingest jobs triggered. Wait ~30s then check /api/health and /api/feed."
+            });
+        });
     }
 }

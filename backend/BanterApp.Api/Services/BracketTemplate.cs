@@ -3,26 +3,52 @@ namespace BanterApp.Api.Services;
 public static class BracketTemplate
 {
     /// <summary>
-    /// Knockout phase only. Group-stage slots are generated from fixtures at runtime.
-    /// R16 pairings follow standard World Cup crossover (winner group X vs runner-up group Y).
+    /// Knockout phase for the 48-team 2026 World Cup (OpenFootball match nums 73–104).
+    /// Group-stage slots are generated from fixtures at runtime.
     /// </summary>
     public static IReadOnlyList<BracketSlotDefinition> KnockoutSlots { get; } =
     [
-        Knockout("r16-1", "wc26-r16-01", "Round of 16", 1, 1, new("A", 1), new("B", 2)),
-        Knockout("r16-2", "wc26-r16-02", "Round of 16", 1, 2, new("C", 1), new("D", 2)),
-        Knockout("r16-3", "wc26-r16-03", "Round of 16", 1, 3, new("E", 1), new("F", 2)),
-        Knockout("r16-4", "wc26-r16-04", "Round of 16", 1, 4, new("G", 1), new("H", 2)),
-        Knockout("r16-5", "wc26-r16-05", "Round of 16", 1, 5, new("B", 1), new("A", 2)),
-        Knockout("r16-6", "wc26-r16-06", "Round of 16", 1, 6, new("D", 1), new("C", 2)),
-        Knockout("r16-7", "wc26-r16-07", "Round of 16", 1, 7, new("F", 1), new("E", 2)),
-        Knockout("r16-8", "wc26-r16-08", "Round of 16", 1, 8, new("H", 1), new("G", 2)),
-        Bracket("qf-1", "wc26-qf-01", "Quarter-finals", 2, 1, "r16-1", "r16-2"),
-        Bracket("qf-2", "wc26-qf-02", "Quarter-finals", 2, 2, "r16-3", "r16-4"),
-        Bracket("qf-3", "wc26-qf-03", "Quarter-finals", 2, 3, "r16-5", "r16-6"),
-        Bracket("qf-4", "wc26-qf-04", "Quarter-finals", 2, 4, "r16-7", "r16-8"),
-        Bracket("sf-1", "wc26-sf-01", "Semi-finals", 3, 1, "qf-1", "qf-2"),
-        Bracket("sf-2", "wc26-sf-02", "Semi-finals", 3, 2, "qf-3", "qf-4"),
-        Bracket("final", "wc26-final", "Final", 4, 1, "sf-1", "sf-2"),
+        // Round of 32
+        R32("r32-1", 73, 1, new GroupRankSource("A", 2), new GroupRankSource("B", 2)),
+        R32("r32-2", 74, 2, new GroupRankSource("E", 1), new AnnexCThirdSource("E")),
+        R32("r32-3", 75, 3, new GroupRankSource("F", 1), new GroupRankSource("C", 2)),
+        R32("r32-4", 76, 4, new GroupRankSource("C", 1), new GroupRankSource("F", 2)),
+        R32("r32-5", 77, 5, new GroupRankSource("I", 1), new AnnexCThirdSource("I")),
+        R32("r32-6", 78, 6, new GroupRankSource("E", 2), new GroupRankSource("I", 2)),
+        R32("r32-7", 79, 7, new GroupRankSource("A", 1), new AnnexCThirdSource("A")),
+        R32("r32-8", 80, 8, new GroupRankSource("L", 1), new AnnexCThirdSource("L")),
+        R32("r32-9", 81, 9, new GroupRankSource("D", 1), new AnnexCThirdSource("D")),
+        R32("r32-10", 82, 10, new GroupRankSource("G", 1), new AnnexCThirdSource("G")),
+        R32("r32-11", 83, 11, new GroupRankSource("K", 2), new GroupRankSource("L", 2)),
+        R32("r32-12", 84, 12, new GroupRankSource("H", 1), new GroupRankSource("J", 2)),
+        R32("r32-13", 85, 13, new GroupRankSource("B", 1), new AnnexCThirdSource("B")),
+        R32("r32-14", 86, 14, new GroupRankSource("J", 1), new GroupRankSource("H", 2)),
+        R32("r32-15", 87, 15, new GroupRankSource("K", 1), new AnnexCThirdSource("K")),
+        R32("r32-16", 88, 16, new GroupRankSource("D", 2), new GroupRankSource("G", 2)),
+
+        // Round of 16
+        Bracket("r16-1", 89, "Round of 16", 2, 1, "r32-2", "r32-5"),
+        Bracket("r16-2", 90, "Round of 16", 2, 2, "r32-1", "r32-3"),
+        Bracket("r16-3", 91, "Round of 16", 2, 3, "r32-4", "r32-6"),
+        Bracket("r16-4", 92, "Round of 16", 2, 4, "r32-7", "r32-8"),
+        Bracket("r16-5", 93, "Round of 16", 2, 5, "r32-11", "r32-12"),
+        Bracket("r16-6", 94, "Round of 16", 2, 6, "r32-9", "r32-10"),
+        Bracket("r16-7", 95, "Round of 16", 2, 7, "r32-14", "r32-16"),
+        Bracket("r16-8", 96, "Round of 16", 2, 8, "r32-13", "r32-15"),
+
+        // Quarter-finals
+        Bracket("qf-1", 97, "Quarter-finals", 3, 1, "r16-1", "r16-2"),
+        Bracket("qf-2", 98, "Quarter-finals", 3, 2, "r16-5", "r16-6"),
+        Bracket("qf-3", 99, "Quarter-finals", 3, 3, "r16-3", "r16-4"),
+        Bracket("qf-4", 100, "Quarter-finals", 3, 4, "r16-7", "r16-8"),
+
+        // Semi-finals
+        Bracket("sf-1", 101, "Semi-finals", 4, 1, "qf-1", "qf-2"),
+        Bracket("sf-2", 102, "Semi-finals", 4, 2, "qf-3", "qf-4"),
+
+        // Third-place play-off & Final
+        Bracket("third", 103, "Third-place play-off", 5, 1, "sf-1", "sf-2", losers: true),
+        Bracket("final", 104, "Final", 6, 1, "sf-1", "sf-2"),
     ];
 
     public static IReadOnlyDictionary<string, BracketSlotDefinition> BySlotId { get; } =
@@ -44,8 +70,8 @@ public static class BracketTemplate
                     continue;
                 }
 
-                if (string.Equals(slot.SourceSlotAId, current, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(slot.SourceSlotBId, current, StringComparison.OrdinalIgnoreCase))
+                if (ReferencesSlot(slot.TeamSourceA, current) ||
+                    ReferencesSlot(slot.TeamSourceB, current))
                 {
                     visited.Add(slot.SlotId);
                     queue.Enqueue(slot.SlotId);
@@ -60,29 +86,87 @@ public static class BracketTemplate
     {
         var normalized = group.Trim().ToUpperInvariant();
         return KnockoutSlots
-            .Where(slot =>
-                string.Equals(slot.QualifierA?.Group, normalized, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(slot.QualifierB?.Group, normalized, StringComparison.OrdinalIgnoreCase))
+            .Where(slot => SourceReferencesGroup(slot.TeamSourceA, normalized) ||
+                           SourceReferencesGroup(slot.TeamSourceB, normalized))
             .Select(slot => slot.SlotId);
     }
 
-    private static BracketSlotDefinition Knockout(
+    public static string FormatTeamSource(TeamSource? source) =>
+        source switch
+        {
+            GroupRankSource g => g.Rank switch
+            {
+                1 => $"1{g.Group}",
+                2 => $"2{g.Group}",
+                3 => $"3{g.Group}",
+                _ => $"{g.Rank}{g.Group}"
+            },
+            ThirdPlaceSource t => $"3{string.Join("/", t.CandidateGroups)}",
+            AnnexCThirdSource a => $"3?→1{a.GroupWinnerLetter}",
+            SlotWinnerSource w => $"W{WinnerLabel(w.SlotId)}",
+            SlotLoserSource l => $"L{LoserLabel(l.SlotId)}",
+            _ => "TBD"
+        };
+
+    private static string WinnerLabel(string slotId)
+    {
+        var slot = KnockoutSlots.FirstOrDefault(s =>
+            string.Equals(s.SlotId, slotId, StringComparison.OrdinalIgnoreCase));
+        if (slot is null)
+        {
+            return slotId;
+        }
+
+        var num = slot.MatchId["of26-ko-".Length..];
+        return num;
+    }
+
+    private static string LoserLabel(string slotId) => WinnerLabel(slotId);
+
+    private static bool ReferencesSlot(TeamSource? source, string slotId) =>
+        source switch
+        {
+            SlotWinnerSource w => string.Equals(w.SlotId, slotId, StringComparison.OrdinalIgnoreCase),
+            SlotLoserSource l => string.Equals(l.SlotId, slotId, StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
+
+    private static bool SourceReferencesGroup(TeamSource? source, string group) =>
+        source switch
+        {
+            GroupRankSource g => string.Equals(g.Group, group, StringComparison.OrdinalIgnoreCase),
+            ThirdPlaceSource t => t.CandidateGroups.Any(g =>
+                string.Equals(g, group, StringComparison.OrdinalIgnoreCase)),
+            AnnexCThirdSource => true,
+            _ => false
+        };
+
+    private static string Ko(int num) => $"of26-ko-{num}";
+
+    private static BracketSlotDefinition R32(
         string slotId,
-        string matchId,
-        string round,
-        int roundOrder,
+        int matchNum,
         int position,
-        GroupQualifierRef qualifierA,
-        GroupQualifierRef qualifierB) =>
-        new(slotId, matchId, round, roundOrder, position, BracketSlotKind.Knockout, null, null, qualifierA, qualifierB);
+        TeamSource sourceA,
+        TeamSource sourceB) =>
+        new(slotId, Ko(matchNum), "Round of 32", 1, position, BracketSlotKind.Knockout, sourceA, sourceB);
 
     private static BracketSlotDefinition Bracket(
         string slotId,
-        string matchId,
+        int matchNum,
         string round,
         int roundOrder,
         int position,
         string sourceA,
-        string sourceB) =>
-        new(slotId, matchId, round, roundOrder, position, BracketSlotKind.Knockout, sourceA, sourceB, null, null);
+        string sourceB,
+        bool losers = false) =>
+        new(
+            slotId,
+            Ko(matchNum),
+            round,
+            roundOrder,
+            position,
+            BracketSlotKind.Knockout,
+            losers ? new SlotLoserSource(sourceA) : new SlotWinnerSource(sourceA),
+            losers ? new SlotLoserSource(sourceB) : new SlotWinnerSource(sourceB));
 }

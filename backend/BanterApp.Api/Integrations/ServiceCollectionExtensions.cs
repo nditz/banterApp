@@ -25,6 +25,7 @@ public static class ServiceCollectionExtensions
             configuration.GetSection(SportsDataOptions.SectionName));
         services.Configure<SportmonksOptions>(
             configuration.GetSection(SportmonksOptions.SectionName));
+        services.Configure<OpenFootballOptions>(configuration.GetSection(OpenFootballOptions.SectionName));
         services.Configure<FootballDataOptions>(
             configuration.GetSection(FootballDataOptions.SectionName));
         services.Configure<YouTubeOptions>(configuration.GetSection(YouTubeOptions.SectionName));
@@ -65,11 +66,15 @@ public static class ServiceCollectionExtensions
 
         services.AddHttpClient<ISportsDataFallbackProvider, SportmonksProvider>();
         services.AddHttpClient<ISportsDataFallbackProvider, FootballDataProvider>();
+        services.AddHttpClient<ISportsDataFallbackProvider, OpenFootballProvider>();
 
         var newsApiKey = configuration["News:ApiKey"];
-        if (!string.IsNullOrWhiteSpace(newsApiKey))
+        var rssFeeds = configuration.GetSection("News:RssFeedUrls").Get<string[]>() ?? [];
+        if (!string.IsNullOrWhiteSpace(newsApiKey) || rssFeeds.Length > 0)
         {
-            services.AddHttpClient<INewsProvider, NewsApiProvider>();
+            services.AddHttpClient<NewsApiProvider>();
+            services.AddSingleton<RssNewsProvider>();
+            services.AddSingleton<INewsProvider, CompositeNewsProvider>();
         }
         else
         {

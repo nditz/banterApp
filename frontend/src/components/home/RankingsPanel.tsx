@@ -46,7 +46,11 @@ export function RankingsPanel() {
       <Panel
         id="rankings-heading"
         title="Aura rankings"
-        subtitle={selectedLeague?.name ?? "Pick a league below"}
+        subtitle={
+          selectedLeague?.bonusPointsEnabled
+            ? `${selectedLeague.name} · includes tournament bonus points`
+            : selectedLeague?.name ?? "Pick a league below"
+        }
         accent="gold"
       >
         {standingsError && (

@@ -99,6 +99,7 @@ export interface League {
   points?: number;
   kind?: LeagueKind;
   countryCode?: string;
+  bonusPointsEnabled?: boolean;
 }
 
 export interface LeagueLimits {

@@ -85,13 +85,16 @@ public sealed class ScoreSyncJob
                     updated++;
                 }
 
-                if (dto.Id.StartsWith("apifb-", StringComparison.OrdinalIgnoreCase))
+                if (dto.Id.StartsWith("apifb-", StringComparison.OrdinalIgnoreCase) ||
+                    dto.Id.StartsWith("of26-", StringComparison.OrdinalIgnoreCase))
                 {
-                    var externalId = dto.Id["apifb-".Length..];
+                    var externalId = dto.Id.Contains('-')
+                        ? dto.Id[(dto.Id.IndexOf('-') + 1)..]
+                        : dto.Id;
                     await _tracker.UpsertExternalIdAsync(
                         "fixture",
                         dto.Id,
-                        Provider,
+                        dto.Id.StartsWith("of26-", StringComparison.OrdinalIgnoreCase) ? "openfootball" : Provider,
                         externalId,
                         ct: cancellationToken);
                 }
