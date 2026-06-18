@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiFetch, ApiError } from "@/lib/api";
 
 export type ScriptPhase = "pre_match" | "post_match";
+export type ScriptStyle = "full" | "praise" | "burn";
 export type ScriptFormat = "tiktok" | "youtube_short" | "instagram";
 
 export interface PredictionPickSummary {
@@ -19,6 +20,7 @@ export interface PredictionPickSummary {
 export interface CumulativeScriptRequest {
   phase: ScriptPhase;
   picks: PredictionPickSummary[];
+  style?: ScriptStyle;
   format?: ScriptFormat;
 }
 
@@ -26,44 +28,63 @@ export interface ScriptResult {
   content: string;
   type: string;
   phase: ScriptPhase;
+  style?: ScriptStyle;
   remainingGenerations?: number;
 }
 
-/** Offline fallback in the same TV-studio format the backend produces. */
 function stubBroadcastScript(req: CumulativeScriptRequest): string {
   const count = req.picks.length;
+  const style = req.style ?? "full";
 
   if (req.phase === "pre_match") {
     if (count === 0) {
-      return `[STUDIO — COLD OPEN]\nGood evening from the BanterApp studio. The card is empty tonight — make your picks and come back for the full rundown.\n\n[SIGN-OFF — to camera]\nI know ball — watch me.\n\n#WorldCup2026 #BanterApp`;
+      return `[DESK — COLD OPEN]\nCard's empty — get your picks in before we go live.\n\n#BanterApp #PreMatch`;
     }
     const segments = req.picks
       .map(
         (p, i) =>
-          `[SEGMENT ${i + 1} — ${p.teamA} v ${p.teamB}]\nTo camera: "My call here is ${p.prediction}. Lock it in."`
+          `[SEGMENT ${i + 1} — ${p.teamA} v ${p.teamB}]\nTo camera: "I'm on ${p.prediction}. Lowkey confident, highkey accountable."`
       )
       .join("\n\n");
-    return `[STUDIO — COLD OPEN]\nGood evening from the BanterApp studio. I'm filing ${count} prediction${count === 1 ? "" : "s"} on the record tonight.\n\n${segments}\n\n[SIGN-OFF — to camera]\nThat's the card. Clip it, post it, hold me to it. I know ball — watch me.\n\n#WorldCup2026 #BanterApp #IKnowBall`;
+    return `[DESK — COLD OPEN]\n${count} call${count === 1 ? "" : "s"} on the record before kickoff.\n\n${segments}\n\n#BanterApp #IKnowBall`;
   }
 
   if (count === 0) {
-    return `[STUDIO — COLD OPEN]\nFull time across the board — but the results desk is empty. Come back once your picks have gone the distance.\n\n#BanterApp`;
+    return style === "praise"
+      ? `[STUDIO — PRAISE]\nNo W's to flex yet. Come back when you've got receipts.\n\n#BanterApp`
+      : style === "burn"
+        ? `[STUDIO — BURN]\nNothing to roast yet. Suspiciously perfect or no results yet.\n\n#BanterApp`
+        : `[STUDIO — FULL RECAP]\nFull time but the desk is empty.\n\n#BanterApp`;
   }
 
-  const totalPts = req.picks.reduce((s, p) => s + (p.pointsAwarded ?? 0), 0);
-  const wins = req.picks.filter((p) => (p.pointsAwarded ?? 0) > 0).length;
-  const segments = req.picks
+  const filtered =
+    style === "praise"
+      ? req.picks.filter((p) => (p.pointsAwarded ?? 0) > 0)
+      : style === "burn"
+        ? req.picks.filter((p) => (p.pointsAwarded ?? 0) <= 0)
+        : req.picks;
+
+  const totalPts = filtered.reduce((s, p) => s + (p.pointsAwarded ?? 0), 0);
+  const wins = filtered.filter((p) => (p.pointsAwarded ?? 0) > 0).length;
+  const segments = filtered
     .map(
       (p, i) =>
-        `[SEGMENT ${i + 1} — ${p.teamA} v ${p.teamB}]\nThe call: ${p.prediction}. The result: ${p.actualResult ?? "to be confirmed"}.\n${
+        `[SEGMENT ${i + 1} — ${p.teamA} v ${p.teamB}]\nPick: ${p.prediction}. Result: ${p.actualResult ?? "TBC"}.\n${
           (p.pointsAwarded ?? 0) > 0
-            ? `Verdict: the tape backs the take. +${p.pointsAwarded} points.`
-            : "Verdict: football humbles us all. We go again."
+            ? `Verdict: generational read. +${p.pointsAwarded} pts.`
+            : "Verdict: cooked. Clip the apology."
         }`
     )
     .join("\n\n");
 
-  return `[STUDIO — COLD OPEN]\nFull time across the board. Let's go through my card, call by call.\n\n[SCOREBOARD]\n${count} match${count === 1 ? "" : "es"} reviewed · ${wins}/${count} calls landed · ${totalPts} points banked.\n\n${segments}\n\n[SIGN-OFF — to camera]\nSame desk, next matchday. I know ball — watch me.\n\n#WorldCup2026 #BanterApp #MatchdayRecap`;
+  const header =
+    style === "praise"
+      ? `[STUDIO — PRAISE CUT]\n${wins} banger${wins === 1 ? "" : "s"} to flex.`
+      : style === "burn"
+        ? `[STUDIO — BURN CUT]\n${filtered.length} pick${filtered.length === 1 ? "" : "s"} on blast.`
+        : `[STUDIO — FULL RECAP]\n${wins}/${filtered.length} landed · ${totalPts} pts.`;
+
+  return `${header}\n\n${segments}\n\n#BanterApp #BallKnowledge`;
 }
 
 async function generateCumulativeScript(
@@ -76,6 +97,7 @@ async function generateCumulativeScript(
         method: "POST",
         body: JSON.stringify({
           phase: req.phase,
+          style: req.phase === "post_match" ? (req.style ?? "full") : null,
           picks: req.picks.map((p) => ({
             matchId: p.matchId ?? null,
             teamA: p.teamA,
@@ -91,6 +113,7 @@ async function generateCumulativeScript(
       content: script.content,
       type: "broadcast_script",
       phase: req.phase,
+      style: req.style,
       remainingGenerations: script.remainingGenerations,
     };
   } catch (error) {
@@ -99,6 +122,7 @@ async function generateCumulativeScript(
         content: stubBroadcastScript(req),
         type: "broadcast_script_stub",
         phase: req.phase,
+        style: req.style,
       };
     }
     throw error;

@@ -1,6 +1,11 @@
 import { Calendar } from "lucide-react";
 import { PickChip } from "@/components/studio/PickChip";
 import type { StudioMatchComparison, StudioPickRole } from "@/lib/types";
+import {
+  formatPunditSubtitle,
+  formatSourcePlatformLabel,
+  PUNDIT_PARODY_DISCLAIMER,
+} from "@/lib/pundits";
 
 interface MatchComparisonCardProps {
   match: StudioMatchComparison;
@@ -68,9 +73,33 @@ export function MatchComparisonCard({ match, filter }: MatchComparisonCardProps)
                 <div key={i} className="flex flex-col items-start gap-0.5">
                   {role !== "me" && (
                     <span className="text-[10px] text-muted-foreground">
-                      {p.name}
-                      {p.organization && (
+                      <span className="font-medium text-foreground/90">{p.name}</span>
+                      {role === "pundit" && p.parodyCue && (
+                        <span className="mt-0.5 block text-[10px] leading-snug text-flare/90">
+                          {p.parodyCue}
+                        </span>
+                      )}
+                      {role === "pundit" && !p.parodyCue && p.archetype && (
+                        <span className="text-muted-foreground/70"> · {p.archetype}</span>
+                      )}
+                      {p.organization && role !== "pundit" && (
                         <span className="text-muted-foreground/60"> · {p.organization}</span>
+                      )}
+                      {p.sourcePlatform && (
+                        <span className="text-muted-foreground/60">
+                          {" "}
+                          · via {formatSourcePlatformLabel(p.sourcePlatform)}
+                        </span>
+                      )}
+                      {p.sourceUrl && (
+                        <a
+                          href={p.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-1 text-pitch underline-offset-2 hover:underline"
+                        >
+                          Source
+                        </a>
                       )}
                     </span>
                   )}
@@ -86,6 +115,12 @@ export function MatchComparisonCard({ match, filter }: MatchComparisonCardProps)
           </div>
         ))}
       </div>
+      {groups.some((g) => g.role === "pundit") && (
+        <p className="border-t border-border px-4 py-2 text-[10px] text-muted-foreground">
+          {PUNDIT_PARODY_DISCLAIMER} You&apos;ll see who each desk is parodying — pit your picks against
+          their takes, not the real person.
+        </p>
+      )}
     </div>
   );
 }

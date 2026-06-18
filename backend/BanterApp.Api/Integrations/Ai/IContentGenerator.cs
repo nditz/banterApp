@@ -76,4 +76,13 @@ public interface IContentGenerator
         string reactionText,
         string? category = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// ChatGPT chooses a GIF mood tag or image prompt for the feed card visual.
+    /// </summary>
+    Task<FeedVisualSuggestion> SuggestFeedVisualAsync(
+        string headline,
+        string reactionText,
+        string? category = null,
+        CancellationToken cancellationToken = default);
 }

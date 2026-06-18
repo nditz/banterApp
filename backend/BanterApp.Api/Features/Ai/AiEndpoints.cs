@@ -159,7 +159,7 @@ public static class AiEndpoints
             }
         }
 
-        var content = BroadcastScriptComposer.Compose(request.Phase, request.Picks, statsByMatchId);
+        var content = BroadcastScriptComposer.Compose(request.Phase, request.Style, request.Picks, statsByMatchId);
 
         await RecordGenerationAsync(db, user, GeneratedContentType.VideoScript,
             $"broadcast:{request.Phase}:{request.Picks.Count} picks", content, ct);

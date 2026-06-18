@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Calendar, MapPin } from "lucide-react";
 import { FixtureStatusBadge } from "@/components/prediction/FixtureStatusBadge";
 import { PredictionButtons } from "@/components/prediction/PredictionButtons";
+import { TeamFlag } from "@/components/brackets/TeamFlag";
 import { Badge } from "@/components/ui/badge";
 import { isMatchLocked } from "@/lib/anonymous";
 import { usePredictionHistory } from "@/hooks/usePredictions";
@@ -50,9 +51,19 @@ export function MatchCard({ match }: MatchCardProps) {
           <FixtureStatusBadge status={locked ? "locked" : "open"} />
         </div>
         <h3 className="font-display text-base font-semibold leading-snug">
-          <span className="text-foreground">{match.teamA}</span>{" "}
+          <span className="inline-flex items-center gap-2 text-foreground">
+            {match.teamACode && (
+              <TeamFlag code={match.teamACode} name={match.teamA} />
+            )}
+            {match.teamA}
+          </span>{" "}
           <span className="font-normal text-muted-foreground">v</span>{" "}
-          <span className="text-foreground">{match.teamB}</span>
+          <span className="inline-flex items-center gap-2 text-foreground">
+            {match.teamBCode && (
+              <TeamFlag code={match.teamBCode} name={match.teamB} />
+            )}
+            {match.teamB}
+          </span>
         </h3>
         <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
           <span className="inline-flex items-center gap-1">
@@ -73,6 +84,8 @@ export function MatchCard({ match }: MatchCardProps) {
           matchId={match.id}
           teamA={match.teamA}
           teamB={match.teamB}
+          teamACode={match.teamACode}
+          teamBCode={match.teamBCode}
           isLocked={locked}
           existingPredictions={matchPredictions}
           selectedValue={selectedPrediction}

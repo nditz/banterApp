@@ -170,25 +170,33 @@
 
   .stadium-bg > * {
     position: relative;
-    z-index: 1;
+  }
+
+  .site-footer {
+    background: linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.72),
+      rgb(0 0 0 / 0.45)
+    );
+    backdrop-filter: blur(8px);
   }
 }
 
 @layer utilities {
   .welcome-slide-viewport {
-    height: 18.5rem;
+    height: 19.5rem;
     overflow: hidden;
   }
 
   @media (min-width: 640px) {
     .welcome-slide-viewport {
-      height: 17rem;
+      height: 18rem;
     }
   }
 
   @media (min-width: 1024px) {
     .welcome-slide-viewport {
-      height: 15.5rem;
+      height: 16.5rem;
     }
   }
 
@@ -207,13 +215,75 @@
     position: relative;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--logo-green) 55%, transparent);
-    background:
-      radial-gradient(ellipse at 90% 10%, var(--hero-glow), transparent 55%),
-      radial-gradient(ellipse at 5% 95%, color-mix(in srgb, var(--pitch) 10%, transparent), transparent 50%),
-      var(--card);
+    background: var(--card);
     box-shadow:
       0 1px 0 color-mix(in srgb, var(--electric) 20%, transparent) inset,
       0 12px 40px color-mix(in srgb, var(--brand) 10%, transparent);
+  }
+
+  .welcome-slide-panel {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 0.375rem;
+    background-color: var(--card);
+    background-size: cover;
+    background-position: center right;
+    background-repeat: no-repeat;
+  }
+
+  .welcome-slide-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      102deg,
+      var(--card) 0%,
+      color-mix(in srgb, var(--card) 96%, transparent) 32%,
+      color-mix(in srgb, var(--card) 82%, transparent) 50%,
+      color-mix(in srgb, var(--card) 48%, transparent) 72%,
+      color-mix(in srgb, var(--card) 22%, transparent) 100%
+    );
+    pointer-events: none;
+  }
+
+  .welcome-slide-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.85;
+  }
+
+  .welcome-slide-panel--gold::after {
+    background:
+      radial-gradient(ellipse at 88% 45%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 58%),
+      linear-gradient(105deg, color-mix(in srgb, var(--card) 88%, transparent), transparent 62%);
+  }
+
+  .welcome-slide-panel--pitch::after {
+    background:
+      radial-gradient(ellipse at 88% 45%, color-mix(in srgb, var(--pitch) 24%, transparent), transparent 58%),
+      linear-gradient(105deg, color-mix(in srgb, var(--card) 88%, transparent), transparent 62%);
+  }
+
+  .welcome-slide-panel--flare::after {
+    background:
+      radial-gradient(ellipse at 88% 45%, color-mix(in srgb, var(--flare) 22%, transparent), transparent 58%),
+      linear-gradient(105deg, color-mix(in srgb, var(--card) 88%, transparent), transparent 62%);
+  }
+
+  .welcome-slide-panel--brand::after {
+    background:
+      radial-gradient(ellipse at 88% 45%, color-mix(in srgb, var(--logo-green) 20%, transparent), transparent 58%),
+      linear-gradient(105deg, color-mix(in srgb, var(--card) 88%, transparent), transparent 62%);
+  }
+
+  .welcome-slide-panel__content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    padding: 0.125rem 0;
   }
 
   .welcome-panel::before {
@@ -223,25 +293,6 @@
     height: 4px;
     background: linear-gradient(90deg, var(--logo-green), color-mix(in srgb, var(--logo-green) 70%, white), var(--logo-green));
     z-index: 2;
-  }
-
-  .welcome-panel::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 40%;
-    height: 100%;
-    pointer-events: none;
-    opacity: 0.04;
-    background: repeating-linear-gradient(
-      -55deg,
-      transparent,
-      transparent 6px,
-      var(--brand) 6px,
-      var(--brand) 7px
-    );
-    mask-image: linear-gradient(to left, black, transparent);
   }
 
   .home-stat-card {
@@ -388,6 +439,11 @@
     box-shadow:
       0 1px 0 color-mix(in srgb, var(--foreground) 4%, transparent) inset,
       0 8px 32px color-mix(in srgb, var(--brand) 8%, transparent);
+  }
+
+  .team-flag {
+    flex-shrink: 0;
+    vertical-align: middle;
   }
 
   .pick-btn {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -12,15 +12,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { apiFetch } from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
+import { getOAuthRedirectUrl } from "@/lib/supabase/oauth";
 import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [oauthError, setOauthError] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setOauthError(params.has("error"));
+  }, []);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +53,12 @@ export default function LoginPage() {
       return;
     }
 
+    try {
+      await apiFetch("/api/auth/session/sync", { method: "POST" });
+    } catch {
+      // Non-blocking — session cookies are set.
+    }
+
     router.push("/");
     router.refresh();
   };
@@ -60,7 +74,7 @@ export default function LoginPage() {
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: getOAuthRedirectUrl("/"),
       },
     });
 
@@ -124,6 +138,11 @@ export default function LoginPage() {
                 required
               />
             </div>
+            {oauthError && !error && (
+              <p className="text-sm text-destructive" role="alert">
+                Google sign-in failed. Check Supabase Google provider and redirect URLs.
+              </p>
+            )}
             {error && (
               <p className="text-sm text-destructive" role="alert">
                 {error}

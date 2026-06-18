@@ -1,8 +1,8 @@
 namespace BanterApp.Api.Features.Leagues;
 
-public sealed record CreateLeagueRequest(string Name, string DisplayName);
+public sealed record CreateLeagueRequest(string Name);
 
-public sealed record JoinLeagueRequest(string InviteCode, string DisplayName);
+public sealed record JoinLeagueRequest(string InviteCode);
 
 public sealed record LeagueResponse(
     Guid Id,
@@ -10,7 +10,8 @@ public sealed record LeagueResponse(
     string InviteCode,
     int MemberCount,
     int MaxMembers,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? MyDisplayName = null);
 
 public sealed record MyLeagueResponse(
     Guid Id,

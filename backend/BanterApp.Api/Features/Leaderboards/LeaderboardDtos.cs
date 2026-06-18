@@ -17,6 +17,13 @@ public sealed record PunditLeaderboardEntry(
     Guid PunditId,
     string Name,
     string Organization,
+    string? Archetype,
+    string? ParodyCue,
+    string? StyleSlug,
+    bool IsFictionalPersona,
+    string? AttributionNote,
+    string? AvatarSeed,
+    string? SourceUrl,
     int CorrectPredictions,
     int TotalPredictions,
     int Rank);

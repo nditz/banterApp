@@ -7,9 +7,11 @@ import {
   type CumulativeScriptRequest,
   type PredictionPickSummary,
   type ScriptPhase,
+  type ScriptStyle,
   useContentScript,
 } from "@/hooks/useContentScript";
 import { usePredictionHistory } from "@/hooks/usePredictions";
+import type { Match, Prediction } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const resultLabels: Record<string, string> = {
@@ -21,11 +23,21 @@ const resultLabels: Record<string, string> = {
   home_or_away: "Home or Away",
 };
 
-const demoActualResults: Record<string, string> = {
-  pred1: "Japan 2-1 Colombia (Home Win)",
-  pred2: "Netherlands 2-1 Mexico",
-  pred3: "Portugal 0-0 Uruguay (Draw)",
-};
+const FINISHED_STATUSES = new Set(["FT", "FINISHED", "AET", "PEN", "FULL_TIME"]);
+
+function isFinishedMatch(match?: Match): boolean {
+  if (!match) return false;
+  if (match.status && FINISHED_STATUSES.has(match.status.toUpperCase())) return true;
+  return match.homeScore != null && match.awayScore != null;
+}
+
+function formatActualResult(match: Match): string {
+  const home = match.homeScore ?? 0;
+  const away = match.awayScore ?? 0;
+  const outcome =
+    home > away ? "Home Win" : home < away ? "Away Win" : "Draw";
+  return `${match.teamA} ${home}-${away} ${match.teamB} (${outcome})`;
+}
 
 function formatPickValue(type: string, value: string): string {
   if (type === "result" || type === "double_chance") {
@@ -34,20 +46,11 @@ function formatPickValue(type: string, value: string): string {
   return value;
 }
 
-function toPickSummaries(
-  predictions: Array<{
-    id: string;
-    matchId?: string;
-    predictionType: string;
-    predictionValue: string;
-    pointsAwarded?: number;
-    match?: { teamA: string; teamB: string };
-  }>,
-  phase: ScriptPhase
-): PredictionPickSummary[] {
+function toPickSummaries(predictions: Prediction[], phase: ScriptPhase): PredictionPickSummary[] {
   return predictions.map((p) => {
-    const teamA = p.match?.teamA ?? "Team A";
-    const teamB = p.match?.teamB ?? "Team B";
+    const match = p.match;
+    const teamA = match?.teamA ?? "Team A";
+    const teamB = match?.teamB ?? "Team B";
     const base: PredictionPickSummary = {
       matchId: p.matchId,
       teamA,
@@ -56,10 +59,10 @@ function toPickSummaries(
       predictionType: p.predictionType,
     };
 
-    if (phase === "post_match") {
+    if (phase === "post_match" && match && isFinishedMatch(match)) {
       return {
         ...base,
-        actualResult: demoActualResults[p.id],
+        actualResult: formatActualResult(match),
         pointsAwarded: p.pointsAwarded,
       };
     }
@@ -74,6 +77,7 @@ interface CumulativeScriptExportProps {
 
 export function CumulativeScriptExport({ className, minimal = false }: CumulativeScriptExportProps) {
   const [phase, setPhase] = useState<ScriptPhase>("pre_match");
+  const [style, setStyle] = useState<ScriptStyle>("full");
   const [copied, setCopied] = useState(false);
   const { data: predictions, isLoading } = usePredictionHistory();
   const { mutate, data, isPending, isError } = useContentScript();
@@ -82,15 +86,26 @@ export function CumulativeScriptExport({ className, minimal = false }: Cumulativ
     if (!predictions?.length) return [];
     if (phase === "post_match") {
       return toPickSummaries(
-        predictions.filter((p) => demoActualResults[p.id] || p.pointsAwarded !== undefined),
+        predictions.filter((p) => isFinishedMatch(p.match)),
         "post_match"
       );
     }
     return toPickSummaries(predictions, "pre_match");
   }, [predictions, phase]);
 
+  const styledPickCount = useMemo(() => {
+    if (phase !== "post_match") return picks.length;
+    if (style === "praise") return picks.filter((p) => (p.pointsAwarded ?? 0) > 0).length;
+    if (style === "burn") return picks.filter((p) => (p.pointsAwarded ?? 0) <= 0).length;
+    return picks.length;
+  }, [picks, phase, style]);
+
   const handleExport = () => {
-    const request: CumulativeScriptRequest = { phase, picks };
+    const request: CumulativeScriptRequest = {
+      phase,
+      picks,
+      style: phase === "post_match" ? style : undefined,
+    };
     mutate(request);
   };
 
@@ -107,7 +122,7 @@ export function CumulativeScriptExport({ className, minimal = false }: Cumulativ
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `banterapp-cumulative-${phase}.txt`;
+    a.download = `banterapp-${phase}${phase === "post_match" ? `-${style}` : ""}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -119,7 +134,8 @@ export function CumulativeScriptExport({ className, minimal = false }: Cumulativ
           <div>
             <p className="text-xs font-semibold">Export content script</p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              One script for all your picks — {picks.length} in this export
+              Pundit-style pre-match or praise/burn post-match — {styledPickCount} pick
+              {styledPickCount === 1 ? "" : "s"} in this export
             </p>
           </div>
         )}
@@ -144,24 +160,58 @@ export function CumulativeScriptExport({ className, minimal = false }: Cumulativ
         </div>
       </div>
 
+      {phase === "post_match" && (
+        <div className="mt-2 inline-flex rounded-md border border-border bg-muted/50 p-0.5">
+          {(
+            [
+              ["full", "Full recap"],
+              ["praise", "Praise cut"],
+              ["burn", "Burn cut"],
+            ] as const
+          ).map(([key, label]) => (
+            <Button
+              key={key}
+              type="button"
+              variant={style === key ? "default" : "ghost"}
+              size="sm"
+              className="h-7 px-2.5 text-[11px]"
+              onClick={() => setStyle(key)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+      )}
+
       {!isLoading && picks.length > 0 && (
         <ul className="mt-2 max-h-24 space-y-1 overflow-y-auto rounded-md border border-border bg-card p-2 text-[11px] text-muted-foreground">
-          {picks.map((pick, i) => (
-            <li key={`${pick.teamA}-${pick.teamB}-${i}`}>
-              {pick.teamA} v {pick.teamB}: <strong className="text-foreground">{pick.prediction}</strong>
-              {phase === "post_match" && pick.pointsAwarded !== undefined && (
-                <span> · +{pick.pointsAwarded} pts</span>
-              )}
-            </li>
-          ))}
+          {picks
+            .filter((pick) => {
+              if (phase !== "post_match") return true;
+              if (style === "praise") return (pick.pointsAwarded ?? 0) > 0;
+              if (style === "burn") return (pick.pointsAwarded ?? 0) <= 0;
+              return true;
+            })
+            .map((pick, i) => (
+              <li key={`${pick.teamA}-${pick.teamB}-${i}`}>
+                {pick.teamA} v {pick.teamB}: <strong className="text-foreground">{pick.prediction}</strong>
+                {phase === "post_match" && pick.pointsAwarded !== undefined && (
+                  <span> · +{pick.pointsAwarded} pts</span>
+                )}
+              </li>
+            ))}
         </ul>
       )}
 
-      {!isLoading && picks.length === 0 && (
+      {!isLoading && styledPickCount === 0 && (
         <p className="mt-2 text-[11px] text-muted-foreground">
           {phase === "pre_match"
-            ? "Make a prediction first — your script will include every pick."
-            : "No finished results yet. Check back after full time."}
+            ? "Make a prediction first — your pundit-style script drops every pick."
+            : style === "praise"
+              ? "No W's to flex yet. Full recap or burn cut still available when results land."
+              : style === "burn"
+                ? "No L's to roast — suspiciously clean or no finished games yet."
+                : "No finished results yet. Check back after full time."}
         </p>
       )}
 
@@ -169,12 +219,18 @@ export function CumulativeScriptExport({ className, minimal = false }: Cumulativ
         size="sm"
         className="btn-tournament mt-3 h-8 w-full text-xs sm:w-auto"
         onClick={handleExport}
-        disabled={isPending || isLoading}
+        disabled={isPending || isLoading || styledPickCount === 0}
       >
         {isPending ? (
           <Loader2 className="size-3.5 animate-spin" aria-hidden />
+        ) : phase === "pre_match" ? (
+          "Export pre-match script"
+        ) : style === "praise" ? (
+          "Export praise script"
+        ) : style === "burn" ? (
+          "Export burn script"
         ) : (
-          `Export ${phase === "pre_match" ? "pre-match" : "post-match"} script`
+          "Export full recap script"
         )}
       </Button>
 

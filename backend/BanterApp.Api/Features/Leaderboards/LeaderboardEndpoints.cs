@@ -1,5 +1,7 @@
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
+using BanterApp.Api.Features.Leagues;
+using BanterApp.Api.Features.Pundits;
 using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -90,6 +92,12 @@ public static class LeaderboardEndpoints
             return Results.NotFound();
         }
 
+        var access = await LeagueAccessGuard.RequireCustomLeagueMemberAsync(db, league, userContext, ct);
+        if (access is not null)
+        {
+            return access;
+        }
+
         var currentId = userContext.UserId ?? userContext.AnonymousUserId;
         var standings = await Leagues.LeagueEndpoints.BuildStandingsAsync(db, league, bonusScoring, ct);
 
@@ -141,7 +149,22 @@ public static class LeaderboardEndpoints
                            (result == "D" && pp.Prediction.Contains("Draw", StringComparison.OrdinalIgnoreCase));
                 });
 
-                return new PunditLeaderboardEntry(p.Id, p.Name, p.Organization, correct, finished.Count, 0);
+                var display = PunditDisplayResolver.Resolve(p);
+
+                return new PunditLeaderboardEntry(
+                    p.Id,
+                    display.DisplayName,
+                    display.DeskLabel,
+                    display.Archetype,
+                    display.ParodyCue,
+                    display.StyleSlug,
+                    display.IsFictionalPersona,
+                    display.AttributionNote,
+                    display.AvatarSeed,
+                    display.SourceUrl,
+                    correct,
+                    finished.Count,
+                    0);
             })
             .OrderByDescending(e => e.CorrectPredictions)
             .ThenBy(e => e.Name)
@@ -200,9 +223,24 @@ public static class LeaderboardEndpoints
     }
 
     private static List<PunditLeaderboardEntry> GetMockPunditLeaderboard() =>
-    [
-        new(Guid.Parse("11111111-1111-1111-1111-111111111101"), "Alex Morgan", "ESPN", 8, 12, 1),
-        new(Guid.Parse("11111111-1111-1111-1111-111111111102"), "Rio Ferdinand", "BBC Sport", 7, 12, 2),
-        new(Guid.Parse("11111111-1111-1111-1111-111111111103"), "Stephen A. Smith", "First Take", 5, 12, 3),
-    ];
+        PunditPersonas.Defaults
+            .Select((seed, i) =>
+            {
+                var display = PunditDisplayResolver.Resolve(PunditPersonas.ToEntity(seed));
+                return new PunditLeaderboardEntry(
+                    seed.Id,
+                    display.DisplayName,
+                    display.DeskLabel,
+                    display.Archetype,
+                    display.ParodyCue,
+                    display.StyleSlug,
+                    display.IsFictionalPersona,
+                    display.AttributionNote,
+                    display.AvatarSeed,
+                    display.SourceUrl,
+                    8 - i,
+                    12,
+                    i + 1);
+            })
+            .ToList();
 }

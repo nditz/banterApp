@@ -28,7 +28,8 @@ public sealed record BroadcastPick(
 
 public sealed record BroadcastScriptRequest(
     string Phase,
-    List<BroadcastPick> Picks);
+    List<BroadcastPick> Picks,
+    string? Style = null);
 
 public sealed record AiGenerationResponse(
     string Content,

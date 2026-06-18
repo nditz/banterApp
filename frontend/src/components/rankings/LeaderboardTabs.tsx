@@ -5,6 +5,7 @@ import { LeaderboardTable } from "@/components/rankings/LeaderboardTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLeaderboard, type LeaderboardTab } from "@/hooks/useLeaderboard";
 import { cn } from "@/lib/utils";
+import { PUNDIT_PARODY_DISCLAIMER } from "@/lib/pundits";
 
 const allTabs: { value: LeaderboardTab; label: string }[] = [
   { value: "league", label: "My League" },
@@ -60,6 +61,12 @@ export function LeaderboardTabs({ embedded = false, punditsOnly = false }: Leade
         </TabsList>
         {tabs.map((tab) => (
           <TabsContent key={tab.value} value={tab.value} className="mt-3">
+            {activeTab === "pundits" && !isLoading && (
+              <p className="mb-2 text-[10px] text-muted-foreground">
+                {PUNDIT_PARODY_DISCLAIMER} Each desk name is a joke — the parody cue tells you who
+                you&apos;re up against.
+              </p>
+            )}
             {isError && tab.value === activeTab && (
               <p className="mb-2 text-xs text-muted-foreground">Demo data shown</p>
             )}

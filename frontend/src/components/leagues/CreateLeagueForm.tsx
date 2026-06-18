@@ -11,6 +11,8 @@ import { useNeedsTerms } from "@/hooks/useNeedsTerms";
 import { getApiErrorMessage } from "@/lib/api";
 import type { League } from "@/lib/types";
 
+const LEAGUE_NAME_MAX = 25;
+
 function buildInviteLink(inviteCode: string): string {
   if (typeof window === "undefined") return `/leagues/join/${inviteCode}`;
   return `${window.location.origin}/leagues/join/${inviteCode}`;
@@ -18,7 +20,6 @@ function buildInviteLink(inviteCode: string): string {
 
 export function CreateLeagueForm() {
   const [name, setName] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<League | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,14 +32,14 @@ export function CreateLeagueForm() {
     e.preventDefault();
     setError(null);
 
-    if (!name.trim() || !displayName.trim()) {
-      setError("Enter a league name and your player name.");
+    if (!name.trim()) {
+      setError("Enter a league name.");
       return;
     }
 
     setLoading(true);
     try {
-      const league = await createLeague(name.trim(), displayName.trim());
+      const league = await createLeague(name.trim());
       setCreated(league);
       setName("");
       queryClient.invalidateQueries({ queryKey: ["leagues"] });
@@ -56,7 +57,6 @@ export function CreateLeagueForm() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // League admins must onboard first (guest session with terms is enough)
   if (needsTerms) {
     return (
       <div className="space-y-3">
@@ -96,8 +96,8 @@ export function CreateLeagueForm() {
         </div>
         <p className="text-xs text-muted-foreground">
           <Link2 className="mr-1 inline size-3" aria-hidden />
-          Up to {created.maxMembers ?? 50} players can join with this link —
-          they each pick their own name, no signup required.
+          Up to {created.maxMembers ?? 50} players can join with this link. Names
+          are assigned automatically from account email or a guest ID.
         </p>
         <Button
           type="button"
@@ -123,22 +123,12 @@ export function CreateLeagueForm() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Office World Cup Pool"
-          maxLength={50}
+          maxLength={LEAGUE_NAME_MAX}
           required
         />
-      </div>
-      <div>
-        <label htmlFor="admin-display-name" className="mb-1.5 block text-sm font-medium">
-          Your name in this league
-        </label>
-        <Input
-          id="admin-display-name"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          placeholder="e.g. Wandi"
-          maxLength={40}
-          required
-        />
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Max {LEAGUE_NAME_MAX} characters. Keep it family-friendly.
+        </p>
       </div>
       {error && (
         <p className="text-sm text-destructive" role="alert">

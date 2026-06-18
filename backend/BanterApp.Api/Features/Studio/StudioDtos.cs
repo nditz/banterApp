@@ -2,11 +2,19 @@ namespace BanterApp.Api.Features.Studio;
 
 public sealed record StudioPickEntry(
     string Name,
-    string Role,          // "me" | "league" | "pundit"
-    string? Organization, // pundit outlet
+    string Role,
+    string? Organization,
     string Prediction,
     string PredictionType,
-    int? PointsAwarded);
+    int? PointsAwarded,
+    string? Archetype = null,
+    string? ParodyCue = null,
+    string? StyleSlug = null,
+    bool IsFictionalPersona = false,
+    string? AttributionNote = null,
+    string? SourceUrl = null,
+    string? SourcePlatform = null,
+    string? AvatarSeed = null);
 
 public sealed record StudioMatchComparison(
     string MatchId,

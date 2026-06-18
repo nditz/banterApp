@@ -115,8 +115,8 @@ public sealed class ScoreSyncJob
         }
         catch (Exception ex)
         {
-            await _tracker.CompleteAsync(run, added, updated, failed: 1, errorMessage: ex.Message, cancellationToken);
-            throw;
+            _logger.LogError(ex, "Score sync job failed.");
+            await _tracker.FailAsync(run, added, updated, ex, cancellationToken);
         }
     }
 }

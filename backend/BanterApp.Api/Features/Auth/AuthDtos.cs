@@ -2,8 +2,7 @@ namespace BanterApp.Api.Features.Auth;
 
 public sealed record RegisterRequest(
     string Email,
-    string Password,
-    string DisplayName);
+    string Password);
 
 public sealed record LoginRequest(
     string Email,

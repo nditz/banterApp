@@ -3,7 +3,6 @@ import { getThemeForReaction } from '@/lib/predictionThemes';
 import { cn } from '@/lib/utils';
 
 export function PredictionReceiptCard({
-  userName,
   fixture,
   pick,
   reaction,
@@ -12,7 +11,6 @@ export function PredictionReceiptCard({
   leagueName,
   className,
 }: {
-  userName: string;
   fixture: string;
   pick: string;
   reaction: PredictionReaction;
@@ -34,7 +32,7 @@ export function PredictionReceiptCard({
         <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-brand-foreground/60">
           Prediction Receipt
         </div>
-        <h2 className="mt-3 font-display text-2xl font-semibold">{userName} said:</h2>
+        <h2 className="mt-3 font-display text-2xl font-semibold">Your pick</h2>
         <div className="mt-4 rounded-xl bg-card p-4 text-card-foreground shadow-inner">
           <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{fixture}</div>
           <div className="mt-1 font-display text-3xl font-semibold">{pick}</div>

@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Leagues;
 using BanterApp.Api.Middleware;
 using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
@@ -20,8 +22,54 @@ public static class SessionEndpoints
         group.MapPost("/recover", RecoverSession)
             .RequireRateLimiting("auth")
             .WithValidation<SessionRecoverRequest>();
+        group.MapPost("/sync", SyncAuthenticatedUser);
 
         return app;
+    }
+
+    /// <summary>Upserts the app user row after Supabase OAuth (Google, etc.).</summary>
+    private static async Task<IResult> SyncAuthenticatedUser(
+        IUserContext user,
+        HttpContext http,
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        if (!user.IsAuthenticated)
+        {
+            return Results.Unauthorized();
+        }
+
+        var userId = user.UserId!.Value;
+        var email = http.User.FindFirstValue(ClaimTypes.Email)
+                    ?? http.User.FindFirstValue("email")
+                    ?? string.Empty;
+
+        var existing = await db.Users.FindAsync([userId], ct);
+        if (existing is null)
+        {
+            db.Users.Add(new User
+            {
+                Id = userId,
+                Email = email,
+                DisplayName = string.IsNullOrWhiteSpace(email) ? "Player" : email
+            });
+        }
+        else if (!string.IsNullOrWhiteSpace(email))
+        {
+            existing.Email = email;
+            if (string.IsNullOrWhiteSpace(existing.DisplayName) || existing.DisplayName == "Player")
+            {
+                existing.DisplayName = email;
+            }
+        }
+
+        await db.SaveChangesAsync(ct);
+
+        var countryCode = http.Request.Headers["X-Country-Code"].FirstOrDefault();
+        await SystemLeagueService.EnsureSystemLeaguesAsync(db, user, countryCode, ct);
+        await db.SaveChangesAsync(ct);
+
+        return Results.Ok(new { synced = true, userId });
     }
 
     private static async Task<IResult> GetSession(
@@ -88,6 +136,8 @@ public static class SessionEndpoints
             return Results.BadRequest(new { error = "Human verification failed." });
         }
 
+        var detectedCountry = http.Request.Headers["X-Country-Code"].FirstOrDefault();
+
         if (user.IsAuthenticated)
         {
             var registered = await db.Users.FindAsync([user.UserId!.Value], ct);
@@ -109,6 +159,10 @@ public static class SessionEndpoints
 
             await db.SaveChangesAsync(ct);
             var csrf = CsrfMiddleware.IssueToken(http);
+
+            await SystemLeagueService.EnsureSystemLeaguesAsync(db, user, detectedCountry, ct);
+            await db.SaveChangesAsync(ct);
+
             return Results.Ok(new SessionResponse(
                 Authenticated: true,
                 Anonymous: false,
@@ -151,6 +205,9 @@ public static class SessionEndpoints
 
         http.Items["AnonymousUser"] = anonymous;
         AppendAnonymousCookies(http, anonymous);
+
+        await SystemLeagueService.EnsureSystemLeaguesAsync(db, user, detectedCountry, ct);
+        await db.SaveChangesAsync(ct);
 
         var recoveryToken = tokens.CreateRecoveryToken(anonymous.Id);
         var csrfToken = CsrfMiddleware.IssueToken(http);

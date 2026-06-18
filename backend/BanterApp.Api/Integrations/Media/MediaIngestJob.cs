@@ -1,3 +1,4 @@
+using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.Common;
@@ -38,7 +39,7 @@ public sealed class MediaIngestJob
         _logger = logger;
     }
 
-    [AutomaticRetry(Attempts = 1, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
+    [AutomaticRetry(Attempts = 0)]
     public async Task IngestAsync(CancellationToken cancellationToken)
     {
         if (!_options.Enabled)
@@ -49,6 +50,7 @@ public sealed class MediaIngestJob
         var run = await _tracker.StartAsync(Provider, JobId, cancellationToken);
         var created = 0;
         var updated = 0;
+        var failed = 0;
 
         try
         {
@@ -69,9 +71,10 @@ public sealed class MediaIngestJob
 
                 foreach (var video in videos)
                 {
-                    var (c, u) = await UpsertItemAsync(source, video, cancellationToken);
+                    var (c, u, f) = await UpsertItemSafeAsync(source, video, run.Id, cancellationToken);
                     created += c;
                     updated += u;
+                    failed += f;
                 }
             }
 
@@ -88,9 +91,10 @@ public sealed class MediaIngestJob
                 var episodes = await _rss.FetchFeedAsync(feedUrl, _options.MaxItemsPerSource, cancellationToken);
                 foreach (var episode in episodes)
                 {
-                    var (c, u) = await UpsertItemAsync(source, episode, cancellationToken);
+                    var (c, u, f) = await UpsertItemSafeAsync(source, episode, run.Id, cancellationToken);
                     created += c;
                     updated += u;
+                    failed += f;
                 }
             }
 
@@ -116,9 +120,10 @@ public sealed class MediaIngestJob
 
                 foreach (var article in articles)
                 {
-                    var (c, u) = await UpsertItemAsync(source, article, cancellationToken);
+                    var (c, u, f) = await UpsertItemSafeAsync(source, article, run.Id, cancellationToken);
                     created += c;
                     updated += u;
+                    failed += f;
                 }
             }
 
@@ -127,13 +132,17 @@ public sealed class MediaIngestJob
                 await _db.SaveChangesAsync(cancellationToken);
             }
 
-            await _tracker.CompleteAsync(run, created, updated, ct: cancellationToken);
-            _logger.LogInformation("Media ingest: {Created} created, {Updated} updated.", created, updated);
+            await _tracker.CompleteAsync(run, created, updated, failed, ct: cancellationToken);
+            _logger.LogInformation(
+                "Media ingest: {Created} created, {Updated} updated, {Failed} failed.",
+                created,
+                updated,
+                failed);
         }
         catch (Exception ex)
         {
-            await _tracker.CompleteAsync(run, created, updated, failed: 1, errorMessage: ex.Message, cancellationToken);
-            throw;
+            _logger.LogError(ex, "Media ingest job failed.");
+            await _tracker.FailAsync(run, created, updated, ex, cancellationToken);
         }
     }
 
@@ -145,8 +154,9 @@ public sealed class MediaIngestJob
         string? siteUrl = null,
         CancellationToken ct = default)
     {
+        var normalizedExternalId = ExternalIdNormalizer.Normalize(externalId);
         var existing = await _db.MediaSources.FirstOrDefaultAsync(
-            x => x.SourceType == sourceType && x.ExternalId == externalId,
+            x => x.SourceType == sourceType && x.ExternalId == normalizedExternalId,
             ct);
 
         if (existing is not null)
@@ -157,11 +167,11 @@ public sealed class MediaIngestJob
         var source = new MediaSource
         {
             Id = Guid.NewGuid(),
-            Name = name,
+            Name = StringLimits.Truncate(name, 120) ?? name,
             SourceType = sourceType,
-            ExternalId = externalId,
-            RssUrl = rssUrl,
-            SiteUrl = siteUrl,
+            ExternalId = normalizedExternalId,
+            RssUrl = StringLimits.Truncate(rssUrl, 512),
+            SiteUrl = StringLimits.Truncate(siteUrl, 512),
             CrawlAllowed = sourceType != "website",
             ExtractPredictions = true,
             IsActive = true,
@@ -172,13 +182,39 @@ public sealed class MediaIngestJob
         return source;
     }
 
-    private async Task<(int Created, int Updated)> UpsertItemAsync(
+    private async Task<(int Created, int Updated, int Failed)> UpsertItemSafeAsync(
+        MediaSource source,
+        Dtos.MediaItemDto item,
+        Guid syncRunId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await UpsertItemAsync(source, item, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to upsert media item {ExternalId}.", item.ExternalId);
+            await _tracker.LogErrorAsync(
+                Provider,
+                JobId,
+                "media_item",
+                ex.Message,
+                syncRunId,
+                ExternalIdNormalizer.Normalize(item.ExternalId),
+                cancellationToken);
+            return (0, 0, 1);
+        }
+    }
+
+    private async Task<(int Created, int Updated, int Failed)> UpsertItemAsync(
         MediaSource source,
         Dtos.MediaItemDto item,
         CancellationToken cancellationToken)
     {
+        var externalId = ExternalIdNormalizer.Normalize(item.ExternalId);
         var existing = await _db.MediaItems.FirstOrDefaultAsync(
-            x => x.MediaSourceId == source.Id && x.ExternalId == item.ExternalId,
+            x => x.MediaSourceId == source.Id && x.ExternalId == externalId,
             cancellationToken);
 
         if (existing is null)
@@ -187,16 +223,16 @@ public sealed class MediaIngestJob
             {
                 Id = Guid.NewGuid(),
                 MediaSourceId = source.Id,
-                ExternalId = item.ExternalId,
-                Title = item.Title,
+                ExternalId = externalId,
+                Title = StringLimits.Truncate(item.Title, 300) ?? string.Empty,
                 Description = item.Description,
-                SourceUrl = item.SourceUrl,
-                AudioUrl = item.AudioUrl,
+                SourceUrl = StringLimits.Truncate(item.SourceUrl, 512) ?? string.Empty,
+                AudioUrl = StringLimits.Truncate(item.AudioUrl, 512),
                 PublishedAt = item.PublishedAt,
                 TranscriptSnippet = Truncate(item.Description, 280),
                 LastSyncedAt = DateTimeOffset.UtcNow
             });
-            return (1, 0);
+            return (1, 0, 0);
         }
 
         var changed = existing.Title != item.Title ||
@@ -205,26 +241,21 @@ public sealed class MediaIngestJob
 
         if (changed)
         {
-            existing.Title = item.Title;
+            existing.Title = StringLimits.Truncate(item.Title, 300) ?? string.Empty;
             existing.Description = item.Description;
-            existing.SourceUrl = item.SourceUrl;
-            existing.AudioUrl = item.AudioUrl;
+            existing.SourceUrl = StringLimits.Truncate(item.SourceUrl, 512) ?? string.Empty;
+            existing.AudioUrl = StringLimits.Truncate(item.AudioUrl, 512);
             existing.PublishedAt = item.PublishedAt;
             existing.TranscriptSnippet = Truncate(item.Description, 280);
             existing.LastSyncedAt = DateTimeOffset.UtcNow;
-            return (0, 1);
+            return (0, 1, 0);
         }
 
-        return (0, 0);
+        return (0, 0, 0);
     }
 
     private static string? Truncate(string? value, int maxLength)
     {
-        if (string.IsNullOrWhiteSpace(value) || value.Length <= maxLength)
-        {
-            return value;
-        }
-
-        return value[..maxLength];
+        return StringLimits.Truncate(value, maxLength);
     }
 }

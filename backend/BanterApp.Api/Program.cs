@@ -16,6 +16,7 @@ using BanterApp.Api.Features.Studio;
 using BanterApp.Api.Features.Health;
 using BanterApp.Api.Features.Sync;
 using BanterApp.Api.Integrations;
+using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.SportsData;
 using BanterApp.Api.Middleware;
 using BanterApp.Api.Services;
@@ -31,6 +32,8 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<IUserContext, UserContext>();
+builder.Services.AddSingleton<IApplicationErrorLogger, ApplicationErrorLogger>();
+builder.Services.AddSingleton<HangfireErrorLoggingFilter>();
 builder.Services.AddScoped<LiveDataResetService>();
 builder.Services.AddSingleton<ScoringService>();
 builder.Services.AddSingleton<TournamentBonusScoringService>();
@@ -45,11 +48,12 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 builder.Services.AddBanterIntegrations(builder.Configuration);
 
-builder.Services.AddHangfire(config => config
+builder.Services.AddHangfire((serviceProvider, config) => config
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
     .UseSimpleAssemblyNameTypeSerializer()
     .UseRecommendedSerializerSettings()
-    .UseInMemoryStorage());
+    .UseInMemoryStorage()
+    .UseFilter(serviceProvider.GetRequiredService<HangfireErrorLoggingFilter>()));
 // Two workers so live-score, news-ingest, and AI jobs don't block each other.
 builder.Services.AddHangfireServer(options => options.WorkerCount = 2);
 
@@ -200,6 +204,7 @@ if (app.Environment.IsDevelopment())
 HangfireJobRegistration.RegisterRecurringJobs(app);
 
 app.UseCors("Frontend");
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseRateLimiter();
 app.UseAuthentication();

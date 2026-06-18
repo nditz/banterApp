@@ -2,17 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { WelcomeSlidePanel } from "@/components/home/WelcomeSlidePanel";
 import { Button } from "@/components/ui/button";
 import { BRAND } from "@/lib/brand";
 import { CONCEPT_SLIDES } from "@/lib/scoring-rules";
 import { cn } from "@/lib/utils";
-
-const accentBorder: Record<string, string> = {
-  gold: "border-gold bg-gold/5",
-  pitch: "border-pitch bg-pitch/5",
-  flare: "border-flare bg-flare/5",
-  brand: "border-brand bg-brand/5",
-};
 
 const accentText: Record<string, string> = {
   gold: "text-gold",
@@ -53,28 +47,32 @@ export function ConceptSlider({
 
   const slideContent = (
     <>
-      <div
+      <WelcomeSlidePanel
+        backgroundImage={slide.backgroundImage}
+        accent={slide.accent}
+        ariaLabel={slide.title}
         className={cn(
-          "px-4 py-4 transition-colors sm:px-5 sm:py-5",
-          embedded ? "border-b border-border" : "border-b px-4 py-5 sm:px-6 sm:py-6",
-          accentBorder[slide.accent]
+          embedded ? "min-h-[11rem]" : "min-h-[12rem] rounded-t-md",
+          "border-b border-border/40"
         )}
       >
-        <p
-          className={cn(
-            "text-[10px] font-bold uppercase tracking-widest",
-            accentText[slide.accent]
-          )}
-        >
-          {slide.subtitle}
-        </p>
-        <h2 className="mt-1 text-base font-bold leading-snug sm:text-lg">
-          {slide.title}
-        </h2>
-        <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
-          {slide.body}
-        </p>
-      </div>
+        <div className="flex h-full flex-col justify-center py-1">
+          <p
+            className={cn(
+              "text-[10px] font-bold uppercase tracking-widest",
+              accentText[slide.accent]
+            )}
+          >
+            {slide.subtitle}
+          </p>
+          <h2 className="mt-1 text-base font-bold leading-snug sm:text-lg">
+            {slide.title}
+          </h2>
+          <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
+            {slide.body}
+          </p>
+        </div>
+      </WelcomeSlidePanel>
 
       <div className="flex items-center justify-between gap-2 px-4 py-2">
         <div className="flex gap-1.5" role="tablist" aria-label="Concept slides">

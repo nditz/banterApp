@@ -261,6 +261,21 @@ public sealed class StubContentGenerator : IContentGenerator
         CancellationToken cancellationToken = default) =>
         Task.FromResult<string?>(null);
 
+    public Task<FeedVisualSuggestion> SuggestFeedVisualAsync(
+        string headline,
+        string reactionText,
+        string? category = null,
+        CancellationToken cancellationToken = default)
+    {
+        var seed = $"{headline}|{reactionText}|{category}";
+        var moods = new[] { "celebrate", "debate", "shock", "facepalm", "hype", "pundit", "news" };
+        var mood = moods[Math.Abs(seed.GetHashCode()) % moods.Length];
+        var useGif = Math.Abs(seed.GetHashCode()) % 4 != 0;
+        return Task.FromResult(useGif
+            ? new FeedVisualSuggestion("gif", mood, null)
+            : new FeedVisualSuggestion("image", null, $"Football banter: {headline}"));
+    }
+
     private static string ResolveUserKey(string? userId, bool isAnonymous)
     {
         if (!isAnonymous)

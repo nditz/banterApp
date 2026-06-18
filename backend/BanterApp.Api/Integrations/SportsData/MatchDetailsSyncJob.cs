@@ -131,8 +131,8 @@ public sealed class MatchDetailsSyncJob
         }
         catch (Exception ex)
         {
-            await _tracker.CompleteAsync(run, created, updated, failed: 1, errorMessage: ex.Message, cancellationToken);
-            throw;
+            _logger.LogError(ex, "Match details sync job failed.");
+            await _tracker.FailAsync(run, created, updated, ex, cancellationToken);
         }
     }
 }

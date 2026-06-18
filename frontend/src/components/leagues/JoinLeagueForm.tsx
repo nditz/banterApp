@@ -9,7 +9,6 @@ import { getApiErrorMessage } from "@/lib/api";
 
 export function JoinLeagueForm() {
   const [inviteCode, setInviteCode] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,18 +20,19 @@ export function JoinLeagueForm() {
     setError(null);
     setSuccess(null);
 
-    if (!inviteCode.trim() || !displayName.trim()) {
-      setError("Enter the invite code and your player name.");
+    if (!inviteCode.trim()) {
+      setError("Enter the invite code.");
       return;
     }
 
     setLoading(true);
     try {
-      const league = await joinLeague(
-        inviteCode.trim().toUpperCase(),
-        displayName.trim()
+      const league = await joinLeague(inviteCode.trim().toUpperCase());
+      setSuccess(
+        league.myDisplayName
+          ? `Joined ${league.name} as ${league.myDisplayName}!`
+          : `Joined ${league.name}!`
       );
-      setSuccess(`Joined ${league.name} as ${displayName.trim()}!`);
       setInviteCode("");
       queryClient.invalidateQueries({ queryKey: ["leagues"] });
     } catch (err) {
@@ -54,19 +54,6 @@ export function JoinLeagueForm() {
           onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
           placeholder="WC2026AB"
           className="font-mono uppercase"
-          required
-        />
-      </div>
-      <div>
-        <label htmlFor="join-display-name" className="mb-1.5 block text-sm font-medium">
-          Your name in this league
-        </label>
-        <Input
-          id="join-display-name"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          placeholder="e.g. Wandi"
-          maxLength={40}
           required
         />
       </div>

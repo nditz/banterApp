@@ -7,7 +7,6 @@ import { PartyPopper, Trophy, Users } from "lucide-react";
 import { SessionKeyNotice } from "@/components/session/SessionKeyNotice";
 import { TermsAcceptPanel } from "@/components/session/TermsAcceptPanel";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJoinLeague, useLeaguePreview } from "@/hooks/useLeaderboard";
 import { useNeedsTerms } from "@/hooks/useNeedsTerms";
@@ -24,23 +23,16 @@ export function JoinLeagueLanding({ inviteCode }: JoinLeagueLandingProps) {
   const joinLeague = useJoinLeague();
   const queryClient = useQueryClient();
 
-  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
   const [joinedName, setJoinedName] = useState<string | null>(null);
 
-  const handleJoin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleJoin = async () => {
     setError(null);
-    if (!displayName.trim()) {
-      setError("Pick a name for this league.");
-      return;
-    }
-
     setJoining(true);
     try {
-      await joinLeague(inviteCode, displayName.trim());
-      setJoinedName(displayName.trim());
+      const league = await joinLeague(inviteCode);
+      setJoinedName(league.myDisplayName ?? "Player");
       queryClient.invalidateQueries({ queryKey: ["leagues"] });
       queryClient.invalidateQueries({ queryKey: ["league-preview", inviteCode] });
     } catch (err) {
@@ -79,7 +71,6 @@ export function JoinLeagueLanding({ inviteCode }: JoinLeagueLandingProps) {
 
   return (
     <div className="space-y-4">
-      {/* League invite header */}
       <header className="rounded-lg border border-border bg-card/85 p-5 text-center backdrop-blur">
         <span className="mx-auto flex size-10 items-center justify-center rounded-full bg-gold/15 ring-1 ring-gold/40">
           <Trophy className="size-5 text-gold" aria-hidden />
@@ -102,7 +93,7 @@ export function JoinLeagueLanding({ inviteCode }: JoinLeagueLandingProps) {
           >
             <PartyPopper className="mx-auto size-6 text-pitch" aria-hidden />
             <p className="mt-2 text-sm font-semibold">
-              You&apos;re in, {joinedName}!
+              You&apos;re in as {joinedName}!
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               Your picks now count in {preview.name}. Time to show them you know
@@ -139,37 +130,26 @@ export function JoinLeagueLanding({ inviteCode }: JoinLeagueLandingProps) {
           <TermsAcceptPanel variant="compact" />
         </div>
       ) : (
-        <form
-          onSubmit={handleJoin}
-          className="space-y-4 rounded-lg border border-border bg-card/85 p-5 backdrop-blur"
-        >
-          <div>
-            <label htmlFor="landing-display-name" className="mb-1.5 block text-sm font-medium">
-              Your name in this league
-            </label>
-            <Input
-              id="landing-display-name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="e.g. Wandi"
-              maxLength={40}
-              autoFocus
-              required
-            />
-            <p className="mt-1.5 text-[11px] text-muted-foreground">
-              This is how office mates and family will see you on the standings.
-            </p>
-          </div>
+        <div className="space-y-4 rounded-lg border border-border bg-card/85 p-5 backdrop-blur">
+          <p className="text-sm text-muted-foreground">
+            Your player name is assigned automatically from your account email
+            or guest session — no custom usernames on this family-friendly site.
+          </p>
           {error && (
             <p className="text-sm text-destructive" role="alert">
               {error}
             </p>
           )}
-          <Button type="submit" disabled={joining} className="btn-tournament w-full">
+          <Button
+            type="button"
+            disabled={joining}
+            className="btn-tournament w-full"
+            onClick={handleJoin}
+          >
             {joining ? "Joining..." : `Join ${preview.name}`}
           </Button>
           <SessionKeyNotice compact />
-        </form>
+        </div>
       )}
     </div>
   );

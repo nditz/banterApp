@@ -6,10 +6,19 @@ import { FeedList } from "@/components/feed/FeedList";
 import { BanterLine } from "@/components/BanterLine";
 import { Panel } from "@/components/ui/panel";
 import { getLocalBanterEntries, type LocalBanterEntry } from "@/lib/banterFeed";
+import { useFeed } from "@/hooks/useFeed";
 
 const LOCAL_BATCH = 4;
 
+const FEED_SUBTITLES = {
+  personal: "Your picks vs reality — plus the chaos around you",
+  pundit: "Fictional pundit desks vs full-time receipts — clip the L's",
+  default: "Hot takes, memes & matchday chaos",
+} as const;
+
 export function BanterFeedPanel() {
+  const { data } = useFeed();
+  const feedMode = data?.feedMode;
   const [localBanter, setLocalBanter] = useState<LocalBanterEntry[]>([]);
   const [visibleLocalCount, setVisibleLocalCount] = useState(LOCAL_BATCH);
   const localLoadRef = useRef<HTMLDivElement>(null);
@@ -54,7 +63,7 @@ export function BanterFeedPanel() {
     <Panel
       id="banter-feed-heading"
       title="Banter feed"
-      subtitle="Hot takes, memes & matchday chaos"
+      subtitle={FEED_SUBTITLES[feedMode ?? "default"]}
       accent="flare"
     >
       {visibleLocal.length > 0 && (
@@ -63,7 +72,13 @@ export function BanterFeedPanel() {
             Live league banter
           </p>
           {visibleLocal.map((entry) => (
-            <BanterLine key={entry.id} emoji={entry.emoji} text={entry.line} />
+            <BanterLine
+              key={entry.id}
+              emoji={entry.emoji}
+              text={entry.line}
+              imageUrl={entry.imageUrl}
+              media={entry.media}
+            />
           ))}
           {hasMoreLocal && (
             <div

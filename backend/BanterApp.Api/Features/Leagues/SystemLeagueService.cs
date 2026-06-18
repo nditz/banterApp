@@ -47,6 +47,20 @@ public static class SystemLeagueService
             : $"{countryCode} Fans";
 
     /// <summary>
+    /// Ensures global + country system league rows exist (no membership).
+    /// Called for every leagues list so guests always see system leagues.
+    /// </summary>
+    public static async Task EnsureSystemLeagueRowsAsync(
+        AppDbContext db,
+        string? countryCode,
+        CancellationToken ct)
+    {
+        var normalizedCountry = NormalizeCountryCode(countryCode);
+        await GetOrCreateGlobalLeagueAsync(db, ct);
+        await GetOrCreateCountryLeagueAsync(db, normalizedCountry, ct);
+    }
+
+    /// <summary>
     /// Ensures global + country system leagues exist and the user is enrolled.
     /// Persists browser-detected country on the user record.
     /// </summary>
@@ -66,8 +80,11 @@ public static class SystemLeagueService
 
         var displayName = await ResolveDefaultDisplayNameAsync(db, user, ct);
 
-        await EnsureGlobalLeagueAsync(db, user, displayName, ct);
-        await EnsureCountryLeagueAsync(db, user, normalizedCountry, displayName, ct);
+        var global = await GetOrCreateGlobalLeagueAsync(db, ct);
+        await EnsureMembershipAsync(db, global, user, displayName, ct);
+
+        var country = await GetOrCreateCountryLeagueAsync(db, normalizedCountry, ct);
+        await EnsureMembershipAsync(db, country, user, displayName, ct);
     }
 
     public static async Task<(int CustomUsed, int TotalUsed)> CountMembershipsAsync(
@@ -131,71 +148,55 @@ public static class SystemLeagueService
             return existing;
         }
 
-        if (user.IsAuthenticated && user.UserId.HasValue)
-        {
-            var registered = await db.Users.FindAsync([user.UserId.Value], ct);
-            if (!string.IsNullOrWhiteSpace(registered?.DisplayName))
-            {
-                return registered.DisplayName;
-            }
-        }
-
-        if (user.AnonymousUserId.HasValue)
-        {
-            return $"Guest-{user.AnonymousUserId.Value.ToString()[..4].ToUpperInvariant()}";
-        }
-
-        return "Player";
+        return await LeagueDisplayNameResolver.ResolveAsync(db, user, ct);
     }
 
-    private static async Task EnsureGlobalLeagueAsync(
+    private static async Task<League> GetOrCreateGlobalLeagueAsync(
         AppDbContext db,
-        IUserContext user,
-        string displayName,
         CancellationToken ct)
     {
         var league = await db.Leagues.FindAsync([League.GlobalLeagueId], ct);
-        if (league is null)
+        if (league is not null)
         {
-            league = new League
-            {
-                Id = League.GlobalLeagueId,
-                Name = "Global Banter League",
-                InviteCode = "GLOBAL",
-                Kind = LeagueKind.Global,
-                MaxMembers = 1_000_000
-            };
-            db.Leagues.Add(league);
+            return league;
         }
 
-        await EnsureMembershipAsync(db, league, user, displayName, ct);
+        league = new League
+        {
+            Id = League.GlobalLeagueId,
+            Name = "Global Banter League",
+            InviteCode = "GLOBAL",
+            Kind = LeagueKind.Global,
+            MaxMembers = 1_000_000
+        };
+        db.Leagues.Add(league);
+        return league;
     }
 
-    private static async Task EnsureCountryLeagueAsync(
+    private static async Task<League> GetOrCreateCountryLeagueAsync(
         AppDbContext db,
-        IUserContext user,
         string countryCode,
-        string displayName,
         CancellationToken ct)
     {
         var league = await db.Leagues
             .FirstOrDefaultAsync(l => l.Kind == LeagueKind.Country && l.CountryCode == countryCode, ct);
 
-        if (league is null)
+        if (league is not null)
         {
-            league = new League
-            {
-                Id = Guid.NewGuid(),
-                Name = CountryLeagueName(countryCode),
-                InviteCode = $"CTRY{countryCode}",
-                Kind = LeagueKind.Country,
-                CountryCode = countryCode,
-                MaxMembers = 500_000
-            };
-            db.Leagues.Add(league);
+            return league;
         }
 
-        await EnsureMembershipAsync(db, league, user, displayName, ct);
+        league = new League
+        {
+            Id = Guid.NewGuid(),
+            Name = CountryLeagueName(countryCode),
+            InviteCode = $"CTRY{countryCode}",
+            Kind = LeagueKind.Country,
+            CountryCode = countryCode,
+            MaxMembers = 500_000
+        };
+        db.Leagues.Add(league);
+        return league;
     }
 
     private static async Task EnsureMembershipAsync(

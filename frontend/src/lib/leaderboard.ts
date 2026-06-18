@@ -1,4 +1,5 @@
 import type { LeaderboardEntry, LeaderboardView } from "./types";
+import { getPunditAvatarUrl } from "./pundits";
 
 type RawLeaderboardEntry = Record<string, unknown>;
 
@@ -41,14 +42,34 @@ export function normalizeLeaderboardEntry(
   const organization = pickString(
     raw,
     "organization",
-    "Organization"
+    "Organization",
+    "deskLabel",
+    "DeskLabel"
   );
+
+  const archetype = pickString(raw, "archetype", "Archetype");
+  const parodyCue = pickString(raw, "parodyCue", "ParodyCue");
+  const styleSlug = pickString(raw, "styleSlug", "StyleSlug");
+  const attributionNote = pickString(
+    raw,
+    "attributionNote",
+    "AttributionNote"
+  );
+  const sourceUrl = pickString(raw, "sourceUrl", "SourceUrl");
+  const avatarSeed = pickString(raw, "avatarSeed", "AvatarSeed");
+
+  const avatarUrl =
+    pickString(raw, "avatarUrl", "AvatarUrl", "photoUrl", "PhotoUrl") ??
+    (avatarSeed ? getPunditAvatarUrl(avatarSeed, displayName) : undefined);
 
   const isPundit =
     raw.isPundit === true ||
     raw.punditId !== undefined ||
     raw.PunditId !== undefined ||
     organization !== undefined;
+
+  const isFictionalPersona =
+    raw.isFictionalPersona === true || raw.IsFictionalPersona === true;
 
   const isCurrentUser =
     raw.isCurrentUser === true || raw.IsCurrentUser === true;
@@ -57,11 +78,18 @@ export function normalizeLeaderboardEntry(
     rank,
     userId,
     displayName,
+    avatarUrl,
     points: points ?? correctPredictions ?? 0,
     correctPredictions,
     totalPredictions,
     isPundit,
     organization,
+    archetype,
+    parodyCue,
+    styleSlug,
+    isFictionalPersona,
+    attributionNote,
+    sourceUrl,
     isCurrentUser,
   };
 }

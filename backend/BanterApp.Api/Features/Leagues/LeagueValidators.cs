@@ -1,3 +1,4 @@
+using BanterApp.Api.Common;
 using FluentValidation;
 
 namespace BanterApp.Api.Features.Leagues;
@@ -6,8 +7,11 @@ public sealed class CreateLeagueRequestValidator : AbstractValidator<CreateLeagu
 {
     public CreateLeagueRequestValidator()
     {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(40);
+        RuleFor(x => x.Name)
+            .NotEmpty()
+            .MaximumLength(StringLimits.LeagueName)
+            .Must(name => !ProfanityFilter.ContainsProfanity(name))
+            .WithMessage("League name contains language we can't allow on a family-friendly site.");
     }
 }
 
@@ -16,6 +20,5 @@ public sealed class JoinLeagueRequestValidator : AbstractValidator<JoinLeagueReq
     public JoinLeagueRequestValidator()
     {
         RuleFor(x => x.InviteCode).NotEmpty().MaximumLength(12);
-        RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(40);
     }
 }

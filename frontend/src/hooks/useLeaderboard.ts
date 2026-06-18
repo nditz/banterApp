@@ -8,6 +8,7 @@ import {
   mockGlobalLeaderboard,
   mockLeagueLeaderboard,
   mockLeagues,
+  mockSystemLeagues,
   mockPunditLeaderboard,
 } from "@/lib/mock-data";
 import { detectCountryCode } from "@/lib/country";
@@ -140,12 +141,13 @@ export function useMyLeagues() {
           `/api/leagues?countryCode=${encodeURIComponent(countryCode)}`
         );
         const payload = normalizeMyLeaguesPayload(response);
-        return payload.leagues.length > 0
-          ? payload
-          : { leagues: mockLeagues, limits: DEFAULT_LIMITS };
+        if (payload.leagues.length > 0) {
+          return payload;
+        }
+        return { leagues: mockSystemLeagues, limits: DEFAULT_LIMITS };
       } catch (error) {
         if (error instanceof ApiError) {
-          return { leagues: mockLeagues, limits: DEFAULT_LIMITS };
+          return { leagues: mockSystemLeagues, limits: DEFAULT_LIMITS };
         }
         throw error;
       }
@@ -192,11 +194,11 @@ function normalizeLeague(raw: Record<string, unknown>): League {
 
 export function pickDefaultLeague(leagues: League[]): League | null {
   if (leagues.length === 0) return null;
-  const custom = leagues.find((l) => l.kind === "custom");
-  if (custom) return custom;
+  const global = leagues.find((l) => l.kind === "global");
+  if (global) return global;
   const country = leagues.find((l) => l.kind === "country");
   if (country) return country;
-  return leagues[0];
+  return leagues.find((l) => l.kind === "custom") ?? leagues[0];
 }
 
 export function useLeaguePreview(inviteCode: string) {
@@ -213,11 +215,11 @@ export function useLeaguePreview(inviteCode: string) {
 }
 
 export function useCreateLeague() {
-  return async (name: string, displayName: string) => {
+  return async (name: string) => {
     try {
       return await apiFetch<League>("/api/leagues/create", {
         method: "POST",
-        body: JSON.stringify({ name, displayName }),
+        body: JSON.stringify({ name }),
       });
     } catch (error) {
       if (error instanceof ApiError && error.status >= 500) {
@@ -228,7 +230,7 @@ export function useCreateLeague() {
           memberCount: 1,
           maxMembers: 50,
           isAdmin: true,
-          myDisplayName: displayName,
+          myDisplayName: "player@example.com",
           points: 0,
         } satisfies League;
       }
@@ -238,10 +240,10 @@ export function useCreateLeague() {
 }
 
 export function useJoinLeague() {
-  return async (inviteCode: string, displayName: string) => {
+  return async (inviteCode: string) => {
     return await apiFetch<League>("/api/leagues/join", {
       method: "POST",
-      body: JSON.stringify({ inviteCode, displayName }),
+      body: JSON.stringify({ inviteCode }),
     });
   };
 }

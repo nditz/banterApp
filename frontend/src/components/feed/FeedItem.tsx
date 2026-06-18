@@ -14,6 +14,7 @@ import {
 import { FeedMedia } from "@/components/feed/FeedMedia";
 import { Badge } from "@/components/ui/badge";
 import { useFeedReaction, type ReactionKind } from "@/hooks/useFeedReaction";
+import { resolveFeedMedia } from "@/lib/feed-media";
 import type { FeedItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -67,9 +68,7 @@ export function FeedItemCard({ item }: FeedItemProps) {
   const reactMutation = useFeedReaction(item.id);
   const config = typeConfig[item.type];
   const Icon = config.icon;
-  const media = item.media ?? (item.imageUrl
-    ? { type: "image" as const, url: item.imageUrl, alt: item.title }
-    : undefined);
+  const media = resolveFeedMedia(item);
 
   const handleReact = (kind: ReactionKind) => {
     if (myReaction === kind) return; // no toggling off (keep it simple)

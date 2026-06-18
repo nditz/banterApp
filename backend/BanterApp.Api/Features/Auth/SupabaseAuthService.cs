@@ -38,7 +38,7 @@ public sealed class SupabaseAuthService(
         {
             email = request.Email,
             password = request.Password,
-            data = new { display_name = request.DisplayName }
+            data = new { display_name = request.Email }
         };
 
         using var message = CreateRequest(HttpMethod.Post, "/auth/v1/signup", payload);
@@ -57,8 +57,8 @@ public sealed class SupabaseAuthService(
             return (null, "Registration succeeded but no session returned. Check email confirmation settings.");
         }
 
-        await UpsertUserAsync(session.User, request.DisplayName, ct);
-        return (MapSession(session, request.DisplayName), null);
+        await UpsertUserAsync(session.User, request.Email, ct);
+        return (MapSession(session, request.Email), null);
     }
 
     public async Task<(AuthResponse? Success, string? Error)> LoginAsync(LoginRequest request, CancellationToken ct)
@@ -85,7 +85,7 @@ public sealed class SupabaseAuthService(
             return (null, "Login failed.");
         }
 
-        var displayName = session.User.UserMetadata?.DisplayName ?? request.Email.Split('@')[0];
+        var displayName = session.User.Email ?? request.Email;
         await UpsertUserAsync(session.User, displayName, ct);
         return (MapSession(session, displayName), null);
     }

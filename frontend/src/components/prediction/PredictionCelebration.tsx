@@ -23,7 +23,6 @@ import { cn } from "@/lib/utils";
 
 interface PredictionCelebrationProps {
   reaction: PredictionReaction;
-  userName: string;
   fixture: string;
   pick: string;
   probabilityContext?: string;
@@ -42,7 +41,6 @@ function formatReceiptTimestamp(date = new Date()): string {
 
 export function PredictionCelebration({
   reaction,
-  userName,
   fixture,
   pick,
   probabilityContext,
@@ -256,7 +254,6 @@ export function PredictionCelebration({
             <DialogTitle>Prediction receipt</DialogTitle>
           </DialogHeader>
           <PredictionReceiptCard
-            userName={userName}
             fixture={fixture}
             pick={pick}
             reaction={reaction}

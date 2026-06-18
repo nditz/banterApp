@@ -13,6 +13,16 @@ public sealed record UpdatePredictionRequest(
     string PredictionValue,
     string? TurnstileToken = null);
 
+public sealed record PredictionMatchSummary(
+    string TeamA,
+    string TeamB,
+    string TeamACode,
+    string TeamBCode,
+    string Status,
+    int? HomeScore,
+    int? AwayScore,
+    DateTimeOffset KickoffTime);
+
 public sealed record PredictionResponse(
     Guid Id,
     string MatchId,
@@ -22,4 +32,5 @@ public sealed record PredictionResponse(
     DateTimeOffset CreatedAt,
     DateTimeOffset? UpdatedAt,
     bool IsLocked,
-    DateTimeOffset KickoffTime);
+    DateTimeOffset KickoffTime,
+    PredictionMatchSummary Match);

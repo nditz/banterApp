@@ -5,7 +5,6 @@ import type { PredictionReaction } from "@/lib/reactionEngine";
 
 interface PredictionSavedReactionProps {
   reaction: PredictionReaction;
-  userName: string;
   fixture: string;
   pick: string;
   probabilityContext?: string;

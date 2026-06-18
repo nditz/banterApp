@@ -1,6 +1,7 @@
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Pundits;
 using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,22 +9,21 @@ namespace BanterApp.Api.Features.Studio;
 
 public static class StudioEndpoints
 {
-    // Well-known mock pundits for when no real pundit data exists
-    private static readonly (string Name, string Org, Dictionary<string, string> Picks)[] MockPundits =
+    private static readonly (PunditPersonaSeed Persona, Dictionary<string, string> Picks)[] MockPundits =
     [
-        ("Alex Morgan", "ESPN", new()
+        (PunditPersonas.Defaults[0], new()
         {
             ["m1"] = "HOME", ["m2"] = "HOME", ["m3"] = "AWAY", ["m4"] = "HOME",
         }),
-        ("Rio Ferdinand", "BBC Sport", new()
+        (PunditPersonas.Defaults[1], new()
         {
             ["m1"] = "DRAW", ["m2"] = "HOME", ["m3"] = "HOME", ["m4"] = "AWAY",
         }),
-        ("Stephen A. Smith", "First Take", new()
+        (PunditPersonas.Defaults[2], new()
         {
             ["m1"] = "HOME", ["m2"] = "DRAW", ["m3"] = "DRAW", ["m4"] = "HOME",
         }),
-        ("Thierry Henry", "CBS Sports", new()
+        (PunditPersonas.Defaults[3], new()
         {
             ["m1"] = "AWAY", ["m2"] = "HOME", ["m3"] = "HOME", ["m4"] = "DRAW",
         }),
@@ -191,23 +191,21 @@ public static class StudioEndpoints
             {
                 foreach (var pp in punditBatch)
                 {
-                    picks.Add(new StudioPickEntry(
-                        pp.Pundit.Name, "pundit", pp.Pundit.Organization,
+                    picks.Add(ToPunditPick(
+                        pp.Pundit,
                         FormatPrediction(pp.Prediction, "result"),
-                        "result", null));
+                        pp));
                 }
             }
             else
             {
-                // Inject mock pundit picks so the UI always has something to compare
-                foreach (var (name, org, pundPicks) in MockPundits)
+                foreach (var (persona, pundPicks) in MockPundits)
                 {
                     if (pundPicks.TryGetValue(matchId, out var pick))
                     {
-                        picks.Add(new StudioPickEntry(
-                            name, "pundit", org,
-                            FormatPrediction(pick, "result"),
-                            "result", null));
+                        picks.Add(ToPunditPick(
+                            PunditPersonas.ToEntity(persona),
+                            FormatPrediction(pick, "result")));
                     }
                 }
             }
@@ -227,6 +225,29 @@ public static class StudioEndpoints
             myLeagueRank,
             leagueTotal > 0 ? leagueTotal : null));
 
+    }
+
+    private static StudioPickEntry ToPunditPick(
+        Pundit pundit,
+        string formattedPrediction,
+        PunditPrediction? prediction = null)
+    {
+        var display = PunditDisplayResolver.Resolve(pundit, prediction);
+        return new StudioPickEntry(
+            display.DisplayName,
+            "pundit",
+            display.DeskLabel,
+            formattedPrediction,
+            "result",
+            null,
+            display.Archetype,
+            display.ParodyCue,
+            display.StyleSlug,
+            display.IsFictionalPersona,
+            display.AttributionNote,
+            display.SourceUrl,
+            display.SourcePlatform,
+            display.AvatarSeed);
     }
 
     private static string FormatPrediction(string value, string type) => type switch
@@ -258,32 +279,37 @@ public static class StudioEndpoints
 
     private static StudioComparisonResponse BuildMockComparison()
     {
+        var gary = PunditPersonas.Defaults[0];
+        var rio = PunditPersonas.Defaults[1];
+        var stephen = PunditPersonas.Defaults[2];
+        var henri = PunditPersonas.Defaults[3];
+
         var matches = new List<StudioMatchComparison>
         {
             BuildMockMatch("m1", "Brazil", "Argentina", 2,
             [
-                ("You",             "me",     null,         "Home Win",  "result", 3),
-                ("Boss Wandi",      "league", null,         "Away Win",  "result", null),
-                ("GoalOracle",      "league", null,         "Draw",      "result", null),
-                ("Alex Morgan",     "pundit", "ESPN",       "Home Win",  "result", null),
-                ("Rio Ferdinand",   "pundit", "BBC Sport",  "Draw",      "result", null),
-                ("Thierry Henry",   "pundit", "CBS Sports", "Home Win",  "result", null),
+                MockMePick("Home Win", "result", 3),
+                MockLeaguePick("Boss Wandi", "Away Win", "result", null),
+                MockLeaguePick("GoalOracle", "Draw", "result", null),
+                ToPunditPick(PunditPersonas.ToEntity(gary), "Home Win"),
+                ToPunditPick(PunditPersonas.ToEntity(rio), "Draw"),
+                ToPunditPick(PunditPersonas.ToEntity(henri), "Home Win"),
             ]),
             BuildMockMatch("m2", "France", "Germany", 5,
             [
-                ("You",             "me",     null,         "2-1",      "correct_score", 7),
-                ("Boss Wandi",      "league", null,         "Home Win", "result",        3),
-                ("GoalOracle",      "league", null,         "Home Win", "result",        3),
-                ("Alex Morgan",     "pundit", "ESPN",       "Home Win", "result",        null),
-                ("Stephen A. Smith","pundit", "First Take", "Draw",     "result",        null),
-                ("Thierry Henry",   "pundit", "CBS Sports", "Home Win", "result",        null),
+                MockMePick("2-1", "correct_score", 7),
+                MockLeaguePick("Boss Wandi", "Home Win", "result", 3),
+                MockLeaguePick("GoalOracle", "Home Win", "result", 3),
+                ToPunditPick(PunditPersonas.ToEntity(gary), "Home Win"),
+                ToPunditPick(PunditPersonas.ToEntity(stephen), "Draw"),
+                ToPunditPick(PunditPersonas.ToEntity(henri), "Home Win"),
             ]),
             BuildMockMatch("m3", "Spain", "Morocco", 3,
             [
-                ("You",             "me",     null,         "Home Win",  "result", null),
-                ("Boss Wandi",      "league", null,         "Home Win",  "result", null),
-                ("Alex Morgan",     "pundit", "ESPN",       "Away Win",  "result", null),
-                ("Rio Ferdinand",   "pundit", "BBC Sport",  "Home Win",  "result", null),
+                MockMePick("Home Win", "result", null),
+                MockLeaguePick("Boss Wandi", "Home Win", "result", null),
+                ToPunditPick(PunditPersonas.ToEntity(gary), "Away Win"),
+                ToPunditPick(PunditPersonas.ToEntity(rio), "Home Win"),
             ]),
         };
 
@@ -291,13 +317,23 @@ public static class StudioEndpoints
     }
 
     private static StudioMatchComparison BuildMockMatch(
-        string id, string teamA, string teamB, int daysOut,
-        IEnumerable<(string Name, string Role, string? Org, string Pred, string Type, int? Pts)> picks)
+        string id,
+        string teamA,
+        string teamB,
+        int daysOut,
+        IEnumerable<StudioPickEntry> picks)
     {
         var kickoff = DateTimeOffset.UtcNow.AddDays(daysOut);
-        var entries = picks
-            .Select(p => new StudioPickEntry(p.Name, p.Role, p.Org, p.Pred, p.Type, p.Pts))
-            .ToList();
-        return new StudioMatchComparison(id, teamA, teamB, kickoff, null, null, entries);
+        return new StudioMatchComparison(id, teamA, teamB, kickoff, null, null, picks.ToList());
     }
+
+    private static StudioPickEntry MockLeaguePick(
+        string name,
+        string prediction,
+        string type,
+        int? points) =>
+        new(name, "league", null, prediction, type, points);
+
+    private static StudioPickEntry MockMePick(string prediction, string type, int? points) =>
+        new("You", "me", null, prediction, type, points);
 }

@@ -45,4 +45,11 @@ public sealed class AiOptions
     public string MemeImagePrompt { get; set; } =
         "Funny football banter meme illustration, bold expressive cartoon style, " +
         "single frozen frame like a viral sports GIF, PG-rated, no text in image.";
+
+    /// <summary>System prompt for ChatGPT to pick GIF mood vs DALL-E image for feed cards.</summary>
+    public string FeedVisualSystemPrompt { get; set; } =
+        "You pick visuals for a football banter app feed. Reply ONLY with JSON: " +
+        "{\"format\":\"gif\"|\"image\",\"mood\":\"celebrate|hype|debate|shock|chaos|facepalm|miss|roast|trophy|news|pundit\",\"imagePrompt\":\"...\"}. " +
+        "Use format gif for reactions, hot takes, roasts, and wins. Use format image for news desk scenes. " +
+        "When format is gif, set mood and leave imagePrompt empty. When format is image, set imagePrompt (short scene description) and leave mood empty.";
 }

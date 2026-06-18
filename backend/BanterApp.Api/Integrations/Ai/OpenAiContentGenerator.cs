@@ -145,10 +145,81 @@ public sealed class OpenAiContentGenerator : IContentGenerator
         return await GenerateImageAsync(scenePrompt, cancellationToken);
     }
 
+    public async Task<FeedVisualSuggestion> SuggestFeedVisualAsync(
+        string headline,
+        string reactionText,
+        string? category = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        {
+            return StubVisualFromSeed(headline, reactionText, category);
+        }
+
+        var userPrompt =
+            $"Headline: {headline}\nReaction: {reactionText}\n" +
+            (string.IsNullOrWhiteSpace(category) ? "" : $"Category: {category}\n") +
+            "Pick the best visual for a football banter feed card.";
+
+        try
+        {
+            var json = await CompleteChatAsync(
+                _options.FeedVisualSystemPrompt,
+                userPrompt,
+                cancellationToken,
+                responseFormatJson: true);
+
+            return ParseVisualSuggestion(json) ?? StubVisualFromSeed(headline, reactionText, category);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Feed visual suggestion failed; using deterministic fallback.");
+            return StubVisualFromSeed(headline, reactionText, category);
+        }
+    }
+
+    private static FeedVisualSuggestion StubVisualFromSeed(
+        string headline,
+        string reactionText,
+        string? category)
+    {
+        var seed = $"{headline}|{reactionText}|{category}";
+        var moods = new[] { "celebrate", "debate", "shock", "facepalm", "hype", "pundit" };
+        var mood = moods[Math.Abs(seed.GetHashCode()) % moods.Length];
+        var useGif = Math.Abs(seed.GetHashCode()) % 3 != 0;
+        return useGif
+            ? new FeedVisualSuggestion("gif", mood, null)
+            : new FeedVisualSuggestion("image", null, $"Football banter scene: {headline}");
+    }
+
+    private static FeedVisualSuggestion? ParseVisualSuggestion(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var format = root.TryGetProperty("format", out var f) ? f.GetString() : "gif";
+            var mood = root.TryGetProperty("mood", out var m) ? m.GetString() : null;
+            var prompt = root.TryGetProperty("imagePrompt", out var p) ? p.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(format))
+            {
+                return null;
+            }
+
+            return new FeedVisualSuggestion(format.Trim().ToLowerInvariant(), mood, prompt);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private async Task<string> CompleteChatAsync(
         string systemPrompt,
         string userPrompt,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool responseFormatJson = false)
     {
         var baseUrl = ResolveBaseUrl();
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/chat/completions");
@@ -162,7 +233,8 @@ public sealed class OpenAiContentGenerator : IContentGenerator
                 new { role = "user", content = userPrompt }
             },
             max_tokens = _options.MaxTokens,
-            temperature = _options.Temperature
+            temperature = _options.Temperature,
+            response_format = responseFormatJson ? new { type = "json_object" } : null
         });
 
         using var response = await _httpClient.SendAsync(request, cancellationToken);

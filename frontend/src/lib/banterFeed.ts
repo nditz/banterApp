@@ -1,3 +1,5 @@
+import { getBanterMediaForReaction } from "@/lib/feed-media";
+import type { FeedMedia } from "@/lib/types";
 import {
   banterTemplates,
   type ReactionKey,
@@ -13,6 +15,8 @@ export interface LocalBanterEntry {
   fixture: string;
   line: string;
   emoji: string;
+  imageUrl?: string;
+  media?: FeedMedia;
   createdAt: string;
 }
 
@@ -22,16 +26,15 @@ function pickRandom<T>(items: T[]): T {
 
 export function buildBanterLine(
   reactionKey: ReactionKey,
-  name: string,
   pick: string
 ): string {
   const templates = banterTemplates[reactionKey as keyof typeof banterTemplates];
   if (!templates?.length) {
-    return `${name} picked ${pick}.`;
+    return `Locked in: ${pick}.`;
   }
 
   const template = pickRandom(templates);
-  return template.replaceAll("{name}", name).replaceAll("{pick}", pick);
+  return template.replaceAll("{pick}", pick);
 }
 
 export function getLocalBanterEntries(): LocalBanterEntry[] {
@@ -47,16 +50,25 @@ export function getLocalBanterEntries(): LocalBanterEntry[] {
 }
 
 export function addLocalBanterEntry(entry: {
-  name: string;
   pick: string;
   fixture: string;
   line: string;
   emoji: string;
+  reactionKey?: ReactionKey;
+  reactionAsset?: string;
 }): LocalBanterEntry {
+  const media =
+    entry.reactionKey && entry.reactionAsset
+      ? getBanterMediaForReaction(entry.reactionKey, entry.reactionAsset)
+      : undefined;
+
   const created: LocalBanterEntry = {
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
+    name: "",
     ...entry,
+    imageUrl: media?.url ?? entry.reactionAsset,
+    media,
   };
 
   if (typeof window === "undefined") return created;

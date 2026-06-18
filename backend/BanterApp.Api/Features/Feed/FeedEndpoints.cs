@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Integrations.News;
 using Microsoft.EntityFrameworkCore;
@@ -7,9 +8,7 @@ namespace BanterApp.Api.Features.Feed;
 
 public static class FeedEndpoints
 {
-    // In-memory reaction store keyed by feedItemId → (agree, stale, disagree)
     private static readonly ConcurrentDictionary<string, (int Agree, int Stale, int Disagree)> _reactions = new();
-
     private static readonly HashSet<string> ValidReactions = ["agree", "stale", "disagree"];
 
     public static IEndpointRouteBuilder MapFeedEndpoints(this IEndpointRouteBuilder app)
@@ -55,35 +54,22 @@ public static class FeedEndpoints
         int? count,
         AppDbContext db,
         INewsProvider news,
+        IUserContext user,
         CancellationToken ct)
     {
         var currentPage = Math.Max(page ?? 1, 1);
         var size = Math.Clamp(pageSize ?? count ?? 20, 1, 50);
         var skip = (currentPage - 1) * size;
 
-        var query = db.NewsFeedItems
-            .OrderByDescending(n => n.PublishedAt)
-            .AsQueryable();
+        var (feedMode, personal) = await PersonalizedFeedService.BuildAsync(db, user, 20, ct);
+        var newsItems = await LoadNewsItemsAsync(db, news, 100, ct);
+        var merged = personal
+            .Concat(newsItems)
+            .OrderByDescending(i => i.PublishedAt)
+            .ToList();
 
-        var totalCount = await query.CountAsync(ct);
-        var items = await query.Skip(skip).Take(size).ToListAsync(ct);
-
-        if (totalCount == 0)
-        {
-            var articles = await news.GetLatestArticlesAsync(100, ct);
-            totalCount = articles.Count;
-            var pageItems = articles
-                .OrderByDescending(a => a.PublishedAt)
-                .Skip(skip)
-                .Take(size)
-                .Select(a => MapFromDto(a))
-                .ToList();
-
-            return Results.Ok(BuildPage(pageItems, currentPage, size, totalCount));
-        }
-
-        var mapped = items.Select(MapFromEntity).ToList();
-        return Results.Ok(BuildPage(mapped, currentPage, size, totalCount));
+        var pageItems = merged.Skip(skip).Take(size).ToList();
+        return Results.Ok(BuildPage(pageItems, currentPage, size, merged.Count, feedMode));
     }
 
     private static async Task<IResult> GetTrendingFeed(
@@ -92,60 +78,111 @@ public static class FeedEndpoints
         int? count,
         AppDbContext db,
         INewsProvider news,
+        IUserContext user,
         CancellationToken ct)
     {
         var currentPage = Math.Max(page ?? 1, 1);
         var size = Math.Clamp(pageSize ?? count ?? 10, 1, 30);
         var skip = (currentPage - 1) * size;
 
-        var query = db.NewsFeedItems
-            .OrderByDescending(n => n.ViewCount)
-            .ThenByDescending(n => n.PublishedAt)
-            .AsQueryable();
+        var (feedMode, personal) = await PersonalizedFeedService.BuildAsync(db, user, 10, ct);
+        var newsItems = await LoadNewsItemsAsync(db, news, 100, ct);
+        var merged = personal
+            .Concat(newsItems)
+            .OrderByDescending(i => i.Likes ?? 0)
+            .ThenByDescending(i => i.PublishedAt)
+            .ToList();
 
-        var totalCount = await query.CountAsync(ct);
-        var items = await query.Skip(skip).Take(size).ToListAsync(ct);
+        var pageItems = merged.Skip(skip).Take(size).ToList();
+        return Results.Ok(BuildPage(pageItems, currentPage, size, merged.Count, feedMode));
+    }
 
-        if (totalCount == 0)
+    private static async Task<List<FeedItemResponse>> LoadNewsItemsAsync(
+        AppDbContext db,
+        INewsProvider news,
+        int maxItems,
+        CancellationToken ct)
+    {
+        var items = await db.NewsFeedItems
+            .OrderByDescending(n => n.PublishedAt)
+            .Take(maxItems)
+            .ToListAsync(ct);
+
+        if (items.Count > 0)
         {
-            var articles = await news.GetLatestArticlesAsync(100, ct);
-            totalCount = articles.Count;
-            var pageItems = articles
-                .OrderByDescending(a => a.PublishedAt)
-                .Skip(skip)
-                .Take(size)
-                .Select(a => MapFromDto(a, Random.Shared.Next(500, 5000)))
-                .ToList();
-
-            return Results.Ok(BuildPage(pageItems, currentPage, size, totalCount));
+            return items.Select(MapFromEntity).ToList();
         }
 
-        var mapped = items.Select(MapFromEntity).ToList();
-        return Results.Ok(BuildPage(mapped, currentPage, size, totalCount));
+        var articles = await news.GetLatestArticlesAsync(maxItems, ct);
+        return articles
+            .OrderByDescending(a => a.PublishedAt)
+            .Select(a => MapFromDto(a))
+            .ToList();
     }
 
     private static PaginatedFeedResponse BuildPage(
         IReadOnlyList<FeedItemResponse> items,
         int page,
         int pageSize,
-        int totalCount) =>
+        int totalCount,
+        string? feedMode = null) =>
         new(
             items,
             page,
             pageSize,
             totalCount,
-            page * pageSize < totalCount);
+            page * pageSize < totalCount,
+            feedMode);
 
     private static FeedReactions? GetReactions(string id) =>
         _reactions.TryGetValue(id, out var r) ? new FeedReactions(r.Agree, r.Stale, r.Disagree) : null;
 
+    private static string MapCategoryToType(string? category) =>
+        category?.Trim().ToLowerInvariant() switch
+        {
+            "banter" or "meme" or "prediction_highlight" or "leaderboard" or "ai_reaction" =>
+                category.Trim().ToLowerInvariant() switch
+                {
+                    "ai_reaction" => "banter",
+                    _ => category.Trim().ToLowerInvariant(),
+                },
+            _ => "news",
+        };
+
     private static FeedItemResponse MapFromEntity(Data.Entities.NewsFeedItem n)
     {
         var sid = n.Id.ToString();
-        return new(sid, "news", n.Title, n.Summary ?? n.Title, n.ImageUrl, n.Source, n.Url, n.PublishedAt, n.ViewCount, GetReactions(sid));
+        var media = FeedMediaMapper.FromNewsItem(n);
+        return new(
+            sid,
+            MapCategoryToType(n.Category),
+            n.Title,
+            n.Summary ?? n.Title,
+            n.ImageUrl,
+            n.Source,
+            n.Url,
+            n.PublishedAt,
+            n.ViewCount,
+            GetReactions(sid),
+            media);
     }
 
-    private static FeedItemResponse MapFromDto(NewsArticleDto a, int? likes = null) =>
-        new(a.Id, "news", a.Title, a.Summary, a.ImageUrl, a.SourceName, a.SourceUrl, a.PublishedAt,
-            likes ?? Random.Shared.Next(100, 5000), GetReactions(a.Id));
+    private static FeedItemResponse MapFromDto(NewsArticleDto a, int? likes = null)
+    {
+        var media = string.IsNullOrWhiteSpace(a.ImageUrl)
+            ? null
+            : FeedMediaMapper.FromImageUrl(a.ImageUrl, a.Title);
+        return new(
+            a.Id,
+            "news",
+            a.Title,
+            a.Summary,
+            a.ImageUrl,
+            a.SourceName,
+            a.SourceUrl,
+            a.PublishedAt,
+            likes ?? Random.Shared.Next(100, 5000),
+            GetReactions(a.Id),
+            media);
+    }
 }

@@ -170,5 +170,14 @@ public static class PredictionEndpoints
             p.CreatedAt,
             p.UpdatedAt,
             MatchLockService.IsLocked(match),
-            match.KickoffTime);
+            match.KickoffTime,
+            new PredictionMatchSummary(
+                match.TeamA,
+                match.TeamB,
+                match.TeamACode,
+                match.TeamBCode,
+                match.Status,
+                match.HomeScore,
+                match.AwayScore,
+                match.KickoffTime));
 }

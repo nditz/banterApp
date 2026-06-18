@@ -1,12 +1,17 @@
 using System.Security.Cryptography;
 using System.Text;
+using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace BanterApp.Api.Integrations.Common;
 
-public sealed class SyncRunTracker(AppDbContext db)
+public sealed class SyncRunTracker(
+    AppDbContext db,
+    IApplicationErrorLogger errorLogger,
+    ILogger<SyncRunTracker> logger)
 {
     public async Task<SyncRun> StartAsync(string provider, string jobName, CancellationToken ct = default)
     {
@@ -19,7 +24,7 @@ public sealed class SyncRunTracker(AppDbContext db)
             Status = "running"
         };
         db.SyncRuns.Add(run);
-        await db.SaveChangesAsync(ct);
+        await SaveChangesSafeAsync(ct);
         return run;
     }
 
@@ -31,13 +36,41 @@ public sealed class SyncRunTracker(AppDbContext db)
         string? errorMessage = null,
         CancellationToken ct = default)
     {
-        run.FinishedAt = DateTimeOffset.UtcNow;
-        run.RecordsCreated = created;
-        run.RecordsUpdated = updated;
-        run.RecordsFailed = failed;
-        run.Status = string.IsNullOrWhiteSpace(errorMessage) ? "completed" : "failed";
-        run.ErrorMessage = errorMessage;
-        await db.SaveChangesAsync(ct);
+        await FinalizeRunAsync(run.Id, created, updated, failed, errorMessage, ct);
+    }
+
+    public async Task FailAsync(
+        SyncRun run,
+        int created,
+        int updated,
+        Exception exception,
+        CancellationToken ct = default)
+    {
+        db.ChangeTracker.Clear();
+
+        await errorLogger.LogExceptionAsync(
+            "background",
+            exception,
+            category: run.JobName,
+            syncRunId: run.Id,
+            ct: ct);
+
+        try
+        {
+            await LogErrorAsync(
+                run.Provider,
+                run.JobName,
+                "job",
+                exception.Message,
+                run.Id,
+                ct: ct);
+        }
+        catch (Exception logEx)
+        {
+            logger.LogWarning(logEx, "Failed to write sync error for job {JobName}.", run.JobName);
+        }
+
+        await FinalizeRunAsync(run.Id, created, updated, failed: 1, exception.Message, ct);
     }
 
     public async Task LogErrorAsync(
@@ -56,11 +89,11 @@ public sealed class SyncRunTracker(AppDbContext db)
             Provider = provider,
             JobName = jobName,
             EntityType = entityType,
-            EntityId = entityId,
-            Message = message,
+            EntityId = StringLimits.Truncate(entityId, 64),
+            Message = StringLimits.Truncate(message, StringLimits.SyncErrorMessage) ?? string.Empty,
             OccurredAt = DateTimeOffset.UtcNow
         });
-        await db.SaveChangesAsync(ct);
+        await SaveChangesSafeAsync(ct);
     }
 
     public async Task UpsertExternalIdAsync(
@@ -71,10 +104,11 @@ public sealed class SyncRunTracker(AppDbContext db)
         string? rawPayload = null,
         CancellationToken ct = default)
     {
+        var normalizedExternalId = ExternalIdNormalizer.Normalize(providerExternalId);
         var hash = rawPayload is null ? null : ComputeHash(rawPayload);
         var existing = await db.ExternalIds.FirstOrDefaultAsync(
             x => x.Provider == provider &&
-                 x.ProviderExternalId == providerExternalId &&
+                 x.ProviderExternalId == normalizedExternalId &&
                  x.EntityType == entityType,
             ct);
 
@@ -86,7 +120,7 @@ public sealed class SyncRunTracker(AppDbContext db)
                 EntityType = entityType,
                 EntityId = entityId,
                 Provider = provider,
-                ProviderExternalId = providerExternalId,
+                ProviderExternalId = normalizedExternalId,
                 LastSeenAt = DateTimeOffset.UtcNow,
                 RawPayloadHash = hash
             });
@@ -101,7 +135,49 @@ public sealed class SyncRunTracker(AppDbContext db)
             }
         }
 
-        await db.SaveChangesAsync(ct);
+        await SaveChangesSafeAsync(ct);
+    }
+
+    private async Task FinalizeRunAsync(
+        Guid runId,
+        int created,
+        int updated,
+        int failed,
+        string? errorMessage,
+        CancellationToken ct)
+    {
+        db.ChangeTracker.Clear();
+
+        var run = await db.SyncRuns.FindAsync([runId], ct);
+        if (run is null)
+        {
+            logger.LogWarning("Sync run {RunId} not found while finalizing.", runId);
+            return;
+        }
+
+        run.FinishedAt = DateTimeOffset.UtcNow;
+        run.RecordsCreated = created;
+        run.RecordsUpdated = updated;
+        run.RecordsFailed = failed;
+        run.Status = string.IsNullOrWhiteSpace(errorMessage) ? "completed" : "failed";
+        run.ErrorMessage = StringLimits.Truncate(errorMessage, StringLimits.ErrorMessage);
+
+        await SaveChangesSafeAsync(ct);
+    }
+
+    private async Task SaveChangesSafeAsync(CancellationToken ct)
+    {
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            logger.LogError(ex, "Database save failed in SyncRunTracker.");
+            db.ChangeTracker.Clear();
+            await errorLogger.LogExceptionAsync("background", ex, category: "SyncRunTracker", ct: ct);
+            throw;
+        }
     }
 
     private static string ComputeHash(string payload)

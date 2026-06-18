@@ -1,3 +1,4 @@
+using BanterApp.Api.Common;
 using BanterApp.Api.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,6 +27,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LineupPlayer> LineupPlayers => Set<LineupPlayer>();
     public DbSet<MediaSource> MediaSources => Set<MediaSource>();
     public DbSet<MediaItem> MediaItems => Set<MediaItem>();
+    public DbSet<ApplicationErrorLog> ApplicationErrorLogs => Set<ApplicationErrorLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,6 +75,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(x => x.InviteCode).IsUnique();
             e.HasIndex(x => new { x.Kind, x.CountryCode });
             e.Property(x => x.InviteCode).HasMaxLength(12);
+            e.Property(x => x.Name).HasMaxLength(StringLimits.LeagueName);
             e.Property(x => x.CountryCode).HasMaxLength(2);
             e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId);
             e.HasOne(x => x.CreatedByAnonymousUser).WithMany().HasForeignKey(x => x.CreatedByAnonymousUserId);
@@ -84,7 +87,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.LeagueId, x.UserId });
             e.HasIndex(x => new { x.LeagueId, x.AnonymousUserId });
-            e.Property(x => x.DisplayName).HasMaxLength(40);
+            e.Property(x => x.DisplayName).HasMaxLength(StringLimits.LeagueMemberDisplayName);
             e.HasOne(x => x.League).WithMany(l => l.Members).HasForeignKey(x => x.LeagueId);
             e.HasOne(x => x.User).WithMany(u => u.LeagueMemberships).HasForeignKey(x => x.UserId);
             e.HasOne(x => x.AnonymousUser).WithMany().HasForeignKey(x => x.AnonymousUserId);
@@ -176,6 +179,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Provider).HasMaxLength(32);
             e.Property(x => x.JobName).HasMaxLength(64);
             e.Property(x => x.Status).HasMaxLength(16);
+            e.Property(x => x.ErrorMessage).HasMaxLength(2000);
+        });
+
+        modelBuilder.Entity<ApplicationErrorLog>(e =>
+        {
+            e.ToTable("application_error_logs");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.OccurredAt);
+            e.HasIndex(x => x.Source);
+            e.Property(x => x.Source).HasMaxLength(32);
+            e.Property(x => x.Category).HasMaxLength(128);
+            e.Property(x => x.Message).HasMaxLength(1000);
+            e.Property(x => x.RequestMethod).HasMaxLength(16);
+            e.Property(x => x.RequestPath).HasMaxLength(512);
         });
 
         modelBuilder.Entity<SyncError>(e =>
@@ -187,6 +204,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.JobName).HasMaxLength(64);
             e.Property(x => x.EntityType).HasMaxLength(32);
             e.Property(x => x.EntityId).HasMaxLength(64);
+            e.Property(x => x.Message).HasMaxLength(4000);
             e.HasOne(x => x.SyncRun).WithMany().HasForeignKey(x => x.SyncRunId);
         });
 

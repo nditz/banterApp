@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Lock } from "lucide-react";
 import { PredictionCelebration } from "@/components/prediction/PredictionCelebration";
 import { ScoreCounter } from "@/components/prediction/ScoreCounter";
@@ -11,14 +11,17 @@ import { usePredictions } from "@/hooks/usePredictions";
 import { addLocalBanterEntry, buildBanterLine } from "@/lib/banterFeed";
 import {
   estimateFixtureProbabilities,
+  formatPickOddsHint,
   formatProbabilityContext,
 } from "@/lib/predictionProbabilities";
+import type { PredictionOutcome } from "@/lib/reactionEngine";
 import {
   formatPickLabel,
   getPreMatchReaction,
 } from "@/lib/predictionReactions";
 import type { PredictionReaction } from "@/lib/reactionEngine";
 import { Button } from "@/components/ui/button";
+import { TeamFlag } from "@/components/brackets/TeamFlag";
 import type { Prediction } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -26,11 +29,12 @@ interface PredictionButtonsProps {
   matchId: string;
   teamA: string;
   teamB: string;
+  teamACode?: string;
+  teamBCode?: string;
   isLocked?: boolean;
   existingPredictions?: Prediction[];
   selectedValue?: string | null;
   onSelect?: (value: string) => void;
-  userDisplayName?: string;
 }
 
 type Mode = "result" | "correct_score" | "double_chance";
@@ -70,19 +74,67 @@ function parseScoreline(value: string): [number, number] | null {
   return [Number(match[1]), Number(match[2])];
 }
 
+interface CorrectScoreSectionProps {
+  teamA: string;
+  teamB: string;
+  savedScore: string | null;
+  isSaving: boolean;
+  onSubmit: (value: string) => void;
+}
+
+function CorrectScoreSection({
+  teamA,
+  teamB,
+  savedScore,
+  isSaving,
+  onSubmit,
+}: CorrectScoreSectionProps) {
+  const parsed = savedScore ? parseScoreline(savedScore) : null;
+  const [homeScore, setHomeScore] = useState(() => parsed?.[0] ?? 0);
+  const [awayScore, setAwayScore] = useState(() => parsed?.[1] ?? 0);
+
+  return (
+    <div className="space-y-3">
+      <ScoreCounter
+        label={teamA.split(" ").pop() ?? teamA}
+        value={homeScore}
+        onChange={setHomeScore}
+      />
+      <ScoreCounter
+        label={teamB.split(" ").pop() ?? teamB}
+        value={awayScore}
+        onChange={setAwayScore}
+      />
+      <div className="flex items-center justify-between border-t border-border pt-2">
+        <span className="font-display text-lg font-bold tabular-nums text-foreground">
+          {homeScore} – {awayScore}
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          className="btn-tournament h-8 cursor-pointer text-xs"
+          disabled={isSaving}
+          onClick={() => onSubmit(`${homeScore}-${awayScore}`)}
+        >
+          Lock it in (+7)
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function PredictionButtons({
   matchId,
   teamA,
   teamB,
+  teamACode,
+  teamBCode,
   isLocked = false,
   existingPredictions = [],
   selectedValue,
   onSelect,
-  userDisplayName = "You",
 }: PredictionButtonsProps) {
   const [mode, setMode] = useState<Mode>("result");
-  const [homeScore, setHomeScore] = useState(0);
-  const [awayScore, setAwayScore] = useState(0);
   const [savedReaction, setSavedReaction] = useState<SavedReactionState | null>(null);
   const [justSelected, setJustSelected] = useState<string | null>(null);
   const { savePrediction, isSaving } = usePredictions();
@@ -97,21 +149,16 @@ export function PredictionButtons({
 
   const savedValueForMode = (type: Mode) => existingByType.get(type)?.predictionValue ?? null;
 
-  useEffect(() => {
-    const savedScore = savedValueForMode("correct_score");
-    if (!savedScore) return;
-    const parsed = parseScoreline(savedScore);
-    if (parsed) {
-      setHomeScore(parsed[0]);
-      setAwayScore(parsed[1]);
-    }
-  }, [existingByType]);
   const { award } = useAura();
   const banterMode = useBanterMode();
   const { data: myLeagues } = useMyLeagues();
 
   const dcOptions = doubleChanceOptions(teamA, teamB);
   const leagueName = myLeagues?.leagues[0]?.name;
+  const probabilities = useMemo(
+    () => estimateFixtureProbabilities(matchId, teamA, teamB),
+    [matchId, teamA, teamB]
+  );
 
   const showReaction = (value: string, type: Mode) => {
     try {
@@ -132,11 +179,12 @@ export function PredictionButtons({
       const probabilityContext = formatProbabilityContext(probabilities, teamA, teamB);
       award(reaction.auraDelta);
       addLocalBanterEntry({
-        name: userDisplayName,
         pick: pickLabel,
         fixture: `${teamA} vs ${teamB}`,
-        line: buildBanterLine(reaction.key, userDisplayName, pickLabel),
+        line: buildBanterLine(reaction.key, pickLabel),
         emoji: reaction.emoji.split("")[0] ?? "⚽",
+        reactionKey: reaction.key,
+        reactionAsset: reaction.asset,
       });
 
       setSavedReaction({
@@ -214,13 +262,21 @@ export function PredictionButtons({
             <div className="grid grid-cols-3 gap-1.5" role="group" aria-label="Match result">
               {(
                 [
-                  ["home", teamA, "+3"],
-                  ["draw", "Draw", "+3"],
-                  ["away", teamB, "+3"],
+                  ["home", teamA, "+3", "home" as PredictionOutcome],
+                  ["draw", "Draw", "+3", "draw" as PredictionOutcome],
+                  ["away", teamB, "+3", "away" as PredictionOutcome],
                 ] as const
-              ).map(([value, label, points]) => {
+              ).map(([value, label, points, outcome]) => {
                 const isSelected = activeValue === value;
                 const isJustSelected = justSelected === value;
+                const flagCode =
+                  value === "home" ? teamACode : value === "away" ? teamBCode : undefined;
+                const oddsHint = formatPickOddsHint(
+                  outcome,
+                  probabilities[outcome],
+                  teamA,
+                  teamB
+                );
                 return (
                   <button
                     key={value}
@@ -233,8 +289,16 @@ export function PredictionButtons({
                       isJustSelected && "pick-btn-just-selected"
                     )}
                   >
-                    <span className="line-clamp-2 font-semibold">{label}</span>
+                    <span className="flex items-center justify-center gap-1.5 font-semibold">
+                      {flagCode && (
+                        <TeamFlag code={flagCode} name={label} />
+                      )}
+                      <span className="line-clamp-2">{label}</span>
+                    </span>
                     <span className="text-[10px] font-normal opacity-70">{points}</span>
+                    <span className="mt-0.5 line-clamp-2 px-1 text-[9px] font-normal leading-tight opacity-60">
+                      {oddsHint}
+                    </span>
                   </button>
                 );
               })}
@@ -242,34 +306,14 @@ export function PredictionButtons({
           )}
 
           {mode === "correct_score" && (
-            <div className="space-y-3">
-              <ScoreCounter
-                label={teamA.split(" ").pop() ?? teamA}
-                value={homeScore}
-                onChange={setHomeScore}
-              />
-              <ScoreCounter
-                label={teamB.split(" ").pop() ?? teamB}
-                value={awayScore}
-                onChange={setAwayScore}
-              />
-              <div className="flex items-center justify-between border-t border-border pt-2">
-                <span className="font-display text-lg font-bold tabular-nums text-foreground">
-                  {homeScore} – {awayScore}
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="btn-tournament h-8 cursor-pointer text-xs"
-                  disabled={isSaving}
-                  onClick={() =>
-                    handleSubmit(`${homeScore}-${awayScore}`, "correct_score")
-                  }
-                >
-                  Lock it in (+7)
-                </Button>
-              </div>
-            </div>
+            <CorrectScoreSection
+              key={savedValueForMode("correct_score") ?? "new"}
+              teamA={teamA}
+              teamB={teamB}
+              savedScore={savedValueForMode("correct_score")}
+              isSaving={isSaving}
+              onSubmit={(value) => handleSubmit(value, "correct_score")}
+            />
           )}
 
           {mode === "double_chance" && (
@@ -316,7 +360,6 @@ export function PredictionButtons({
             <PredictionCelebration
               key={`${matchId}-${savedReaction.pickLabel}`}
               reaction={savedReaction.reaction}
-              userName={userDisplayName}
               fixture={`${teamA} vs ${teamB}`}
               pick={savedReaction.pickLabel}
               probabilityContext={savedReaction.probabilityContext}

@@ -132,8 +132,8 @@ public sealed class StandingsSyncJob
         }
         catch (Exception ex)
         {
-            await _tracker.CompleteAsync(run, created, updated, failed: 1, errorMessage: ex.Message, cancellationToken);
-            throw;
+            _logger.LogError(ex, "Standings sync job failed.");
+            await _tracker.FailAsync(run, created, updated, ex, cancellationToken);
         }
     }
 }

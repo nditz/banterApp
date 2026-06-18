@@ -60,6 +60,29 @@ public static class SyncEndpoints
             return Results.Ok(errors);
         });
 
+        group.MapGet("/application-errors", async (AppDbContext db, int? limit, CancellationToken ct) =>
+        {
+            var take = Math.Clamp(limit ?? 20, 1, 100);
+            var errors = await db.ApplicationErrorLogs
+                .OrderByDescending(e => e.OccurredAt)
+                .Take(take)
+                .Select(e => new
+                {
+                    e.Id,
+                    e.Source,
+                    e.Category,
+                    e.Message,
+                    e.RequestMethod,
+                    e.RequestPath,
+                    e.StatusCode,
+                    e.SyncRunId,
+                    e.OccurredAt
+                })
+                .ToListAsync(ct);
+
+            return Results.Ok(errors);
+        });
+
         group.MapGet("/status", async (
             AppDbContext db,
             IYouTubeProvider youtube,

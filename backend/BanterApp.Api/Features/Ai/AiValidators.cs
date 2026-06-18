@@ -47,6 +47,9 @@ public sealed class BroadcastScriptRequestValidator : AbstractValidator<Broadcas
             .NotEmpty()
             .Must(p => p is "pre_match" or "post_match")
             .WithMessage("Phase must be 'pre_match' or 'post_match'.");
+        RuleFor(x => x.Style)
+            .Must(s => s is null or "full" or "praise" or "burn")
+            .WithMessage("Style must be 'full', 'praise', or 'burn'.");
         RuleFor(x => x.Picks).NotNull();
         RuleFor(x => x.Picks.Count).LessThanOrEqualTo(30);
         RuleForEach(x => x.Picks).ChildRules(pick =>

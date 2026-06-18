@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Users } from "lucide-react";
+import { LeagueAvatar } from "@/components/ui/UserAvatar";
 import type { League, LeagueLimits } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -25,8 +25,8 @@ export function LeagueSelector({
 }: LeagueSelectorProps) {
   if (leagues.length === 0) {
     return (
-      <p className="py-3 text-center text-xs text-muted-foreground">
-        No leagues yet — create or join one below.
+        <p className="py-3 text-center text-xs text-muted-foreground">
+        Global and country leagues load automatically once you&apos;re playing.
       </p>
     );
   }
@@ -43,7 +43,6 @@ export function LeagueSelector({
         {leagues.map((league) => {
           const selected = league.id === selectedId;
           const badge = kindBadge[league.kind ?? "custom"] ?? kindBadge.custom;
-          const Icon = league.kind === "global" ? Globe : Users;
 
           return (
             <li key={league.id}>
@@ -59,14 +58,7 @@ export function LeagueSelector({
                     : "border-border bg-card hover:border-gold/30 hover:bg-muted/40"
                 )}
               >
-                <span
-                  className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-full",
-                    selected ? "bg-gold/20" : "bg-muted"
-                  )}
-                >
-                  <Icon className="size-3.5 text-muted-foreground" aria-hidden />
-                </span>
+                <LeagueAvatar league={league} size={32} selected={selected} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs font-semibold">{league.name}</span>
                   <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">

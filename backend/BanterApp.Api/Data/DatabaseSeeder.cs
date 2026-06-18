@@ -1,4 +1,5 @@
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Pundits;
 using BanterApp.Api.Integrations.News;
 using BanterApp.Api.Integrations.SportsData;
 using Microsoft.EntityFrameworkCore;
@@ -25,8 +26,20 @@ public static class DatabaseSeeder
 
         if (isPostgres)
         {
-            await db.Database.MigrateAsync(cancellationToken);
-            logger.LogInformation("Database migrations applied.");
+            try
+            {
+                await db.Database.MigrateAsync(cancellationToken);
+                logger.LogInformation("Database migrations applied.");
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("PendingModelChangesWarning", StringComparison.Ordinal))
+            {
+                logger.LogCritical(
+                    ex,
+                    "The EF model has changes that are not captured in a migration. " +
+                    "Stop the API, run: dotnet ef migrations add <Name> --project backend/BanterApp.Api " +
+                    "then dotnet ef database update --project backend/BanterApp.Api, and rebuild before restarting.");
+                throw;
+            }
         }
         else
         {
@@ -74,12 +87,7 @@ public static class DatabaseSeeder
 
         if (!useLiveSports && !await db.Pundits.AnyAsync(cancellationToken))
         {
-            var pundits = new[]
-            {
-                new Pundit { Id = Guid.Parse("11111111-1111-1111-1111-111111111101"), Name = "Alex Morgan", Organization = "ESPN" },
-                new Pundit { Id = Guid.Parse("11111111-1111-1111-1111-111111111102"), Name = "Rio Ferdinand", Organization = "BBC Sport" },
-                new Pundit { Id = Guid.Parse("11111111-1111-1111-1111-111111111103"), Name = "Stephen A. Smith", Organization = "First Take" },
-            };
+            var pundits = PunditPersonas.Defaults.Take(3).Select(PunditPersonas.ToEntity).ToArray();
             db.Pundits.AddRange(pundits);
 
             var finished = await db.Matches.Where(m => m.Status == "FT").Take(3).ToListAsync(cancellationToken);
@@ -104,6 +112,8 @@ public static class DatabaseSeeder
             }
         }
 
+        await UpgradeLegacyPunditsAsync(db, cancellationToken);
+
         await db.SaveChangesAsync(cancellationToken);
 
         var matchCount = await db.Matches.CountAsync(cancellationToken);
@@ -112,6 +122,38 @@ public static class DatabaseSeeder
             "Seed complete: {MatchCount} matches, {NewsCount} feed items in database.",
             matchCount,
             newsCount);
+    }
+
+    /// <summary>Rewrites known seeded pundit rows to fictional desk personas.</summary>
+    private static async Task UpgradeLegacyPunditsAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
+        var changed = false;
+        foreach (var seed in PunditPersonas.Defaults)
+        {
+            var pundit = await db.Pundits.FindAsync([seed.Id], cancellationToken);
+            if (pundit is null)
+            {
+                continue;
+            }
+
+            if (pundit.Name == seed.Name &&
+                pundit.Organization == seed.Organization &&
+                pundit.Archetype == seed.Archetype &&
+                pundit.ParodyCue == seed.ParodyCue &&
+                pundit.StyleSlug == seed.StyleSlug &&
+                pundit.AttributionMode == PunditAttributionMode.Persona)
+            {
+                continue;
+            }
+
+            PunditPersonas.Apply(pundit, seed);
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private static async Task SeedMatchesAsync(

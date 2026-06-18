@@ -177,23 +177,23 @@ export const auraLevels = [
 
 export const banterTemplates = {
   smart_choice: [
-    '{name} picked {pick}. Safe, sensible, very spreadsheet-coded.',
-    '{name} backed the favourite. Ball knowledge or basic? We’ll find out.',
-    '{name} chose logic over chaos. Respectable behaviour.'
+    '{pick} locked in. Safe, sensible, very spreadsheet-coded.',
+    'The favourite is in at {pick}. Ball knowledge or basic? We’ll find out.',
+    'Logic over chaos on {pick}. Respectable behaviour.'
   ],
   playing_safe: [
-    '{name} picked {pick}. Fence officially occupied.',
-    '{name} has entered neutrality mode.',
-    '{name} said “I’m not here for screenshots today.”'
+    '{pick} is the call. Fence officially occupied.',
+    'Neutrality mode activated on {pick}.',
+    'Not here for screenshots today — {pick} it is.'
   ],
   against_grain: [
-    '{name} backed {pick}. The group chat has been notified.',
-    '{name} is standing on business with this one.',
-    '{name} picked the underdog. Aura farming has begun.'
+    '{pick} backed. The group chat has been notified.',
+    'Standing on business with {pick}.',
+    'Underdog energy on {pick}. Aura farming has begun.'
   ],
   chaos_pick: [
-    '{name} has submitted a chaos pick. Medical team on standby.',
-    '{name} said stats are optional.',
-    '{name} is either a genius or needs WiFi supervision.'
+    'Chaos pick submitted: {pick}. Medical team on standby.',
+    'Stats were optional for {pick}.',
+    '{pick} is either genius or needs WiFi supervision.'
   ]
 };

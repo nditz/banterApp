@@ -63,5 +63,31 @@ export function formatProbabilityContext(
   homeTeamName: string,
   awayTeamName: string
 ): string {
-  return `Model: ${homeTeamName} ${probabilities.home}% · Draw ${probabilities.draw}% · ${awayTeamName} ${probabilities.away}%`;
+  const entries = Object.entries(probabilities) as [PredictionOutcome, number][];
+  const favorite = entries.sort((a, b) => b[1] - a[1])[0];
+  const favoriteLabel =
+    favorite[0] === "home" ? homeTeamName : favorite[0] === "away" ? awayTeamName : "Draw";
+
+  return `Odds read: ${favoriteLabel} is the chalk at ${favorite[1]}% · Draw ${probabilities.draw}% · ${homeTeamName} ${probabilities.home}% · ${awayTeamName} ${probabilities.away}%`;
+}
+
+export function formatPickOddsHint(
+  outcome: PredictionOutcome,
+  probability: number,
+  homeTeamName: string,
+  awayTeamName: string
+): string {
+  const label =
+    outcome === "home" ? homeTeamName : outcome === "away" ? awayTeamName : "Draw";
+
+  if (probability >= 45) {
+    return `Chalk · ${probability}% — safe but valid`;
+  }
+  if (probability >= 30) {
+    return `${probability}% — mid, not mid`;
+  }
+  if (probability >= 18) {
+    return `${probability}% — spicy, I see you`;
+  }
+  return `${probability}% on ${label} — delulu era unlocked`;
 }

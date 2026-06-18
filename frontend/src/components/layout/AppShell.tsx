@@ -37,7 +37,7 @@ export function AppShell({ children }: AppShellProps) {
   const { data: session } = useSession();
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="stadium-bg flex min-h-screen flex-col">
       <header
         className="sticky top-0 z-50 text-white"
         style={{ backgroundColor: BRAND.headerBackground }}
@@ -171,7 +171,7 @@ export function AppShell({ children }: AppShellProps) {
         )}
       </header>
 
-      <main className="stadium-bg main-with-bottom-nav relative flex-1 px-4 py-4 sm:px-6 sm:py-5">
+      <main className="main-with-bottom-nav relative z-[1] flex-1 px-4 py-4 sm:px-6 sm:py-5">
         <TurnstileProvider />
         <TermsGate />
         {children}
@@ -179,10 +179,7 @@ export function AppShell({ children }: AppShellProps) {
 
       <MobileBottomNav />
 
-      <footer
-        className="mt-auto border-t border-logo-green/40 py-6 text-white/65"
-        style={{ backgroundColor: BRAND.headerBackground }}
-      >
+      <footer className="site-footer relative z-[1] mt-auto border-t border-logo-green/40 py-6 text-white/65">
         <div className="mx-auto max-w-[1400px] space-y-3 px-4 text-center text-[11px] sm:px-6">
           <Link href="/" className="mx-auto inline-flex justify-center">
             <Image

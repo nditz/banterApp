@@ -42,5 +42,9 @@ export function useFeed() {
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.page + 1 : undefined,
     staleTime: 30_000,
+    select: (data) => ({
+      ...data,
+      feedMode: data.pages[0]?.feedMode,
+    }),
   });
 }

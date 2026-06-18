@@ -15,6 +15,8 @@ export interface Match {
   venue?: string;
   stage?: string;
   status?: string;
+  homeScore?: number;
+  awayScore?: number;
   isLocked?: boolean;
 }
 
@@ -75,6 +77,12 @@ export interface LeaderboardEntry {
   totalPredictions?: number;
   isPundit?: boolean;
   organization?: string;
+  archetype?: string;
+  parodyCue?: string;
+  styleSlug?: string;
+  isFictionalPersona?: boolean;
+  attributionNote?: string;
+  sourceUrl?: string;
   isCurrentUser?: boolean;
 }
 
@@ -134,6 +142,14 @@ export interface StudioPickEntry {
   prediction: string;
   predictionType: string;
   pointsAwarded?: number;
+  archetype?: string;
+  parodyCue?: string;
+  styleSlug?: string;
+  isFictionalPersona?: boolean;
+  attributionNote?: string;
+  sourceUrl?: string;
+  sourcePlatform?: string;
+  avatarSeed?: string;
 }
 
 export interface StudioMatchComparison {
@@ -161,4 +177,5 @@ export interface PaginatedResponse<T> {
   pageSize: number;
   totalCount: number;
   hasMore: boolean;
+  feedMode?: "personal" | "pundit";
 }

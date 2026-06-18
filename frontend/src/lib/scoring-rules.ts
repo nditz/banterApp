@@ -97,6 +97,7 @@ export const CONCEPT_SLIDES = [
     subtitle: "Content engine",
     body: "Export one cumulative script for all your picks — pre-match hot takes or post-match flex and roast — ready for TikTok, Reels, or Shorts. Studio-style, with the stats to back it up.",
     accent: "gold",
+    backgroundImage: "/images/baller-scripts.png",
   },
   {
     id: "scoring",
@@ -104,6 +105,7 @@ export const CONCEPT_SLIDES = [
     subtitle: "Simple rules, big bragging rights",
     body: "Result picks earn +3, correct scores +7, double chance +2. Stack bonuses for perfect matchdays and group stages. In private leagues, nail tournament awards for up to +190 more.",
     accent: "pitch",
+    backgroundImage: "/images/score-points-your-way.png",
   },
   {
     id: "bonuses",
@@ -111,6 +113,7 @@ export const CONCEPT_SLIDES = [
     subtitle: "Big swings for private leagues",
     body: "Player of the Tournament, Golden Boot, Golden Glove, top assists, and the surprise package team — up to +50 each. Only counts in custom leagues with 3+ mates who are actually playing.",
     accent: "flare",
+    backgroundImage: "/images/bonus-picks.png",
   },
   {
     id: "leagues",
@@ -118,6 +121,7 @@ export const CONCEPT_SLIDES = [
     subtitle: "Friends, family, coworkers",
     body: "Create a private league, share an invite code, and see who really knows ball. Weekly, monthly, and tournament-long standings keep the banter going.",
     accent: "brand",
+    backgroundImage: "/images/fans_main_image_2.png",
   },
   {
     id: "pundits",
@@ -125,6 +129,7 @@ export const CONCEPT_SLIDES = [
     subtitle: "Podcasts, shows & media pundits",
     body: "Compare your picks against journalists, podcasters, and TV analysts. When you beat the pros on the leaderboard, that's content gold.",
     accent: "gold",
+    backgroundImage: "/images/fans_main_image_1.png",
   },
 ] as const;
 
@@ -136,6 +141,7 @@ export const HOME_WELCOME_SLIDES = [
     subtitle: "World Cup 2026",
     body: "Every pick you make becomes ready-to-post content — pre-match hot takes, post-match receipts, full scripts for TikTok, Reels & Shorts. Play the tournament, walk away with a content library.",
     accent: "brand",
+    backgroundImage: "/images/ball-knowledge-header.png",
   },
   ...CONCEPT_SLIDES,
 ] as const;

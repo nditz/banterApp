@@ -13,15 +13,16 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getOrCreateAnonymousUser } from "@/lib/anonymous";
+import { apiFetch } from "@/lib/api";
 import { getStoredRecoveryToken } from "@/lib/session";
 import { createClient } from "@/lib/supabase/client";
+import { getOAuthRedirectUrl } from "@/lib/supabase/oauth";
 import { cn } from "@/lib/utils";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [recoveryCode] = useState<string | null>(() => {
@@ -46,7 +47,7 @@ export default function RegisterPage() {
       email,
       password,
       options: {
-        data: { display_name: displayName },
+        data: { display_name: email },
       },
     });
 
@@ -54,6 +55,12 @@ export default function RegisterPage() {
     if (authError) {
       setError(authError.message);
       return;
+    }
+
+    try {
+      await apiFetch("/api/auth/session/sync", { method: "POST" });
+    } catch {
+      // Non-blocking — session cookies are set.
     }
 
     router.push("/");
@@ -71,7 +78,7 @@ export default function RegisterPage() {
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: getOAuthRedirectUrl("/"),
       },
     });
 
@@ -119,18 +126,6 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label htmlFor="displayName" className="mb-1.5 block text-sm font-medium">
-                Display name
-              </label>
-              <Input
-                id="displayName"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your name"
-                required
-              />
-            </div>
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
                 Email

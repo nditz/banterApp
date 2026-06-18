@@ -1,4 +1,4 @@
-import type { FeedItem, FeedMediaType, PaginatedResponse } from "./types";
+import type { FeedItem, FeedMedia, FeedMediaType, PaginatedResponse } from "./types";
 
 type ApiFeedItem = {
   id?: string;
@@ -34,7 +34,7 @@ function mapFeedItem(raw: ApiFeedItem, index: number): FeedItem | null {
   const type = raw.type as FeedItem["type"] | undefined;
 
   const mediaType = raw.media?.type;
-  const media =
+  let media: FeedMedia | undefined =
     raw.media?.url && isFeedMediaType(mediaType)
       ? {
           type: mediaType,
@@ -44,6 +44,14 @@ function mapFeedItem(raw: ApiFeedItem, index: number): FeedItem | null {
           alt: raw.media.alt,
         }
       : undefined;
+
+  if (!media && raw.imageUrl) {
+    media = {
+      type: "image",
+      url: raw.imageUrl,
+      alt: title,
+    };
+  }
 
   return {
     id,
@@ -109,20 +117,27 @@ export function normalizeFeedResponse(
         ? payload.hasMore
         : currentPage * size < totalCount;
 
+    const feedMode =
+      payload.feedMode === "personal" || payload.feedMode === "pundit"
+        ? payload.feedMode
+        : undefined;
+
     return {
       items,
       page: currentPage,
       pageSize: size,
       totalCount,
       hasMore,
+      feedMode,
     };
   }
 
-  return {
+  const empty: PaginatedResponse<FeedItem> = {
     items: [],
     page,
     pageSize,
     totalCount: 0,
     hasMore: false,
   };
+  return empty;
 }

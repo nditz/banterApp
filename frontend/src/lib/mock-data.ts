@@ -55,6 +55,11 @@ export const mockFeedItems: FeedItem[] = [
     type: "banter",
     title: "Bold call!",
     body: "You predicted Morocco to beat Spain. 92% of users disagreed. You were right.",
+    media: {
+      type: "gif",
+      url: "https://media.giphy.com/media/26gsjCZpPolPr3sBy/giphy.gif",
+      alt: "Celebration reaction",
+    },
     publishedAt: new Date(Date.now() - 3600000).toISOString(),
     likes: 142,
   },
@@ -101,6 +106,11 @@ export const mockFeedItems: FeedItem[] = [
     type: "banter",
     title: "Pundit Roast",
     body: "Your prediction accuracy is currently being investigated by scientists.",
+    media: {
+      type: "gif",
+      url: "https://media.giphy.com/media/ISOckXU5oKAE/giphy.gif",
+      alt: "Skeptical reaction",
+    },
     publishedAt: new Date(Date.now() - 21600000).toISOString(),
     likes: 312,
   },
@@ -208,8 +218,12 @@ export const mockPunditLeaderboard: LeaderboardEntry[] = [
   {
     rank: 1,
     userId: "p1",
-    displayName: "Gary Neville",
-    organization: "Sky Sports",
+    displayName: "Side-View Gary",
+    organization: "Rant & Chips TV",
+    archetype: "Touchline rage merchant",
+    parodyCue: "Parody · the touchline close-up guy (Neville energy)",
+    styleSlug: "touchline-uk",
+    isFictionalPersona: true,
     points: 412,
     isPundit: true,
     correctPredictions: 28,
@@ -218,8 +232,12 @@ export const mockPunditLeaderboard: LeaderboardEntry[] = [
   {
     rank: 2,
     userId: "p2",
-    displayName: "Alexi Lalas",
-    organization: "FOX Sports",
+    displayName: "Sofa Captain Rio",
+    organization: "Sofa Champions",
+    archetype: "Ex-pro captain couch takes",
+    parodyCue: "Parody · the velvet sofa legend (Rio energy)",
+    styleSlug: "ex-pro-couch",
+    isFictionalPersona: true,
     points: 398,
     isPundit: true,
     correctPredictions: 26,
@@ -228,11 +246,29 @@ export const mockPunditLeaderboard: LeaderboardEntry[] = [
   {
     rank: 3,
     userId: "p3",
-    displayName: "BBC Analyst",
-    organization: "BBC Sport",
+    displayName: "Screamin' Stephen",
+    organization: "First Controversy Desk",
+    archetype: "Loudest desk in the building",
+    parodyCue: "Parody · controversy merchant (Stephen A. energy)",
+    styleSlug: "hot-take-desk",
+    isFictionalPersona: true,
     points: 385,
     isPundit: true,
     correctPredictions: 25,
+    totalPredictions: 40,
+  },
+  {
+    rank: 4,
+    userId: "p4",
+    displayName: "Le Prof Henri",
+    organization: "Class on Grass",
+    archetype: "Silky studio icon",
+    parodyCue: "Parody · the smooth studio legend (Henry energy)",
+    styleSlug: "silky-studio",
+    isFictionalPersona: true,
+    points: 372,
+    isPundit: true,
+    correctPredictions: 24,
     totalPredictions: 40,
   },
 ];
@@ -264,7 +300,7 @@ export const mockFriendsLeaderboard: LeaderboardEntry[] = [
   },
 ];
 
-export const mockLeagues: League[] = [
+export const mockSystemLeagues: League[] = [
   {
     id: "global-1",
     name: "Global Banter League",
@@ -282,6 +318,10 @@ export const mockLeagues: League[] = [
     countryCode: "GB",
     points: 86,
   },
+];
+
+export const mockLeagues: League[] = [
+  ...mockSystemLeagues,
   {
     id: "l1",
     name: "Office World Cup Pool",

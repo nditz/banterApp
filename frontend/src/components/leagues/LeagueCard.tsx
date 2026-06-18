@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Crown, Users } from "lucide-react";
+import { Check, Copy, Crown } from "lucide-react";
+import { LeagueAvatar } from "@/components/ui/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,27 +36,31 @@ export function LeagueCard({ league }: LeagueCardProps) {
   return (
     <Card className="rounded-lg">
       <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base">{league.name}</CardTitle>
-          <div className="flex gap-1.5">
-            {league.isAdmin && (
-              <Badge className="gap-1 bg-gold/15 text-gold ring-1 ring-gold/40">
-                <Crown className="size-3" aria-hidden />
-                Admin
-              </Badge>
-            )}
-            {league.rank && <Badge variant="secondary">Rank #{league.rank}</Badge>}
+        <div className="flex items-start gap-3">
+          <LeagueAvatar league={league} size={40} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <CardTitle className="text-base">{league.name}</CardTitle>
+              <div className="flex gap-1.5">
+                {league.isAdmin && (
+                  <Badge className="gap-1 bg-gold/15 text-gold ring-1 ring-gold/40">
+                    <Crown className="size-3" aria-hidden />
+                    Admin
+                  </Badge>
+                )}
+                {league.rank && <Badge variant="secondary">Rank #{league.rank}</Badge>}
+              </div>
+            </div>
+            <CardDescription className="flex items-center gap-1">
+              {league.memberCount}
+              {league.maxMembers ? ` / ${league.maxMembers}` : ""} players
+              {league.bonusPointsEnabled && (
+                <span className="ml-1 text-gold-foreground">· bonus picks on</span>
+              )}
+              {league.myDisplayName && ` · You play as ${league.myDisplayName}`}
+            </CardDescription>
           </div>
         </div>
-        <CardDescription className="flex items-center gap-1">
-          <Users className="size-3.5" aria-hidden />
-          {league.memberCount}
-          {league.maxMembers ? ` / ${league.maxMembers}` : ""} players
-          {league.bonusPointsEnabled && (
-            <span className="ml-1 text-gold-foreground">· bonus picks on</span>
-          )}
-          {league.myDisplayName && ` · You play as ${league.myDisplayName}`}
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2">

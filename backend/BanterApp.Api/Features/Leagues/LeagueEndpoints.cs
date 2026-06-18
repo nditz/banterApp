@@ -61,10 +61,20 @@ public static class LeagueEndpoints
             });
         }
 
+        var leagueName = NormalizeLeagueName(request.Name);
+        if (ProfanityFilter.ContainsProfanity(leagueName))
+        {
+            return Results.BadRequest(new { error = "League name contains language we can't allow on a family-friendly site." });
+        }
+
+        var displayName = LeagueDisplayNameResolver.EnsureUniqueInLeague(
+            await LeagueDisplayNameResolver.ResolveAsync(db, user, ct),
+            []);
+
         var league = new League
         {
             Id = Guid.NewGuid(),
-            Name = request.Name.Trim(),
+            Name = leagueName,
             InviteCode = GenerateInviteCode(),
             CreatedByUserId = user.UserId,
             CreatedByAnonymousUserId = user.IsAuthenticated ? null : user.AnonymousUserId,
@@ -78,14 +88,14 @@ public static class LeagueEndpoints
             LeagueId = league.Id,
             UserId = user.UserId,
             AnonymousUserId = user.IsAuthenticated ? null : user.AnonymousUserId,
-            DisplayName = request.DisplayName.Trim(),
+            DisplayName = displayName,
             IsAdmin = true
         });
 
         await db.SaveChangesAsync(ct);
 
         return Results.Created($"/api/leagues/standings?leagueId={league.Id}", new LeagueResponse(
-            league.Id, league.Name, league.InviteCode, 1, league.MaxMembers, league.CreatedAt));
+            league.Id, league.Name, league.InviteCode, 1, league.MaxMembers, league.CreatedAt, displayName));
     }
 
     private static async Task<IResult> JoinLeague(
@@ -150,11 +160,9 @@ public static class LeagueEndpoints
             return Results.Conflict(new { error = $"This league is full ({league.MaxMembers} players max)." });
         }
 
-        var displayName = request.DisplayName.Trim();
-        if (members.Any(m => string.Equals(m.DisplayName, displayName, StringComparison.OrdinalIgnoreCase)))
-        {
-            return Results.Conflict(new { error = "That name is already taken in this league — pick another." });
-        }
+        var displayName = LeagueDisplayNameResolver.EnsureUniqueInLeague(
+            await LeagueDisplayNameResolver.ResolveAsync(db, user, ct),
+            members.Select(m => m.DisplayName));
 
         db.LeagueMembers.Add(new LeagueMember
         {
@@ -169,10 +177,10 @@ public static class LeagueEndpoints
         await db.SaveChangesAsync(ct);
 
         return Results.Ok(new LeagueResponse(
-            league.Id, league.Name, league.InviteCode, members.Count + 1, league.MaxMembers, league.CreatedAt));
+            league.Id, league.Name, league.InviteCode, members.Count + 1, league.MaxMembers, league.CreatedAt, displayName));
     }
 
-    /// <summary>Leagues the current session (registered or guest) belongs to.</summary>
+    /// <summary>Leagues for the current session — global + country always; custom only if a member.</summary>
     private static async Task<IResult> GetMyLeagues(
         string? countryCode,
         HttpContext http,
@@ -181,19 +189,28 @@ public static class LeagueEndpoints
         TournamentBonusScoringService bonusScoring,
         CancellationToken ct)
     {
-        if (!user.IsAuthenticated && !user.IsAnonymous)
-        {
-            return Results.Ok(new MyLeaguesResponse([], SystemLeagueService.BuildLimits(0, 0)));
-        }
-
         var resolvedCountry = countryCode;
         if (string.IsNullOrWhiteSpace(resolvedCountry))
         {
             resolvedCountry = http.Request.Headers["X-Country-Code"].FirstOrDefault();
         }
 
-        await SystemLeagueService.EnsureSystemLeaguesAsync(db, user, resolvedCountry, ct);
+        var normalizedCountry = SystemLeagueService.NormalizeCountryCode(resolvedCountry);
+        await SystemLeagueService.EnsureSystemLeagueRowsAsync(db, normalizedCountry, ct);
+
+        var hasSession = user.IsAuthenticated || user.IsAnonymous;
+        if (hasSession)
+        {
+            await SystemLeagueService.EnsureSystemLeaguesAsync(db, user, normalizedCountry, ct);
+        }
+
         await db.SaveChangesAsync(ct);
+
+        if (!hasSession)
+        {
+            var guestLeagues = await BuildGuestSystemLeaguesAsync(db, normalizedCountry, ct);
+            return Results.Ok(new MyLeaguesResponse(guestLeagues, SystemLeagueService.BuildLimits(0, 0)));
+        }
 
         var memberships = await db.LeagueMembers
             .Where(m => user.IsAuthenticated
@@ -207,7 +224,8 @@ public static class LeagueEndpoints
 
         if (memberships.Count == 0)
         {
-            return Results.Ok(new MyLeaguesResponse([], limits));
+            var fallback = await BuildGuestSystemLeaguesAsync(db, normalizedCountry, ct);
+            return Results.Ok(new MyLeaguesResponse(fallback, limits));
         }
 
         var leagueIds = memberships.Select(m => m.LeagueId).ToList();
@@ -252,6 +270,64 @@ public static class LeagueEndpoints
         return Results.Ok(new MyLeaguesResponse(response, limits));
     }
 
+    private static async Task<List<MyLeagueResponse>> BuildGuestSystemLeaguesAsync(
+        AppDbContext db,
+        string countryCode,
+        CancellationToken ct)
+    {
+        var global = await db.Leagues.FindAsync([League.GlobalLeagueId], ct);
+        var country = await db.Leagues
+            .FirstOrDefaultAsync(l => l.Kind == LeagueKind.Country && l.CountryCode == countryCode, ct);
+
+        var leagueIds = new List<Guid>();
+        if (global is not null)
+        {
+            leagueIds.Add(global.Id);
+        }
+
+        if (country is not null)
+        {
+            leagueIds.Add(country.Id);
+        }
+
+        var memberCounts = leagueIds.Count == 0
+            ? []
+            : await db.LeagueMembers
+                .Where(m => leagueIds.Contains(m.LeagueId))
+                .GroupBy(m => m.LeagueId)
+                .Select(g => new { LeagueId = g.Key, Count = g.Count() })
+                .ToListAsync(ct);
+        var countMap = memberCounts.ToDictionary(x => x.LeagueId, x => x.Count);
+
+        var response = new List<MyLeagueResponse>();
+        if (global is not null)
+        {
+            response.Add(ToGuestLeagueResponse(global, countMap.GetValueOrDefault(global.Id, 0)));
+        }
+
+        if (country is not null)
+        {
+            response.Add(ToGuestLeagueResponse(country, countMap.GetValueOrDefault(country.Id, 0)));
+        }
+
+        return response;
+    }
+
+    private static MyLeagueResponse ToGuestLeagueResponse(League league, int memberCount) =>
+        new(
+            league.Id,
+            league.Name,
+            league.InviteCode,
+            memberCount,
+            league.MaxMembers,
+            IsAdmin: false,
+            MyDisplayName: string.Empty,
+            MyPoints: 0,
+            league.CreatedAt,
+            league.Kind.ToString().ToLowerInvariant(),
+            league.CountryCode,
+            BonusPointsEnabled: false);
+
     private static int KindSortOrder(LeagueKind kind) => kind switch
     {
         LeagueKind.Global => 0,
@@ -259,7 +335,7 @@ public static class LeagueEndpoints
         _ => 2
     };
 
-    /// <summary>Public preview used by the invite-link landing page.</summary>
+    /// <summary>Invite-link preview — custom leagues only; requires the secret invite code.</summary>
     private static async Task<IResult> GetLeaguePreview(
         string? inviteCode,
         AppDbContext db,
@@ -272,7 +348,7 @@ public static class LeagueEndpoints
 
         var code = inviteCode.Trim().ToUpperInvariant();
         var league = await db.Leagues.FirstOrDefaultAsync(l => l.InviteCode == code, ct);
-        if (league is null)
+        if (league is null || league.Kind != LeagueKind.Custom)
         {
             return Results.NotFound(new { error = "League not found — check the invite link." });
         }
@@ -288,6 +364,7 @@ public static class LeagueEndpoints
         Guid? leagueId,
         string? inviteCode,
         AppDbContext db,
+        IUserContext user,
         TournamentBonusScoringService bonusScoring,
         CancellationToken ct)
     {
@@ -305,6 +382,12 @@ public static class LeagueEndpoints
         if (league is null)
         {
             return Results.BadRequest(new { error = "Provide leagueId or inviteCode query parameter." });
+        }
+
+        var access = await LeagueAccessGuard.RequireCustomLeagueMemberAsync(db, league, user, ct);
+        if (access is not null)
+        {
+            return access;
         }
 
         await bonusScoring.LockPicksIfNeededAsync(db, ct);
@@ -386,6 +469,14 @@ public static class LeagueEndpoints
             : db.Predictions.Where(p => p.AnonymousUserId == user.AnonymousUserId);
 
         return await query.SumAsync(p => p.PointsAwarded, ct);
+    }
+
+    private static string NormalizeLeagueName(string name)
+    {
+        var trimmed = string.Join(
+            ' ',
+            name.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return StringLimits.Truncate(trimmed, StringLimits.LeagueName) ?? trimmed;
     }
 
     private static string GenerateInviteCode()

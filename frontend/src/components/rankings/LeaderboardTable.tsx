@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { getInitials } from "@/lib/leaderboard";
+import { UserAvatar } from "@/components/ui/UserAvatar";
+import { getPunditAvatarUrl, formatPunditSubtitle } from "@/lib/pundits";
 import type { LeaderboardEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,9 @@ function formatCount(value: number): string {
 function PlayerRow({ entry }: { entry: LeaderboardEntry }) {
   const displayName = entry.displayName?.trim() || "Player";
   const isMe = entry.isCurrentUser || displayName === "You";
+  const avatarUrl =
+    entry.avatarUrl ??
+    (entry.isPundit ? getPunditAvatarUrl(entry.userId, displayName) : undefined);
 
   return (
     <tr
@@ -40,20 +44,25 @@ function PlayerRow({ entry }: { entry: LeaderboardEntry }) {
       </td>
       <td className="px-2 py-2">
         <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
-              isMe ? "bg-pitch text-pitch-foreground" : "bg-muted text-muted-foreground"
-            )}
-          >
-            {getInitials(displayName)}
-          </span>
+          <UserAvatar
+            userId={entry.userId}
+            displayName={displayName}
+            avatarUrl={avatarUrl}
+            size={24}
+            highlight={isMe}
+          />
           <div className="min-w-0">
             <span className="block truncate text-sm">{displayName}</span>
-            {entry.organization && (
-              <span className="text-[10px] text-muted-foreground">
-                {entry.organization}
+            {(entry.parodyCue || entry.organization) && (
+              <span className="block text-[10px] leading-snug text-flare/90">
+                {formatPunditSubtitle(entry) ?? entry.organization}
               </span>
+            )}
+            {entry.isPundit && entry.organization && entry.parodyCue && (
+              <span className="text-[10px] text-muted-foreground">{entry.organization}</span>
+            )}
+            {!entry.parodyCue && entry.organization && !entry.isPundit && (
+              <span className="text-[10px] text-muted-foreground">{entry.organization}</span>
             )}
           </div>
         </div>

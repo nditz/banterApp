@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Clapperboard, Sparkles, Trophy } from "lucide-react";
 import { CumulativeScriptExport } from "@/components/content/CumulativeScriptExport";
+import { WelcomeSlidePanel } from "@/components/home/WelcomeSlidePanel";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
 import { BRAND } from "@/lib/brand";
@@ -27,7 +28,7 @@ function WelcomeSlide({
   onCreateContent: () => void;
 }) {
   return (
-    <div className="relative z-[1] flex h-full flex-col justify-center space-y-4">
+    <div className="flex h-full flex-col justify-center space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="wc-badge">
           <Trophy className="size-3" aria-hidden />
@@ -83,7 +84,7 @@ function WelcomeSlide({
 
 function ConceptSlide({ slide }: { slide: Slide }) {
   return (
-    <div className="relative z-[1] flex h-full flex-col justify-center space-y-3">
+    <div className="flex h-full flex-col justify-center space-y-3">
       <p
         className={cn(
           "text-[10px] font-bold uppercase tracking-widest",
@@ -93,10 +94,10 @@ function ConceptSlide({ slide }: { slide: Slide }) {
         {slide.subtitle}
       </p>
       <h2 className="font-display text-xl leading-none sm:text-2xl">{slide.title}</h2>
-      <p className="text-sm leading-relaxed text-muted-foreground">{slide.body}</p>
+      <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{slide.body}</p>
       {slide.id === "content" && (
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <CumulativeScriptExport minimal className="border-0 bg-muted/40 p-3" />
+          <CumulativeScriptExport minimal className="border-0 bg-card/60 p-3 backdrop-blur-sm" />
         </div>
       )}
     </div>
@@ -145,16 +146,22 @@ export function HomeWelcomePanel() {
               aria-hidden={i !== index}
               {...(i !== index ? { inert: true } : {})}
             >
-              {slide.id === "welcome" ? (
-                <WelcomeSlide
-                  slide={slide}
-                  onCreateContent={() =>
-                    setIndex(contentSlideIndex >= 0 ? contentSlideIndex : 0)
-                  }
-                />
-              ) : (
-                <ConceptSlide slide={slide} />
-              )}
+              <WelcomeSlidePanel
+                backgroundImage={slide.backgroundImage}
+                accent={slide.accent}
+                ariaLabel={slide.title}
+              >
+                {slide.id === "welcome" ? (
+                  <WelcomeSlide
+                    slide={slide}
+                    onCreateContent={() =>
+                      setIndex(contentSlideIndex >= 0 ? contentSlideIndex : 0)
+                    }
+                  />
+                ) : (
+                  <ConceptSlide slide={slide} />
+                )}
+              </WelcomeSlidePanel>
             </div>
           ))}
         </div>
