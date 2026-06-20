@@ -95,7 +95,7 @@ export function HomeStatsBar() {
         icon={<Sparkles className="size-4" aria-hidden />}
         label="Your aura"
         value={formatCount(aura)}
-        hint="Ball knowledge points"
+        hint="Ball takes points"
         accent="flare"
       />
       <StatItem

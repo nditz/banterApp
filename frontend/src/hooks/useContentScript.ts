@@ -46,7 +46,7 @@ function stubBroadcastScript(req: CumulativeScriptRequest): string {
           `[SEGMENT ${i + 1} — ${p.teamA} v ${p.teamB}]\nTo camera: "I'm on ${p.prediction}. Lowkey confident, highkey accountable."`
       )
       .join("\n\n");
-    return `[DESK — COLD OPEN]\n${count} call${count === 1 ? "" : "s"} on the record before kickoff.\n\n${segments}\n\n#BanterApp #IKnowBall`;
+    return `[DESK — COLD OPEN]\n${count} call${count === 1 ? "" : "s"} on the record before kickoff.\n\n${segments}\n\n#BanterApp #BallTakes`;
   }
 
   if (count === 0) {
@@ -84,7 +84,7 @@ function stubBroadcastScript(req: CumulativeScriptRequest): string {
         ? `[STUDIO — BURN CUT]\n${filtered.length} pick${filtered.length === 1 ? "" : "s"} on blast.`
         : `[STUDIO — FULL RECAP]\n${wins}/${filtered.length} landed · ${totalPts} pts.`;
 
-  return `${header}\n\n${segments}\n\n#BanterApp #BallKnowledge`;
+  return `${header}\n\n${segments}\n\n#BanterApp #BallTakes`;
 }
 
 async function generateCumulativeScript(

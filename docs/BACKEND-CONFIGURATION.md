@@ -58,6 +58,20 @@ Optional **`Database:TransactionUrl`** (port 6543) is documented for reference; 
 | `News:ApiKey` | News | NewsAPI.org key |
 | `Ai:Provider` / `Ai:ApiKey` | Ai | LLM provider (Phase 2) |
 
+### Media & news feeds (pro takes + main panel)
+
+See **`docs/MEDIA-FEED-INTEGRATION.md`** for full setup (RSS, podcasts, YouTube, attribution).
+
+| Key | Purpose |
+|-----|---------|
+| `News:RssFeedUrls` | RSS headlines for main feed (no API key required) |
+| `NewsIngest:*` | Background job → `news_feed_items` (news + match desk) |
+| `MediaIngest:PodcastSources` | Named podcast RSS → `media_items` |
+| `MediaIngest:YouTubeChannels` | Named YouTube channels (needs `YouTube:ApiKey`) |
+| `MediaIngest:WebsiteSources` | Article RSS for prediction extraction |
+| `BackgroundJobs:NewsIngestIntervalMinutes` | How often news is pulled |
+| `BackgroundJobs:MediaIngestIntervalMinutes` | How often podcasts/YouTube are scanned |
+
 Non-secret tuning (job intervals, World Cup league id, etc.) stays in committed `appsettings.json`.
 
 ## Deploy / GitHub Actions

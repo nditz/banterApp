@@ -144,12 +144,12 @@ public static class PersonalizedFeedService
 
                 var media = FeedMediaMapper.FromGifMood(
                     hit ? "celebrate" : "facepalm",
-                    hit ? "Ball knowledge" : "Receipts");
+                    hit ? "Ball takes" : "Receipts");
 
                 items.Add(new FeedItemResponse(
                     $"you-post-{prediction.Id:N}",
                     hit ? "prediction_highlight" : "meme",
-                    hit ? "Ball knowledge confirmed" : "That one aged like milk",
+                    hit ? "Ball takes confirmed" : "That one aged like milk",
                     body,
                     media.Url,
                     "Your picks",

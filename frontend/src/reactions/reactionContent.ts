@@ -32,8 +32,8 @@ export const reactionContent: ReactionContentItem[] = [
     asset: '/reactions/smart-choice.svg',
     auraDelta: 50,
     captions: {
-      family: ['Sensible pick. Good ball knowledge.', 'The safe brainy option.', 'You read the room correctly.'],
-      standard: ['Cooked.', 'Ball knowledge detected.', 'This pick has spreadsheet energy, in a good way.', 'Lowkey elite decision-making.'],
+      family: ['Sensible pick. Good ball takes.', 'The safe brainy option.', 'You read the room correctly.'],
+      standard: ['Cooked.', 'Ball takes detected.', 'This pick has spreadsheet energy, in a good way.', 'Lowkey elite decision-making.'],
       spicy: ['Bro downloaded the script.', 'Everyone and their nan saw this one coming.', 'No cap, this is the HR-approved pick.']
     },
     microcopy: ['Favourite backed', 'Logic merchant', 'Probability pal']
@@ -117,7 +117,7 @@ export const reactionContent: ReactionContentItem[] = [
     auraDelta: 300,
     captions: {
       family: ['You called it.', 'Correct prediction.', 'Great read.'],
-      standard: ['Receipts found.', 'Aged beautifully.', 'Ball knowledge confirmed.'],
+      standard: ['Receipts found.', 'Aged beautifully.', 'Ball takes confirmed.'],
       spicy: ['Talk your talk.', 'They doubted. You documented.', 'Apology forms are now available.']
     },
     microcopy: ['Correct pick', 'Proof secured', 'Talk your talk']
@@ -160,7 +160,7 @@ export const reactionContent: ReactionContentItem[] = [
     captions: {
       family: ['Exact score. Incredible.', 'You predicted the script.', 'Perfect call.'],
       standard: ['You wrote the script.', 'Exact score merchant.', 'This is not luck. This is cinema.'],
-      spicy: ['Check this person’s hard drive for the fixture script.', 'Generational ball knowledge.', 'The pundits are unemployed now.']
+      spicy: ['Check this person’s hard drive for the fixture script.', 'Generational ball takes.', 'The pundits are unemployed now.']
     },
     microcopy: ['Exact score', 'Cinema', 'Oracle confirmed']
   }
@@ -171,14 +171,14 @@ export const auraLevels = [
   { min: 100, label: 'Kitchen Analyst', emoji: '🍳' },
   { min: 500, label: 'Twitter Tactician', emoji: '📱' },
   { min: 1000, label: 'Matchday Oracle', emoji: '🔮' },
-  { min: 2500, label: 'Ball Knowledge Merchant', emoji: '🧠' },
+  { min: 2500, label: 'Ball Takes Merchant', emoji: '🧠' },
   { min: 5000, label: 'Generational Talent', emoji: '🏆' }
 ];
 
 export const banterTemplates = {
   smart_choice: [
     '{pick} locked in. Safe, sensible, very spreadsheet-coded.',
-    'The favourite is in at {pick}. Ball knowledge or basic? We’ll find out.',
+    'The favourite is in at {pick}. Ball takes or basic? We’ll find out.',
     'Logic over chaos on {pick}. Respectable behaviour.'
   ],
   playing_safe: [

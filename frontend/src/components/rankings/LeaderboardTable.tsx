@@ -97,7 +97,7 @@ export function LeaderboardTable({
   if (entries.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        No receipts on the board yet. Time to put your ball knowledge on record.
+        No receipts on the board yet. Time to put your ball takes on record.
       </p>
     );
   }

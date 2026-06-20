@@ -60,7 +60,7 @@
   --radius-2xl: calc(var(--radius) * 1.8);
 }
 
-/* Ball Knowledge UI — Midnight Broadcast: cool slate, navy header, cyan + pitch green */
+/* Ball Takes UI — Midnight Broadcast: cool slate, navy header, cyan + pitch green */
 :root {
   --background: #e4eaf2;
   --foreground: #0c1425;

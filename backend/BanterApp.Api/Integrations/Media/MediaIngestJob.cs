@@ -54,18 +54,23 @@ public sealed class MediaIngestJob
 
         try
         {
-            foreach (var channelId in _options.YouTubeChannelIds.Where(id => !string.IsNullOrWhiteSpace(id)))
+            foreach (var channel in ResolveYouTubeSources())
             {
+                if (!channel.ExtractPredictions)
+                {
+                    continue;
+                }
+
                 var source = await EnsureSourceAsync(
-                    $"YouTube:{channelId}",
+                    channel.Name,
                     "youtube",
-                    channelId,
+                    channel.ExternalId,
                     rssUrl: null,
-                    siteUrl: $"https://www.youtube.com/channel/{channelId}",
+                    siteUrl: channel.SiteUrl,
                     ct: cancellationToken);
 
                 var videos = await _youtube.GetChannelVideosAsync(
-                    channelId,
+                    channel.ExternalId,
                     _options.MaxItemsPerSource,
                     cancellationToken);
 
@@ -78,17 +83,26 @@ public sealed class MediaIngestJob
                 }
             }
 
-            foreach (var feedUrl in _options.PodcastFeedUrls.Where(url => !string.IsNullOrWhiteSpace(url)))
+            foreach (var podcast in ResolvePodcastSources())
             {
+                if (!podcast.ExtractPredictions)
+                {
+                    continue;
+                }
+
                 var source = await EnsureSourceAsync(
-                    feedUrl,
+                    podcast.Name,
                     "podcast",
-                    feedUrl,
-                    rssUrl: feedUrl,
-                    siteUrl: null,
+                    podcast.ExternalId,
+                    rssUrl: podcast.RssUrl,
+                    siteUrl: podcast.SiteUrl,
                     ct: cancellationToken);
 
-                var episodes = await _rss.FetchFeedAsync(feedUrl, _options.MaxItemsPerSource, cancellationToken);
+                var episodes = await _rss.FetchFeedAsync(
+                    podcast.RssUrl,
+                    _options.MaxItemsPerSource,
+                    cancellationToken);
+
                 foreach (var episode in episodes)
                 {
                     var (c, u, f) = await UpsertItemSafeAsync(source, episode, run.Id, cancellationToken);
@@ -146,6 +160,72 @@ public sealed class MediaIngestJob
         }
     }
 
+    private IEnumerable<(string Name, string ExternalId, string? SiteUrl, string? RssUrl, bool ExtractPredictions)>
+        ResolveYouTubeSources()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var channel in _options.YouTubeChannels.Where(c => !string.IsNullOrWhiteSpace(c.ChannelId)))
+        {
+            var id = channel.ChannelId.Trim();
+            if (!seen.Add(id))
+            {
+                continue;
+            }
+
+            var name = string.IsNullOrWhiteSpace(channel.Name) ? $"YouTube · {id}" : channel.Name.Trim();
+            var siteUrl = channel.SiteUrl?.Trim()
+                ?? $"https://www.youtube.com/channel/{id}";
+
+            yield return (name, id, siteUrl, null, channel.ExtractPredictions);
+        }
+
+        foreach (var channelId in _options.YouTubeChannelIds.Where(id => !string.IsNullOrWhiteSpace(id)))
+        {
+            var id = channelId.Trim();
+            if (!seen.Add(id))
+            {
+                continue;
+            }
+
+            yield return (
+                $"YouTube · {id}",
+                id,
+                $"https://www.youtube.com/channel/{id}",
+                null,
+                true);
+        }
+    }
+
+    private IEnumerable<(string Name, string ExternalId, string RssUrl, string? SiteUrl, bool ExtractPredictions)>
+        ResolvePodcastSources()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var podcast in _options.PodcastSources.Where(p => !string.IsNullOrWhiteSpace(p.RssUrl)))
+        {
+            var rssUrl = podcast.RssUrl.Trim();
+            if (!seen.Add(rssUrl))
+            {
+                continue;
+            }
+
+            var name = string.IsNullOrWhiteSpace(podcast.Name) ? rssUrl : podcast.Name.Trim();
+            yield return (name, rssUrl, rssUrl, podcast.SiteUrl?.Trim(), podcast.ExtractPredictions);
+        }
+
+        foreach (var feedUrl in _options.PodcastFeedUrls.Where(url => !string.IsNullOrWhiteSpace(url)))
+        {
+            var rssUrl = feedUrl.Trim();
+            if (!seen.Add(rssUrl))
+            {
+                continue;
+            }
+
+            yield return (rssUrl, rssUrl, rssUrl, null, true);
+        }
+    }
+
     private async Task<MediaSource> EnsureSourceAsync(
         string name,
         string sourceType,
@@ -161,6 +241,14 @@ public sealed class MediaIngestJob
 
         if (existing is not null)
         {
+            var displayName = StringLimits.Truncate(name, 120) ?? name;
+            if (!string.Equals(existing.Name, displayName, StringComparison.Ordinal))
+            {
+                existing.Name = displayName;
+            }
+
+            existing.SiteUrl = StringLimits.Truncate(siteUrl, 512) ?? existing.SiteUrl;
+            existing.RssUrl = StringLimits.Truncate(rssUrl, 512) ?? existing.RssUrl;
             return existing;
         }
 

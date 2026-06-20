@@ -34,7 +34,7 @@ export default function HomePage() {
         </div>
 
         <div id="rankings" className={cn(stickyScrollSideClass, "xl:col-span-4")}>
-          <p className="home-section-label">Ball knowledge board</p>
+          <p className="home-section-label">Ball takes board</p>
           <RankingsPanel />
         </div>
       </div>

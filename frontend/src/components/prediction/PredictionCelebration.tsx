@@ -115,7 +115,7 @@ export function PredictionCelebration({
         </motion.span>
         <div className="min-w-0">
           <p className={cn("text-sm font-bold", theme.text)}>Receipt secured.</p>
-          <p className="text-xs text-muted-foreground">Your football knowledge is on record.</p>
+          <p className="text-xs text-muted-foreground">Your ball takes are on record.</p>
         </div>
       </motion.div>
 

@@ -16,7 +16,7 @@
     "TurnstileSecretKey": ""
   },
   "SportsData": {
-    "Provider": "apifootball",
+    "Provider": "mock",
     "ApiKey": "",
     "BaseUrl": "https://v3.football.api-sports.io",
     "WorldCupLeagueId": 1,
@@ -33,10 +33,107 @@
     "Token": ""
   },
   "YouTube": {
-    "ApiKey": ""
+    "BaseUrl": "https://www.googleapis.com/youtube/v3",
+    "ApiKey": "",
+    "DefaultSearchTerms": [
+      "World Cup predictions",
+      "World Cup preview",
+      "World Cup score prediction",
+      "World Cup group predictions"
+    ]
   },
   "News": {
-    "ApiKey": ""
+    "ApiKey": "",
+    "RssFeedUrls": [
+      "https://feeds.bbci.co.uk/sport/football/world-cup/rss.xml",
+      "https://www.espn.com/espn/rss/soccer/news",
+      "https://www.theguardian.com/football/world-cup-2026/rss",
+      "https://www.skysports.com/rss/12040"
+    ]
+  },
+  "BackgroundJobs": {
+    "Enabled": true,
+    "LiveScoresIntervalMinutes": 15,
+    "MatchDetailsIntervalMinutes": 15,
+    "StandingsIntervalMinutes": 360,
+    "AiReactionsIntervalMinutes": 20,
+    "NewsIngestIntervalMinutes": 30,
+    "MediaIngestIntervalMinutes": 60,
+    "AiReactionsStartMinute": 7,
+    "NewsIngestStartMinute": 10,
+    "MediaIngestStartMinute": 20,
+    "AiReactionsBatchSize": 5
+  },
+  "NewsIngest": {
+    "Enabled": true,
+    "MaxArticlesPerRun": 25,
+    "IncludeMatchFixtures": true,
+    "IncludeMatchResults": true,
+    "IncludeLiveScores": true
+  },
+  "MediaIngest": {
+    "Enabled": true,
+    "MaxItemsPerSource": 8,
+    "YouTubeChannelIds": [],
+    "PodcastFeedUrls": [],
+    "YouTubeChannels": [
+      {
+        "Name": "CBS Sports Golazo",
+        "ChannelId": "REPLACE_WITH_CHANNEL_ID",
+        "SiteUrl": "https://www.youtube.com/@CBSGolazo",
+        "StyleSlug": "hot-take-desk",
+        "ExtractPredictions": true
+      },
+      {
+        "Name": "Sky Sports Football",
+        "ChannelId": "REPLACE_WITH_CHANNEL_ID",
+        "SiteUrl": "https://www.youtube.com/@SkySportsFootball",
+        "StyleSlug": "touchline-uk",
+        "ExtractPredictions": true
+      }
+    ],
+    "PodcastSources": [
+      {
+        "Name": "Football Weekly",
+        "RssUrl": "https://www.theguardian.com/football/series/footballweekly/podcast.xml",
+        "SiteUrl": "https://www.theguardian.com/football/series/footballweekly",
+        "StyleSlug": "silky-studio",
+        "ExtractPredictions": true
+      },
+      {
+        "Name": "The Rest Is Football",
+        "RssUrl": "https://feeds.acast.com/public/shows/the-rest-is-football",
+        "SiteUrl": "https://www.goalhangerpodcasts.com/the-rest-is-football",
+        "StyleSlug": "ex-pro-couch",
+        "ExtractPredictions": true
+      }
+    ],
+    "WebsiteSources": [
+      {
+        "Name": "BBC Sport World Cup",
+        "Type": "website",
+        "RssUrl": "https://feeds.bbci.co.uk/sport/football/world-cup/rss.xml",
+        "BaseUrl": "https://www.bbc.co.uk/sport/football/world-cup",
+        "CrawlAllowed": true,
+        "ExtractPredictions": true
+      },
+      {
+        "Name": "The Guardian Football",
+        "Type": "website",
+        "RssUrl": "https://www.theguardian.com/football/rss",
+        "BaseUrl": "https://www.theguardian.com/football",
+        "CrawlAllowed": true,
+        "ExtractPredictions": true
+      },
+      {
+        "Name": "ESPN FC",
+        "Type": "website",
+        "RssUrl": "https://www.espn.com/espn/rss/soccer/news",
+        "BaseUrl": "https://www.espn.com/soccer/",
+        "CrawlAllowed": true,
+        "ExtractPredictions": true
+      }
+    ]
   },
   "Ai": {
     "Provider": "openai",
@@ -47,7 +144,7 @@
     "Temperature": 0.85,
     "Enabled": true,
     "AnonymousGenerationLimit": 3,
-    "EnableImageGeneration": true,
+    "EnableImageGeneration": false,
     "ImageModel": "dall-e-3",
     "ImageSize": "1024x1024",
     "NewsReactionSystemPrompt": "You are a witty football pundit on a banter app. React to the news in 2-3 sentences like a TV journalist or online personality — opinionated, fun, PG-rated. Never encourage gambling.",

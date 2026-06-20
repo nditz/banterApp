@@ -1,19 +1,23 @@
+import { BRAND } from "./brand";
+
 export const TERMS_VERSION = "2026-06";
+
+const brand = BRAND.name;
 
 export const TERMS_SECTIONS = [
   {
     id: "welcome",
-    title: "Who can use BanterApp",
+    title: `Who can use ${brand}`,
     paragraphs: [
-      "BanterApp is open to everyone. No signup is required to play — we create a browser session so you can make predictions, join leagues with friends, and export content scripts.",
-      "By using BanterApp you agree to these Terms of Use. If you do not agree, please do not use the site.",
+      `${brand} is open to everyone. No signup is required to play — we create a browser session so you can make predictions, join leagues with friends, and export content scripts.`,
+      `By using ${brand} you agree to these Terms of Use. If you do not agree, please do not use the site.`,
     ],
   },
   {
     id: "entertainment",
     title: "Entertainment only — not gambling",
     paragraphs: [
-      "BanterApp is a free-to-play social predictions game intended for banter, entertainment, and friendly competition among friends and family.",
+      `${brand} is a free-to-play social predictions game intended for banter, entertainment, and friendly competition among friends and family.`,
       "No real money is wagered, won, or lost. This platform does not encourage, promote, or facilitate gambling in any form.",
       "If you or someone you know is affected by problem gambling, please seek support at BeGambleAware.org or call the National Gambling Helpline: 0808 802 0133.",
     ],
@@ -22,7 +26,7 @@ export const TERMS_SECTIONS = [
     id: "affiliation",
     title: "Fan game — no official affiliation",
     paragraphs: [
-      "BanterApp is a fan prediction game for the World Cup. It is not affiliated with FIFA or any football governing body.",
+      `${brand} is a fan prediction game for the World Cup. It is not affiliated with FIFA or any football governing body.`,
     ],
   },
   {

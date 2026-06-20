@@ -185,9 +185,9 @@ export function AppShell({ children }: AppShellProps) {
             <Image
               src={BRAND.logoFooter}
               alt={BRAND.name}
-              width={108}
-              height={72}
-              className="h-16 w-auto object-contain"
+              width={168}
+              height={110}
+              className="h-14 w-auto max-w-[min(220px,60vw)] object-contain opacity-90"
               unoptimized
             />
           </Link>

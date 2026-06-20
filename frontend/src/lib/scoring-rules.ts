@@ -137,11 +137,11 @@ export const CONCEPT_SLIDES = [
 export const HOME_WELCOME_SLIDES = [
   {
     id: "welcome",
-    title: "Ball Knowledge",
+    title: "Ball Takes",
     subtitle: "World Cup 2026",
     body: "Every pick you make becomes ready-to-post content — pre-match hot takes, post-match receipts, full scripts for TikTok, Reels & Shorts. Play the tournament, walk away with a content library.",
     accent: "brand",
-    backgroundImage: "/images/ball-knowledge-header.png",
+    backgroundImage: "/images/ball-takes-header.png",
   },
   ...CONCEPT_SLIDES,
 ] as const;

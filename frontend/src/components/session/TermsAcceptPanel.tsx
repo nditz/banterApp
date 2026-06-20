@@ -15,6 +15,7 @@ import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import { useAcceptTerms, useRecoverSession } from "@/hooks/useSession";
 
 import { getApiErrorMessage } from "@/lib/api";
+import { BRAND } from "@/lib/brand";
 
 import { getStoredRecoveryToken } from "@/lib/session";
 
@@ -216,7 +217,7 @@ export function TermsAcceptPanel({ variant = "inline", className }: TermsAcceptP
 
           <p className="mt-1 text-xs text-muted-foreground">
 
-            BanterApp is open to everyone. Read the terms below, then accept to start predicting.
+            {BRAND.name} is open to everyone. Read the terms below, then accept to start predicting.
 
             No account needed — we create a browser session and give you a recovery key for your picks.
 
@@ -268,7 +269,7 @@ export function TermsAcceptPanel({ variant = "inline", className }: TermsAcceptP
 
           </Link>
 
-          , including that BanterApp is for fun and entertainment only and is not a gambling site.
+          , including that {BRAND.name} is for fun and entertainment only and is not a gambling site.
 
         </span>
 

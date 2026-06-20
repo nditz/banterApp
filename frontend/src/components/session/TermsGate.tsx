@@ -12,6 +12,7 @@ import {
 import { TermsAcceptPanel } from "@/components/session/TermsAcceptPanel";
 import { Button } from "@/components/ui/button";
 import { useNeedsTerms } from "@/hooks/useNeedsTerms";
+import { BRAND } from "@/lib/brand";
 import { useSession } from "@/hooks/useSession";
 import { getStoredRecoveryToken } from "@/lib/session";
 
@@ -41,7 +42,7 @@ export function TermsGate() {
           <DialogHeader>
             <DialogTitle>Terms of Use</DialogTitle>
             <DialogDescription>
-              Read and accept the terms below to save your picks to this browser. BanterApp is for
+              Read and accept the terms below to save your picks to this browser. {BRAND.name} is for
               fun only — not gambling.
             </DialogDescription>
           </DialogHeader>
