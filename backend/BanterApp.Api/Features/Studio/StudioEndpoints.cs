@@ -9,26 +9,6 @@ namespace BanterApp.Api.Features.Studio;
 
 public static class StudioEndpoints
 {
-    private static readonly (PunditPersonaSeed Persona, Dictionary<string, string> Picks)[] MockPundits =
-    [
-        (PunditPersonas.Defaults[0], new()
-        {
-            ["m1"] = "HOME", ["m2"] = "HOME", ["m3"] = "AWAY", ["m4"] = "HOME",
-        }),
-        (PunditPersonas.Defaults[1], new()
-        {
-            ["m1"] = "DRAW", ["m2"] = "HOME", ["m3"] = "HOME", ["m4"] = "AWAY",
-        }),
-        (PunditPersonas.Defaults[2], new()
-        {
-            ["m1"] = "HOME", ["m2"] = "DRAW", ["m3"] = "DRAW", ["m4"] = "HOME",
-        }),
-        (PunditPersonas.Defaults[3], new()
-        {
-            ["m1"] = "AWAY", ["m2"] = "HOME", ["m3"] = "HOME", ["m4"] = "DRAW",
-        }),
-    ];
-
     public static IEndpointRouteBuilder MapStudioEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/studio").WithTags("Studio");
@@ -54,10 +34,10 @@ public static class StudioEndpoints
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync(ct);
 
-        // Fall back to mock data when the user has no picks yet
+        // Fall back to empty comparison when the user has no picks yet
         if (myPreds.Count == 0)
         {
-            return Results.Ok(BuildMockComparison());
+            return Results.Ok(new StudioComparisonResponse([], 0, null, null));
         }
 
         var matchIds = myPreds.Select(p => p.MatchId).Distinct().ToList();
@@ -118,7 +98,7 @@ public static class StudioEndpoints
 
         // 3. Fetch pundit predictions for those matches
         var punditPreds = await db.PunditPredictions
-            .Where(pp => matchIds.Contains(pp.MatchId))
+            .Where(pp => matchIds.Contains(pp.MatchId) && pp.Pundit.Kind == PunditKind.Source)
             .Include(pp => pp.Pundit)
             .ToListAsync(ct);
 
@@ -197,18 +177,6 @@ public static class StudioEndpoints
                         pp));
                 }
             }
-            else
-            {
-                foreach (var (persona, pundPicks) in MockPundits)
-                {
-                    if (pundPicks.TryGetValue(matchId, out var pick))
-                    {
-                        picks.Add(ToPunditPick(
-                            PunditPersonas.ToEntity(persona),
-                            FormatPrediction(pick, "result")));
-                    }
-                }
-            }
 
             var actualResult = match.Status == "FT"
                 ? ResolveActualResult(match)
@@ -274,66 +242,4 @@ public static class StudioEndpoints
         m.HomeScore is not null && m.AwayScore is not null
             ? $"{m.HomeScore}-{m.AwayScore}"
             : "FT";
-
-    // ─── Mock fallback ────────────────────────────────────────────────────────
-
-    private static StudioComparisonResponse BuildMockComparison()
-    {
-        var gary = PunditPersonas.Defaults[0];
-        var rio = PunditPersonas.Defaults[1];
-        var stephen = PunditPersonas.Defaults[2];
-        var henri = PunditPersonas.Defaults[3];
-
-        var matches = new List<StudioMatchComparison>
-        {
-            BuildMockMatch("m1", "Brazil", "Argentina", 2,
-            [
-                MockMePick("Home Win", "result", 3),
-                MockLeaguePick("Boss Wandi", "Away Win", "result", null),
-                MockLeaguePick("GoalOracle", "Draw", "result", null),
-                ToPunditPick(PunditPersonas.ToEntity(gary), "Home Win"),
-                ToPunditPick(PunditPersonas.ToEntity(rio), "Draw"),
-                ToPunditPick(PunditPersonas.ToEntity(henri), "Home Win"),
-            ]),
-            BuildMockMatch("m2", "France", "Germany", 5,
-            [
-                MockMePick("2-1", "correct_score", 7),
-                MockLeaguePick("Boss Wandi", "Home Win", "result", 3),
-                MockLeaguePick("GoalOracle", "Home Win", "result", 3),
-                ToPunditPick(PunditPersonas.ToEntity(gary), "Home Win"),
-                ToPunditPick(PunditPersonas.ToEntity(stephen), "Draw"),
-                ToPunditPick(PunditPersonas.ToEntity(henri), "Home Win"),
-            ]),
-            BuildMockMatch("m3", "Spain", "Morocco", 3,
-            [
-                MockMePick("Home Win", "result", null),
-                MockLeaguePick("Boss Wandi", "Home Win", "result", null),
-                ToPunditPick(PunditPersonas.ToEntity(gary), "Away Win"),
-                ToPunditPick(PunditPersonas.ToEntity(rio), "Home Win"),
-            ]),
-        };
-
-        return new StudioComparisonResponse(matches, 10, 2, 3);
-    }
-
-    private static StudioMatchComparison BuildMockMatch(
-        string id,
-        string teamA,
-        string teamB,
-        int daysOut,
-        IEnumerable<StudioPickEntry> picks)
-    {
-        var kickoff = DateTimeOffset.UtcNow.AddDays(daysOut);
-        return new StudioMatchComparison(id, teamA, teamB, kickoff, null, null, picks.ToList());
-    }
-
-    private static StudioPickEntry MockLeaguePick(
-        string name,
-        string prediction,
-        string type,
-        int? points) =>
-        new(name, "league", null, prediction, type, points);
-
-    private static StudioPickEntry MockMePick(string prediction, string type, int? points) =>
-        new("You", "me", null, prediction, type, points);
 }

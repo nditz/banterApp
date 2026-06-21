@@ -43,4 +43,31 @@ public sealed class BackgroundJobsOptions
     public int MediaIngestStartMinute { get; set; } = 45;
 
     public int AiReactionsBatchSize { get; set; } = 5;
+
+    /// <summary>Gen Z banter rewrite for RSS, pundit, and match desk feed cards.</summary>
+    public int FeedBanterEnrichmentIntervalMinutes { get; set; } = 15;
+
+    public int FeedBanterEnrichmentStartMinute { get; set; } = 12;
+
+    public int FeedBanterEnrichmentBatchSize { get; set; } = 8;
+
+    /// <summary>RSS opinion ingest for pundit extraction pipeline.</summary>
+    public int RssOpinionSyncIntervalMinutes { get; set; } = 20;
+
+    public int RssOpinionSyncStartMinute { get; set; } = 5;
+
+    /// <summary>YouTube keyword search for pundit content.</summary>
+    public int YouTubeSearchSyncIntervalMinutes { get; set; } = 180;
+
+    public int YouTubeSearchSyncStartMinute { get; set; } = 20;
+
+    /// <summary>OpenAI extraction batch for enriched media items.</summary>
+    public int PunditExtractionIntervalMinutes { get; set; } = 10;
+
+    public int PunditExtractionStartMinute { get; set; } = 35;
+
+    /// <summary>Fetch transcripts and article bodies.</summary>
+    public int PunditContentEnrichIntervalMinutes { get; set; } = 10;
+
+    public int PunditContentEnrichStartMinute { get; set; } = 10;
 }

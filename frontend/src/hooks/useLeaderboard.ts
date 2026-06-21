@@ -7,7 +7,6 @@ import {
   mockFriendsLeaderboard,
   mockGlobalLeaderboard,
   mockLeagueLeaderboard,
-  mockLeagues,
   mockSystemLeagues,
   mockPunditLeaderboard,
 } from "@/lib/mock-data";
@@ -51,10 +50,16 @@ async function fetchLeaderboard(tab: LeaderboardTab): Promise<LeaderboardView> {
   try {
     const response = await apiFetch<unknown>(endpoints[tab]);
     const view = normalizeLeaderboardView(response);
-    return view.entries.length > 0 ? view : mockView(tab);
+    if (view.entries.length > 0 || tab === "pundits") {
+      return view;
+    }
+    return mockView(tab);
   } catch (error) {
-    if (error instanceof ApiError) {
+    if (error instanceof ApiError && tab !== "pundits") {
       return mockView(tab);
+    }
+    if (error instanceof ApiError) {
+      return { entries: [], me: null, totalPlayers: 0 };
     }
     throw error;
   }

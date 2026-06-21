@@ -3,6 +3,7 @@ using System.Text;
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Integrations.Jobs;
 using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,7 @@ namespace BanterApp.Api.Integrations.Common;
 
 public sealed class SyncRunTracker(
     AppDbContext db,
-    IApplicationErrorLogger errorLogger,
+    IErrorTrackingService errorTracking,
     ILogger<SyncRunTracker> logger)
 {
     public async Task<SyncRun> StartAsync(string provider, string jobName, CancellationToken ct = default)
@@ -48,12 +49,24 @@ public sealed class SyncRunTracker(
     {
         db.ChangeTracker.Clear();
 
-        await errorLogger.LogExceptionAsync(
-            "background",
-            exception,
-            category: run.JobName,
-            syncRunId: run.Id,
-            ct: ct);
+        var jobKey = ResolveJobKey(run.JobName);
+        await errorTracking.TrackExceptionAsync(new ErrorTrackRequest
+        {
+            Source = "job",
+            ErrorCode = ErrorCodes.JobFailed,
+            MessageSafe = "A background task failed.",
+            Severity = "error",
+            JobKey = jobKey,
+            JobRunId = run.Id,
+            Provider = run.Provider,
+            IsRetryable = true,
+            Metadata = new Dictionary<string, object?>
+            {
+                ["job_name"] = run.JobName,
+                ["retry_count"] = 0,
+                ["next_retry_at"] = DateTimeOffset.UtcNow.AddSeconds(ProviderErrorMapper.ComputeRetryDelaySeconds(0))
+            }
+        }, exception, ct);
 
         try
         {
@@ -94,6 +107,23 @@ public sealed class SyncRunTracker(
             OccurredAt = DateTimeOffset.UtcNow
         });
         await SaveChangesSafeAsync(ct);
+
+        var jobKey = ResolveJobKey(jobName);
+        await errorTracking.TrackAsync(new ErrorTrackRequest
+        {
+            Source = "job",
+            ErrorCode = ErrorCodes.JobFailed,
+            MessageSafe = message,
+            Severity = "warning",
+            JobKey = jobKey,
+            JobRunId = syncRunId,
+            Provider = provider,
+            Metadata = new Dictionary<string, object?>
+            {
+                ["entity_type"] = entityType,
+                ["entity_id"] = entityId
+            }
+        }, ct);
     }
 
     public async Task UpsertExternalIdAsync(
@@ -138,6 +168,18 @@ public sealed class SyncRunTracker(
         await SaveChangesSafeAsync(ct);
     }
 
+    private static string ResolveJobKey(string jobName)
+    {
+        var byHangfire = JobRegistry.FindByHangfireId(jobName);
+        if (byHangfire is not null)
+        {
+            return byHangfire.Key;
+        }
+
+        var byKey = JobRegistry.FindByKey(jobName);
+        return byKey?.Key ?? jobName;
+    }
+
     private async Task FinalizeRunAsync(
         Guid runId,
         int created,
@@ -159,6 +201,8 @@ public sealed class SyncRunTracker(
         run.RecordsCreated = created;
         run.RecordsUpdated = updated;
         run.RecordsFailed = failed;
+        run.ItemsProcessed = created + updated + failed;
+        run.DurationMs = (long)(run.FinishedAt.Value - run.StartedAt).TotalMilliseconds;
         run.Status = string.IsNullOrWhiteSpace(errorMessage) ? "completed" : "failed";
         run.ErrorMessage = StringLimits.Truncate(errorMessage, StringLimits.ErrorMessage);
 
@@ -175,7 +219,14 @@ public sealed class SyncRunTracker(
         {
             logger.LogError(ex, "Database save failed in SyncRunTracker.");
             db.ChangeTracker.Clear();
-            await errorLogger.LogExceptionAsync("background", ex, category: "SyncRunTracker", ct: ct);
+            await errorTracking.TrackExceptionAsync(new ErrorTrackRequest
+            {
+                Source = "job",
+                ErrorCode = ErrorCodes.DatabaseError,
+                MessageSafe = "Database operation failed.",
+                Severity = "critical",
+                Provider = "database"
+            }, ex, ct);
             throw;
         }
     }

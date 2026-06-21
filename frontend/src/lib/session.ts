@@ -34,4 +34,5 @@ export interface SessionState {
   userId: string | null;
   anonymousUserId: string | null;
   csrfToken?: string | null;
+  isPlatformAdmin?: boolean;
 }

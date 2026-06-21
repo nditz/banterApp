@@ -2,7 +2,6 @@ import { Calendar } from "lucide-react";
 import { PickChip } from "@/components/studio/PickChip";
 import type { StudioMatchComparison, StudioPickRole } from "@/lib/types";
 import {
-  formatPunditSubtitle,
   formatSourcePlatformLabel,
   PUNDIT_PARODY_DISCLAIMER,
 } from "@/lib/pundits";

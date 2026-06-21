@@ -1,6 +1,13 @@
 import { getAnonymousId } from "./anonymous";
 import { getCsrfToken } from "./csrf";
 import { detectCountryCode } from "./country";
+import {
+  formatErrorWithRequestId,
+  getSafeMessageForCode,
+  isApiErrorEnvelope,
+  type ApiErrorBody,
+  type ApiErrorEnvelope,
+} from "./errors";
 
 function resolveApiUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) {
@@ -20,7 +27,10 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public body?: unknown
+    public body?: unknown,
+    public code?: string,
+    public requestId?: string,
+    public details?: Record<string, string[] | string>
   ) {
     super(message);
     this.name = "ApiError";
@@ -29,10 +39,21 @@ export class ApiError extends Error {
 
 export interface FetchOptions extends RequestInit {
   skipAuth?: boolean;
+  requestId?: string;
 }
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const headers: Record<string, string> = {};
+function createRequestId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `req_${crypto.randomUUID().replace(/-/g, "")}`;
+  }
+
+  return `req_${Date.now().toString(36)}`;
+}
+
+async function getAuthHeaders(requestId?: string): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
+    "X-Request-Id": requestId ?? createRequestId(),
+  };
 
   const anonymousId = getAnonymousId();
   if (anonymousId) {
@@ -64,13 +85,76 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
+function parseApiErrorBody(body: unknown, status: number, responseRequestId?: string | null): ApiError {
+  if (isApiErrorEnvelope(body)) {
+    const err = body.error;
+    const message = getSafeMessageForCode(err.code, err.message);
+    return new ApiError(
+      message,
+      status,
+      body,
+      err.code,
+      err.requestId ?? responseRequestId ?? undefined,
+      err.details as Record<string, string[] | string> | undefined
+    );
+  }
+
+  const legacy = body as { error?: string; title?: string; requestId?: string } | undefined;
+  const message =
+    legacy?.error ??
+    legacy?.title ??
+    getSafeMessageForCode("INTERNAL_SERVER_ERROR", `Request failed (${status}).`);
+
+  return new ApiError(
+    message,
+    status,
+    body,
+    undefined,
+    legacy?.requestId ?? responseRequestId ?? undefined
+  );
+}
+
+export async function reportClientError(
+  error: unknown,
+  context: {
+    route?: string;
+    component?: string;
+    metadata?: Record<string, string>;
+    requestId?: string;
+  } = {}
+): Promise<void> {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack : undefined;
+
+  try {
+    await apiFetch<{ success: boolean; requestId?: string }>("/api/errors/client", {
+      method: "POST",
+      body: JSON.stringify({
+        message,
+        stack,
+        route: context.route ?? window.location.pathname,
+        component: context.component,
+        userAgent: navigator.userAgent,
+        metadata: context.metadata,
+        requestId: context.requestId,
+      }),
+    });
+  } catch {
+    // Never throw from client error reporting.
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   options: FetchOptions = {}
 ): Promise<T> {
-  const { skipAuth, headers: customHeaders, ...rest } = options;
+  const { skipAuth, headers: customHeaders, requestId, ...rest } = options;
 
-  const authHeaders = skipAuth ? {} : await getAuthHeaders();
+  const authHeaders = skipAuth ? { "X-Request-Id": requestId ?? createRequestId() } : await getAuthHeaders(requestId);
 
   const response = await fetch(`${API_URL}${path}`, {
     ...rest,
@@ -82,6 +166,8 @@ export async function apiFetch<T>(
     },
   });
 
+  const responseRequestId = response.headers.get("X-Request-Id");
+
   if (!response.ok) {
     let body: unknown;
     try {
@@ -89,11 +175,18 @@ export async function apiFetch<T>(
     } catch {
       body = await response.text();
     }
-    throw new ApiError(
-      `API request failed: ${response.status} ${response.statusText}`,
-      response.status,
-      body
-    );
+
+    const apiError = parseApiErrorBody(body, response.status, responseRequestId);
+
+    if (response.status >= 500 && typeof window !== "undefined") {
+      void reportClientError(apiError, {
+        route: window.location.pathname,
+        component: "apiFetch",
+        requestId: apiError.requestId,
+      });
+    }
+
+    throw apiError;
   }
 
   if (response.status === 204) {
@@ -109,13 +202,30 @@ export function getApiUrl(): string {
 
 export function getApiErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    const body = error.body as { error?: string; title?: string } | undefined;
-    if (body?.error) return body.error;
-    if (body?.title) return body.title;
-    if (error.status === 404) {
-      return "Session API not found — restart the backend (dotnet run in backend/BanterApp.Api).";
+    const envelope = error.body as ApiErrorEnvelope | undefined;
+    if (envelope?.error?.message) {
+      return formatErrorWithRequestId(
+        getSafeMessageForCode(envelope.error.code, envelope.error.message),
+        error.requestId ?? envelope.error.requestId
+      );
     }
-    return `Request failed (${error.status}).`;
+
+    const legacy = error.body as { error?: string; title?: string } | undefined;
+    if (legacy?.error) {
+      return formatErrorWithRequestId(legacy.error, error.requestId);
+    }
+    if (legacy?.title) {
+      return formatErrorWithRequestId(legacy.title, error.requestId);
+    }
+
+    if (error.status === 404) {
+      return formatErrorWithRequestId(
+        "Session API not found — restart the backend (dotnet run in backend/BanterApp.Api).",
+        error.requestId
+      );
+    }
+
+    return formatErrorWithRequestId(`Request failed (${error.status}).`, error.requestId);
   }
 
   if (error instanceof TypeError) {
@@ -123,4 +233,12 @@ export function getApiErrorMessage(error: unknown): string {
   }
 
   return "Something went wrong. Try again.";
+}
+
+export function getApiErrorDetails(error: unknown): ApiErrorBody | undefined {
+  if (error instanceof ApiError && isApiErrorEnvelope(error.body)) {
+    return error.body.error;
+  }
+
+  return undefined;
 }

@@ -221,7 +221,7 @@ export function BracketBoard() {
             ))}
         </div>
 
-        <div className="overflow-x-auto pb-2">
+        <div className="table-scroll-container pb-2">
           <div className="flex min-w-max gap-4">
             {Object.entries(groupSlotsByGroup)
               .sort(([a], [b]) => a.localeCompare(b))
@@ -250,7 +250,7 @@ export function BracketBoard() {
           Round of 32 → Round of 16 → quarter-finals → semi-finals → Final (plus third-place play-off).
           Winners propagate round by round; changing an earlier pick clears downstream selections.
         </p>
-        <div className="overflow-x-auto pb-2">
+        <div className="table-scroll-container pb-2">
           <div className="flex min-w-max gap-4">
             {knockoutRounds.map((round) => (
               <KnockoutColumn

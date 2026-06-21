@@ -1,3 +1,5 @@
+using BanterApp.Api.Common;
+using BanterApp.Api.Integrations.Jobs;
 using BanterApp.Api.Services;
 using Hangfire.Server;
 
@@ -17,13 +19,25 @@ public sealed class HangfireErrorLoggingFilter(IServiceScopeFactory scopeFactory
         }
 
         using var scope = scopeFactory.CreateScope();
-        var errorLogger = scope.ServiceProvider.GetRequiredService<IApplicationErrorLogger>();
-        var jobName = context.BackgroundJob?.Job?.Type?.Name ?? "unknown";
+        var errorTracking = scope.ServiceProvider.GetRequiredService<IErrorTrackingService>();
+        var hangfireJobId = context.BackgroundJob?.Job?.Type?.Name ?? "unknown";
+        var jobDefinition = JobRegistry.FindByHangfireId(hangfireJobId);
+        var jobKey = jobDefinition?.Key ?? hangfireJobId;
 
-        errorLogger.LogExceptionAsync(
-            "background",
-            context.Exception,
-            category: jobName,
-            ct: context.CancellationToken.ShutdownToken).GetAwaiter().GetResult();
+        errorTracking.TrackExceptionAsync(new ErrorTrackRequest
+        {
+            Source = "job",
+            ErrorCode = ErrorCodes.JobFailed,
+            MessageSafe = "A background task failed.",
+            Severity = "error",
+            JobKey = jobKey,
+            Provider = "job",
+            IsRetryable = true,
+            Metadata = new Dictionary<string, object?>
+            {
+                ["hangfire_job_id"] = hangfireJobId,
+                ["retry_count"] = 0
+            }
+        }, context.Exception, context.CancellationToken.ShutdownToken).GetAwaiter().GetResult();
     }
 }

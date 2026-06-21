@@ -10,6 +10,7 @@ export interface FixturePredictionContext {
   userPick: PredictionOutcome;
   probabilities: Record<PredictionOutcome, number>;
   predictedScore?: string;
+  predictionType?: 'result' | 'correct_score' | 'double_chance';
   userDisplayName?: string;
   tone?: ReactionTone;
 }
@@ -40,7 +41,19 @@ export function getPredictionReaction(ctx: FixturePredictionContext): Prediction
 
   let key: ReactionKey;
 
-  if (ctx.userPick === favoriteOutcome && favoriteProbability >= reactionRules.highConfidenceMinProbability) {
+  if (ctx.predictionType === 'correct_score') {
+    if (pickedProbability + reactionRules.chaosGap < favoriteProbability) {
+      key = 'chaos_pick';
+    } else if (ctx.userPick !== favoriteOutcome) {
+      key = 'against_grain';
+    } else {
+      key = 'script_writer';
+    }
+  } else if (ctx.predictionType === 'double_chance') {
+    key = ctx.userPick === favoriteOutcome && favoriteProbability >= reactionRules.smartFavoriteMinProbability
+      ? 'smart_choice'
+      : 'playing_safe';
+  } else if (ctx.userPick === favoriteOutcome && favoriteProbability >= reactionRules.highConfidenceMinProbability) {
     key = 'locked_in';
   } else if (ctx.userPick === favoriteOutcome && favoriteProbability >= reactionRules.smartFavoriteMinProbability) {
     key = 'smart_choice';
@@ -63,6 +76,52 @@ export function getPredictionReaction(ctx: FixturePredictionContext): Prediction
     favoriteOutcome,
     favoriteProbability
   };
+}
+
+function toReactionItem(content: ReactionContentItem, tone: ReactionTone): PredictionReaction {
+  return {
+    ...content,
+    selectedCaption: pickRandom(content.captions[tone]),
+    pickedProbability: 0,
+    favoriteOutcome: 'home',
+    favoriteProbability: 0,
+  };
+}
+
+/** Extra flavor reactions shown alongside the primary pick reaction. */
+export function getSupplementalReactions(
+  primaryKey: ReactionKey,
+  ctx: FixturePredictionContext
+): PredictionReaction[] {
+  const tone = ctx.tone ?? reactionRules.familyFriendlyDefault;
+  const bonusKeys = new Set<ReactionKey>();
+
+  if (ctx.predictionType === 'correct_score') {
+    bonusKeys.add('script_writer');
+    bonusKeys.add('chaos_pick');
+  } else if (ctx.predictionType === 'double_chance') {
+    bonusKeys.add('playing_safe');
+    bonusKeys.add('smart_choice');
+  } else if (primaryKey === 'locked_in' || primaryKey === 'smart_choice') {
+    bonusKeys.add('locked_in');
+    bonusKeys.add('receipts_found');
+  } else if (primaryKey === 'chaos_pick' || primaryKey === 'against_grain') {
+    bonusKeys.add('against_grain');
+    bonusKeys.add('delulu_vision');
+  } else {
+    bonusKeys.add('delulu_vision');
+    bonusKeys.add('playing_safe');
+  }
+
+  bonusKeys.delete(primaryKey);
+
+  return Array.from(bonusKeys)
+    .slice(0, 2)
+    .map((key) => {
+      const content = byKey.get(key);
+      return content ? toReactionItem(content, tone) : null;
+    })
+    .filter((item): item is PredictionReaction => item !== null);
 }
 
 export function getPostMatchReaction(params: {

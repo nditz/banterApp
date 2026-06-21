@@ -9,15 +9,30 @@ This guide covers configuring **news RSS**, **podcast RSS**, and **YouTube** sou
 | News RSS ingest | **Live** | Headlines in main feed panel via `NewsIngestJob` + `News:RssFeedUrls` |
 | Podcast / YouTube / website RSS discovery | **Live** | Episodes & videos stored in `media_items` via `MediaIngestJob` |
 | AI feed reactions | **Live** (needs `Ai:ApiKey`) | Pundit-style banter on news items |
-| LLM prediction + soundbite extraction | **Next** | Parse transcripts → `pundit_predictions` + quotable feed cards |
+| LLM prediction + soundbite extraction | **Live** | `PunditExtractionJob` → `pundit_opinions` + `prediction_aggregates` via `PunditIngest` |
 | User vs pro compare | **Partial** | Studio `vs_pundits` tab + feed contrast when predictions exist |
 
-Soundbites and quotables will land in the **main news feed panel** once extraction writes:
+Soundbites and quotables are stored in:
 
-- `pundit_predictions` with `SourceUrl`, `SourceType`, `EvidenceSnippet`, `Speaker`
-- Optional `news_feed_items` with category `pundit_quote` (planned)
+- `pundit_opinions` with `evidence_quote`, `source_url` (via `media_items`), and `needs_human_review`
+- `prediction_aggregates` for consensus queries (`GET /api/predictions/pundits`)
+- Optional bridge to `pundit_predictions` for Studio compare (future)
 
 Attribution is enforced in `PunditDisplayResolver` — licensed/scraped takes always show outlet + platform + link.
+
+### Pundit opinion pipeline (new)
+
+Configure **`PunditIngest`** for RSS + YouTube keyword search, then trigger sync:
+
+```powershell
+Invoke-RestMethod -Method Post http://localhost:5000/api/integrations/rss/sync
+Invoke-RestMethod -Method Post http://localhost:5000/api/integrations/youtube/sync
+Invoke-RestMethod http://localhost:5000/api/opinions?team=England
+Invoke-RestMethod http://localhost:5000/api/opinions?needsReview=true
+Invoke-RestMethod http://localhost:5000/api/predictions/pundits?team=Brazil
+```
+
+Hangfire jobs: `rss-opinion-sync`, `youtube-opinion-sync`, `pundit-content-enrich`, `pundit-extraction`, `prediction-aggregate-refresh`.
 
 ## Quick start (local)
 

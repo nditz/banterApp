@@ -9,13 +9,6 @@ namespace BanterApp.Api.Features.Sync;
 /// </summary>
 public sealed class LiveDataResetService(AppDbContext db, ILogger<LiveDataResetService> logger)
 {
-    private static readonly Guid[] SeedPunditIds =
-    [
-        Guid.Parse("11111111-1111-1111-1111-111111111101"),
-        Guid.Parse("11111111-1111-1111-1111-111111111102"),
-        Guid.Parse("11111111-1111-1111-1111-111111111103"),
-    ];
-
     public async Task<LiveDataResetResult> ResetDemoDataAsync(CancellationToken cancellationToken = default)
     {
         var demoMatchIds = await db.Matches
@@ -43,13 +36,22 @@ public sealed class LiveDataResetService(AppDbContext db, ILogger<LiveDataResetS
 
         var newsRemoved = await db.NewsFeedItems.ExecuteDeleteAsync(cancellationToken);
 
-        var punditPredictionsRemoved = await db.PunditPredictions
-            .Where(p => SeedPunditIds.Contains(p.PunditId))
-            .ExecuteDeleteAsync(cancellationToken);
+        var personaIds = await db.Pundits
+            .Where(p => p.Kind == PunditKind.Persona)
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken);
 
-        var punditsRemoved = await db.Pundits
-            .Where(p => SeedPunditIds.Contains(p.Id))
-            .ExecuteDeleteAsync(cancellationToken);
+        var punditPredictionsRemoved = personaIds.Count > 0
+            ? await db.PunditPredictions
+                .Where(p => personaIds.Contains(p.PunditId))
+                .ExecuteDeleteAsync(cancellationToken)
+            : 0;
+
+        var punditsRemoved = personaIds.Count > 0
+            ? await db.Pundits
+                .Where(p => personaIds.Contains(p.Id))
+                .ExecuteDeleteAsync(cancellationToken)
+            : 0;
 
         var aiContentRemoved = await db.GeneratedContents.ExecuteDeleteAsync(cancellationToken);
 

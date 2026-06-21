@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 
 interface PredictionCelebrationProps {
   reaction: PredictionReaction;
+  supplementalReactions?: PredictionReaction[];
   fixture: string;
   pick: string;
   probabilityContext?: string;
@@ -41,6 +42,7 @@ function formatReceiptTimestamp(date = new Date()): string {
 
 export function PredictionCelebration({
   reaction,
+  supplementalReactions = [],
   fixture,
   pick,
   probabilityContext,
@@ -222,6 +224,51 @@ export function PredictionCelebration({
           </span>
         </motion.div>
       </motion.div>
+
+      {supplementalReactions.length > 0 && (
+        <motion.div
+          className="grid grid-cols-2 gap-2"
+          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={
+            reduceMotion
+              ? { duration: 0 }
+              : { delay: celebrationTiming.cardDelay + 0.45, duration: 0.4 }
+          }
+        >
+          {supplementalReactions.map((bonus) => {
+            const bonusTheme = getThemeForReaction(bonus.key);
+            return (
+              <div
+                key={bonus.key}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border px-2.5 py-2",
+                  bonusTheme.border,
+                  bonusTheme.bg
+                )}
+              >
+                <div className="relative size-10 shrink-0 overflow-hidden rounded-md ring-1 ring-border/60">
+                  <Image
+                    src={bonus.asset}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className={cn("text-[10px] font-bold uppercase tracking-wide", bonusTheme.text)}>
+                    {bonus.title}
+                  </p>
+                  <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">
+                    {bonus.selectedCaption}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </motion.div>
+      )}
 
       <motion.div
         initial={reduceMotion ? false : { opacity: 0, y: 8 }}

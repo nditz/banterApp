@@ -17,7 +17,7 @@ import {
 import type { PredictionOutcome } from "@/lib/reactionEngine";
 import {
   formatPickLabel,
-  getPreMatchReaction,
+  getPreMatchReactionBundle,
 } from "@/lib/predictionReactions";
 import type { PredictionReaction } from "@/lib/reactionEngine";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ type Mode = "result" | "correct_score" | "double_chance";
 
 interface SavedReactionState {
   reaction: PredictionReaction;
+  supplementalReactions: PredictionReaction[];
   pickLabel: string;
   probabilityContext: string;
   leagueName?: string;
@@ -163,7 +164,7 @@ export function PredictionButtons({
   const showReaction = (value: string, type: Mode) => {
     try {
       const probabilities = estimateFixtureProbabilities(matchId, teamA, teamB);
-      const reaction = getPreMatchReaction({
+      const bundle = getPreMatchReactionBundle({
         fixtureId: matchId,
         homeTeamName: teamA,
         awayTeamName: teamB,
@@ -173,11 +174,16 @@ export function PredictionButtons({
         probabilities,
       });
 
-      if (!reaction) return;
+      if (!bundle) return;
+
+      const { primary: reaction, supplemental: supplementalReactions } = bundle;
 
       const pickLabel = formatPickLabel(type, value, teamA, teamB);
       const probabilityContext = formatProbabilityContext(probabilities, teamA, teamB);
       award(reaction.auraDelta);
+      for (const bonus of supplementalReactions) {
+        award(Math.round(bonus.auraDelta * 0.25));
+      }
       addLocalBanterEntry({
         pick: pickLabel,
         fixture: `${teamA} vs ${teamB}`,
@@ -189,6 +195,7 @@ export function PredictionButtons({
 
       setSavedReaction({
         reaction,
+        supplementalReactions,
         pickLabel,
         probabilityContext,
         leagueName,
@@ -259,7 +266,7 @@ export function PredictionButtons({
           </div>
 
           {mode === "result" && (
-            <div className="grid grid-cols-3 gap-1.5" role="group" aria-label="Match result">
+            <div className="grid grid-cols-1 gap-1.5 min-[360px]:grid-cols-3" role="group" aria-label="Match result">
               {(
                 [
                   ["home", teamA, "+3", "home" as PredictionOutcome],
@@ -284,7 +291,7 @@ export function PredictionButtons({
                     disabled={isSaving}
                     onClick={() => handleSubmit(value, "result")}
                     className={cn(
-                      "pick-btn flex h-auto min-h-10 flex-col gap-0 py-2 leading-tight",
+                      "pick-btn flex h-auto min-h-11 flex-col gap-0 py-2 leading-tight sm:min-h-10",
                       isSelected && "pick-btn-selected",
                       isJustSelected && "pick-btn-just-selected"
                     )}
@@ -296,7 +303,7 @@ export function PredictionButtons({
                       <span className="line-clamp-2">{label}</span>
                     </span>
                     <span className="text-[10px] font-normal opacity-70">{points}</span>
-                    <span className="mt-0.5 line-clamp-2 px-1 text-[9px] font-normal leading-tight opacity-60">
+                    <span className="mt-0.5 line-clamp-2 px-1 text-xs font-normal leading-tight opacity-60 sm:text-[9px]">
                       {oddsHint}
                     </span>
                   </button>
@@ -360,6 +367,7 @@ export function PredictionButtons({
             <PredictionCelebration
               key={`${matchId}-${savedReaction.pickLabel}`}
               reaction={savedReaction.reaction}
+              supplementalReactions={savedReaction.supplementalReactions}
               fixture={`${teamA} vs ${teamB}`}
               pick={savedReaction.pickLabel}
               probabilityContext={savedReaction.probabilityContext}

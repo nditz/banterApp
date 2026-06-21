@@ -1,5 +1,6 @@
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
+using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Leagues;
 using BanterApp.Api.Features.Pundits;
 using BanterApp.Api.Services;
@@ -122,16 +123,18 @@ public static class LeaderboardEndpoints
         });
     }
 
-    private static async Task<IResult> GetPunditLeaderboard(AppDbContext db, ScoringService scoring, CancellationToken ct)
+    private static async Task<IResult> GetPunditLeaderboard(AppDbContext db, CancellationToken ct)
     {
         var pundits = await db.Pundits
+            .Where(p => p.Kind == PunditKind.Source)
             .Include(p => p.Predictions)
             .ThenInclude(pp => pp.Match)
+            .Include(p => p.Opinions)
             .ToListAsync(ct);
 
         if (pundits.Count == 0)
         {
-            return Results.Ok(GetMockPunditLeaderboard());
+            return Results.Ok(Array.Empty<PunditLeaderboardEntry>());
         }
 
         var entries = pundits
@@ -150,6 +153,8 @@ public static class LeaderboardEndpoints
                 });
 
                 var display = PunditDisplayResolver.Resolve(p);
+                var total = finished.Count > 0 ? finished.Count : p.Opinions.Count;
+                var score = finished.Count > 0 ? correct : p.Opinions.Count;
 
                 return new PunditLeaderboardEntry(
                     p.Id,
@@ -162,13 +167,17 @@ public static class LeaderboardEndpoints
                     display.AttributionNote,
                     display.AvatarSeed,
                     display.SourceUrl,
-                    correct,
-                    finished.Count,
+                    score,
+                    total,
                     0);
             })
-            .OrderByDescending(e => e.CorrectPredictions)
+            .OrderByDescending(e => e.TotalPredictions > 0 && e.CorrectPredictions <= e.TotalPredictions
+                ? (double)e.CorrectPredictions / e.TotalPredictions
+                : 0)
+            .ThenByDescending(e => e.TotalPredictions)
             .ThenBy(e => e.Name)
             .Select((e, i) => e with { Rank = i + 1 })
+            .Take(TopCount)
             .ToList();
 
         return Results.Ok(entries);
@@ -221,26 +230,4 @@ public static class LeaderboardEndpoints
 
         return new LeaderboardView(top, me, totalPlayers);
     }
-
-    private static List<PunditLeaderboardEntry> GetMockPunditLeaderboard() =>
-        PunditPersonas.Defaults
-            .Select((seed, i) =>
-            {
-                var display = PunditDisplayResolver.Resolve(PunditPersonas.ToEntity(seed));
-                return new PunditLeaderboardEntry(
-                    seed.Id,
-                    display.DisplayName,
-                    display.DeskLabel,
-                    display.Archetype,
-                    display.ParodyCue,
-                    display.StyleSlug,
-                    display.IsFictionalPersona,
-                    display.AttributionNote,
-                    display.AvatarSeed,
-                    display.SourceUrl,
-                    8 - i,
-                    12,
-                    i + 1);
-            })
-            .ToList();
 }

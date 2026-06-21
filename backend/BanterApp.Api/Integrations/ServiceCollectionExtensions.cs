@@ -1,11 +1,16 @@
 using BanterApp.Api.Integrations.Ai;
 using BanterApp.Api.Integrations.Common;
+using BanterApp.Api.Integrations.FootballBanter;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.News;
+using BanterApp.Api.Integrations.Pundits;
 using BanterApp.Api.Integrations.SportsData;
+using BanterApp.Api.Integrations.Jobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace BanterApp.Api.Integrations;
 
@@ -30,6 +35,19 @@ public static class ServiceCollectionExtensions
             configuration.GetSection(FootballDataOptions.SectionName));
         services.Configure<YouTubeOptions>(configuration.GetSection(YouTubeOptions.SectionName));
         services.Configure<MediaIngestOptions>(configuration.GetSection(MediaIngestOptions.SectionName));
+        services.Configure<PunditIngestOptions>(configuration.GetSection(PunditIngestOptions.SectionName));
+
+        services.AddSingleton<IFootballBanterConfigProvider>(sp =>
+        {
+            var env = sp.GetRequiredService<IHostEnvironment>();
+            var logger = sp.GetRequiredService<ILogger<FootballBanterConfigProvider>>();
+            return FootballBanterConfigProvider.Create(env.ContentRootPath, logger);
+        });
+        services.AddScoped<IFootballBanterEngine, FootballBanterEngine>();
+        services.AddSingleton<IPostConfigureOptions<PunditIngestOptions>, FootballBanterPunditIngestPostConfigurer>();
+        services.AddSingleton<IPostConfigureOptions<YouTubeOptions>, FootballBanterYouTubePostConfigurer>();
+        services.AddSingleton<IPostConfigureOptions<BackgroundJobsOptions>, FootballBanterBackgroundJobsPostConfigurer>();
+        services.AddSingleton<IPostConfigureOptions<AiOptions>, FootballBanterAiPostConfigurer>();
 
         var sportsProvider = configuration["SportsData:Provider"]?.Trim().ToLowerInvariant() ?? "mock";
         var sportsApiKey = configuration["SportsData:ApiKey"];
@@ -82,13 +100,16 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddHttpClient<IYouTubeProvider, YouTubeProvider>();
-        services.AddHttpClient<IRssFeedProvider, RssFeedProvider>();
+        services.AddSingleton<IRssFeedProvider, RssFeedProvider>();
+        services.AddScoped<IArticleContentFetcher, ArticleContentFetcher>();
+        services.AddHttpClient<IYouTubeTranscriptProvider, YouTubeTranscriptProvider>();
 
         var aiProvider = configuration["Ai:Provider"]?.Trim().ToLowerInvariant() ?? "stub";
         var aiApiKey = configuration["Ai:ApiKey"];
         if ((aiProvider is "openai" or "chatgpt") && !string.IsNullOrWhiteSpace(aiApiKey))
         {
             services.AddHttpClient<IContentGenerator, OpenAiContentGenerator>();
+            services.AddHttpClient<IPunditOpinionExtractor, OpenAiPunditOpinionExtractor>();
         }
         else
         {
@@ -98,7 +119,13 @@ public static class ServiceCollectionExtensions
             }
 
             services.TryAddSingleton<IContentGenerator, StubContentGenerator>();
+            services.TryAddSingleton<IPunditOpinionExtractor, StubPunditOpinionExtractor>();
         }
+
+        services.AddScoped<PunditMediaItemService>();
+        services.AddScoped<PunditReviewFlagger>();
+        services.AddScoped<PunditOpinionPersistenceService>();
+        services.AddScoped<PredictionAggregateService>();
         services.AddScoped<SyncRunTracker>();
         services.AddScoped<ScoreSyncJob>();
         services.AddScoped<StandingsSyncJob>();
@@ -106,6 +133,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<NewsIngestJob>();
         services.AddScoped<MediaIngestJob>();
         services.AddScoped<AiReactionJob>();
+        services.AddScoped<FeedBanterEnrichmentJob>();
+        services.AddScoped<YouTubeSearchSyncJob>();
+        services.AddScoped<RssOpinionSyncJob>();
+        services.AddScoped<ContentEnrichmentJob>();
+        services.AddScoped<PunditExtractionJob>();
+        services.AddScoped<PredictionAggregateJob>();
+        services.AddScoped<IJobRegistryService, JobRegistryService>();
+        services.AddScoped<StubMaintenanceJobs>();
 
         return services;
     }

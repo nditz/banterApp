@@ -7,4 +7,7 @@ public sealed record MediaItemDto(
     string SourceUrl,
     string? AudioUrl,
     DateTimeOffset? PublishedAt,
-    string SourceExternalId);
+    string SourceExternalId,
+    string? Author = null,
+    string? Publication = null,
+    string? FullText = null);

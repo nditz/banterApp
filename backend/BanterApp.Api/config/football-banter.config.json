@@ -1,0 +1,137 @@
+{
+  "version": "1.0.0",
+  "feature": "football_banter_engine",
+  "description": "Configuration for RSS, YouTube, OpenAI extraction, and football banter generation.",
+  "sources": {
+    "youtube": {
+      "enabled": true,
+      "api_base_url": "https://www.googleapis.com/youtube/v3",
+      "search_terms": [
+        "World Cup 2026 predictions pundits",
+        "football pundits predictions",
+        "BBC Sport World Cup predictions",
+        "Sky Sports World Cup predictions",
+        "ESPN FC predictions",
+        "Guardian Football World Cup analysis"
+      ],
+      "max_results_per_search": 25,
+      "sync_interval_minutes": 180,
+      "transcripts": {
+        "prefer_official_captions": true,
+        "allow_fallback_to_description": true,
+        "allow_fallback_to_openai_enrichment": true,
+        "requires_source_attribution": true
+      }
+    },
+    "rss": {
+      "enabled": true,
+      "sync_interval_minutes": 30,
+      "dedupe_strategy": [
+        "guid",
+        "link",
+        "content_hash"
+      ],
+      "feeds": [
+        {
+          "name": "BBC Sport Football World Cup",
+          "url": "https://feeds.bbci.co.uk/sport/football/world-cup/rss.xml",
+          "source_name": "BBC Sport"
+        },
+        {
+          "name": "ESPN Soccer News",
+          "url": "https://www.espn.com/espn/rss/soccer/news",
+          "source_name": "ESPN"
+        },
+        {
+          "name": "Guardian Football World Cup 2026",
+          "url": "https://www.theguardian.com/football/world-cup-2026/rss",
+          "source_name": "The Guardian"
+        },
+        {
+          "name": "Sky Sports Football",
+          "url": "https://www.skysports.com/rss/12040",
+          "source_name": "Sky Sports"
+        }
+      ]
+    }
+  },
+  "openai": {
+    "enabled": true,
+    "model": "gpt-5",
+    "temperature": 0.8,
+    "max_output_tokens": 1800,
+    "pipeline_roles": {
+      "extractor": {
+        "purpose": "Extract structured pundit opinions, predictions, claims, source metadata, and quotes from source content.",
+        "must_not_invent_quotes": true,
+        "must_flag_uncertainty": true
+      },
+      "banter_engine": {
+        "purpose": "Transform grounded football facts into Gen Z football banter, meme captions, reactions, and shareable feed content.",
+        "must_preserve_source_attribution": true,
+        "must_not_create_fake_claims": true
+      }
+    }
+  },
+  "content_rules": {
+    "quote_policy": {
+      "allow_short_quotes": true,
+      "avoid_long_copyrighted_excerpts": true,
+      "always_include_source_url": true,
+      "always_label_statement_type": true,
+      "statement_types": [
+        "direct_quote",
+        "paraphrase",
+        "ai_summary",
+        "inferred_prediction"
+      ]
+    },
+    "safety": {
+      "no_hate_speech": true,
+      "no_harassment": true,
+      "no_fake_endorsements": true,
+      "no_claimed_affiliation_without_permission": true,
+      "keep_banter_football_focused": true
+    }
+  },
+  "banter": {
+    "default_intensity": 7,
+    "allowed_intensity_range": [
+      1,
+      10
+    ],
+    "tone": [
+      "fun",
+      "gen_z",
+      "football_twitter",
+      "group_chat",
+      "cheeky",
+      "meme_page",
+      "banter"
+    ],
+    "output_shape": {
+      "headline": "string",
+      "banter_summary": "string",
+      "meme_reactions": "array",
+      "gif_suggestions": "array",
+      "fan_reactions": "array",
+      "confidence": "number",
+      "source_name": "string",
+      "source_url": "string",
+      "pundit_name": "string",
+      "prediction": "string",
+      "statement_type": "direct_quote | paraphrase | ai_summary | inferred_prediction"
+    }
+  },
+  "review_rules": {
+    "needs_human_review_when": [
+      "pundit_name_missing",
+      "source_text_incomplete",
+      "quote_is_inferred_not_direct",
+      "confidence_below_0_7",
+      "multiple_speakers_mixed",
+      "prediction_is_vague",
+      "source_url_missing"
+    ]
+  }
+}

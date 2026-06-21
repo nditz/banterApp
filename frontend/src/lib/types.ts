@@ -35,7 +35,8 @@ export type FeedItemType =
   | "meme"
   | "news"
   | "leaderboard"
-  | "prediction_highlight";
+  | "prediction_highlight"
+  | "pundit_quote";
 
 export type FeedMediaType = "image" | "gif" | "video" | "clip";
 
@@ -60,11 +61,13 @@ export interface FeedItem {
   body: string;
   imageUrl?: string;
   media?: FeedMedia;
+  author?: string;
   source?: string;
   sourceUrl?: string;
   publishedAt: string;
   likes?: number;
   reactions?: FeedReactions;
+  contentLabel?: string;
 }
 
 export interface LeaderboardEntry {

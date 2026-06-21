@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
+using BanterApp.Api.Common;
 
 namespace BanterApp.Api.Middleware;
-
 public sealed class CsrfMiddleware(RequestDelegate next)
 {
     public const string CookieName = "banter_csrf";
@@ -18,9 +18,9 @@ public sealed class CsrfMiddleware(RequestDelegate next)
         {
             var path = context.Request.Path.Value ?? string.Empty;
             if (path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("/api/sync/", StringComparison.OrdinalIgnoreCase) ||
                 path.Equals("/api/auth/session/consent", StringComparison.OrdinalIgnoreCase) ||
-                path.Equals("/api/auth/session/recover", StringComparison.OrdinalIgnoreCase))
+                path.Equals("/api/auth/session/recover", StringComparison.OrdinalIgnoreCase) ||
+                path.Equals("/api/errors/client", StringComparison.OrdinalIgnoreCase))
             {
                 await next(context);
                 return;
@@ -34,7 +34,10 @@ public sealed class CsrfMiddleware(RequestDelegate next)
                 !string.Equals(cookieToken, headerToken, StringComparison.Ordinal))
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsJsonAsync(new { error = "CSRF validation failed." });
+                await context.Response.WriteAsJsonAsync(new ApiErrorEnvelope(false, new ApiErrorBody(
+                    ErrorCodes.CsrfFailed,
+                    "Your session expired. Please refresh and try again.",
+                    ApiResults.GetRequestId(context))));
                 return;
             }
         }

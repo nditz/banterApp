@@ -68,7 +68,9 @@ public static class PunditPersonas
         new()
         {
             Id = seed.Id,
+            Kind = PunditKind.Persona,
             Name = seed.Name,
+            NormalizedName = seed.Name.Trim().ToLowerInvariant(),
             Organization = seed.Organization,
             Archetype = seed.Archetype,
             ParodyCue = seed.ParodyCue,

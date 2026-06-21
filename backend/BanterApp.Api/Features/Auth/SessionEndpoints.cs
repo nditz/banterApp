@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using BanterApp.Api.Common;
-using BanterApp.Api.Data;
-using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Data;using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Admin;
 using BanterApp.Api.Features.Leagues;
 using BanterApp.Api.Middleware;
 using BanterApp.Api.Services;
@@ -17,10 +17,10 @@ public static class SessionEndpoints
 
         group.MapGet("/", GetSession);
         group.MapPost("/consent", AcceptTerms)
-            .RequireRateLimiting("auth")
+            .RequireRateLimiting(RateLimitPolicies.AuthSession)
             .WithValidation<SessionConsentRequest>();
         group.MapPost("/recover", RecoverSession)
-            .RequireRateLimiting("auth")
+            .RequireRateLimiting(RateLimitPolicies.AuthSession)
             .WithValidation<SessionRecoverRequest>();
         group.MapPost("/sync", SyncAuthenticatedUser);
 
@@ -76,6 +76,7 @@ public static class SessionEndpoints
         IUserContext user,
         SessionTokenService tokens,
         AppDbContext db,
+        IAdminAuthorizationService adminAuth,
         HttpContext http,
         CancellationToken ct)
     {
@@ -84,6 +85,7 @@ public static class SessionEndpoints
         if (user.IsAuthenticated)
         {
             var registered = await db.Users.FindAsync([user.UserId!.Value], ct);
+            var isPlatformAdmin = await adminAuth.IsAdminAsync(user, http, ct);
             return Results.Ok(new SessionResponse(
                 Authenticated: true,
                 Anonymous: false,
@@ -91,7 +93,8 @@ public static class SessionEndpoints
                 RecoveryToken: null,
                 UserId: user.UserId,
                 AnonymousUserId: null,
-                CsrfToken: csrf));
+                CsrfToken: csrf,
+                IsPlatformAdmin: isPlatformAdmin));
         }
 
         if (user.IsAnonymous)
@@ -108,7 +111,8 @@ public static class SessionEndpoints
                 RecoveryToken: recoveryToken,
                 UserId: null,
                 AnonymousUserId: user.AnonymousUserId,
-                CsrfToken: csrf));
+                CsrfToken: csrf,
+                IsPlatformAdmin: false));
         }
 
         return Results.Ok(new SessionResponse(
@@ -118,7 +122,8 @@ public static class SessionEndpoints
             RecoveryToken: null,
             UserId: null,
             AnonymousUserId: null,
-            CsrfToken: csrf));
+            CsrfToken: csrf,
+            IsPlatformAdmin: false));
     }
 
     private static async Task<IResult> AcceptTerms(
@@ -127,6 +132,7 @@ public static class SessionEndpoints
         IUserContext user,
         SessionTokenService tokens,
         TurnstileService turnstile,
+        IAdminAuthorizationService adminAuth,
         HttpContext http,
         CancellationToken ct)
     {
@@ -170,7 +176,8 @@ public static class SessionEndpoints
                 RecoveryToken: null,
                 UserId: user.UserId,
                 AnonymousUserId: null,
-                CsrfToken: csrf));
+                CsrfToken: csrf,
+                IsPlatformAdmin: await adminAuth.IsAdminAsync(user, http, ct)));
         }
 
         var cookieId = ResolveCookieId(http);
@@ -219,7 +226,8 @@ public static class SessionEndpoints
             RecoveryToken: recoveryToken,
             UserId: null,
             AnonymousUserId: anonymous.Id,
-            CsrfToken: csrfToken));
+            CsrfToken: csrfToken,
+            IsPlatformAdmin: false));
     }
 
     private static async Task<IResult> RecoverSession(
@@ -283,7 +291,8 @@ public static class SessionEndpoints
             RecoveryToken: request.RecoveryToken.Trim(),
             UserId: null,
             AnonymousUserId: anonymous.Id,
-            CsrfToken: csrf));
+            CsrfToken: csrf,
+            IsPlatformAdmin: false));
     }
 
     private static string ResolveCookieId(HttpContext context) =>
@@ -315,4 +324,5 @@ public record SessionResponse(
     string? RecoveryToken,
     Guid? UserId,
     Guid? AnonymousUserId,
-    string? CsrfToken);
+    string? CsrfToken,
+    bool IsPlatformAdmin);

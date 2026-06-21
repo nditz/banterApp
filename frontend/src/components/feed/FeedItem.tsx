@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   Flame,
   Laugh,
+  Megaphone,
   Minus,
   Newspaper,
   ThumbsDown,
@@ -15,6 +16,7 @@ import { FeedMedia } from "@/components/feed/FeedMedia";
 import { Badge } from "@/components/ui/badge";
 import { useFeedReaction, type ReactionKind } from "@/hooks/useFeedReaction";
 import { resolveFeedMedia } from "@/lib/feed-media";
+import { safeExternalHref } from "@/lib/safe-url";
 import type { FeedItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +49,11 @@ const typeConfig = {
     label: "Highlight",
     className: "feed-accent-highlight",
   },
+  pundit_quote: {
+    icon: Megaphone,
+    label: "Pundit take",
+    className: "feed-accent-news",
+  },
 };
 
 interface FeedItemProps {
@@ -69,6 +76,18 @@ export function FeedItemCard({ item }: FeedItemProps) {
   const config = typeConfig[item.type];
   const Icon = config.icon;
   const media = resolveFeedMedia(item);
+  const sourceHref = safeExternalHref(item.sourceUrl);
+
+  const contentLabelText =
+    item.contentLabel === "direct_quote"
+      ? "Direct quote"
+      : item.contentLabel === "paraphrase"
+        ? "Paraphrase"
+        : item.contentLabel === "ai_summary"
+          ? "AI summary"
+          : item.contentLabel === "inferred_prediction"
+            ? "Inferred prediction"
+            : null;
 
   const handleReact = (kind: ReactionKind) => {
     if (myReaction === kind) return; // no toggling off (keep it simple)
@@ -95,12 +114,19 @@ export function FeedItemCard({ item }: FeedItemProps) {
       )}
     >
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <Badge variant="secondary" className="h-5 gap-1 px-1.5 text-[10px] font-normal">
-          <Icon className="size-3" aria-hidden />
-          {config.label}
-          {media?.type === "gif" && " · GIF"}
-          {media?.type === "clip" && " · Clip"}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          <Badge variant="secondary" className="h-5 gap-1 px-1.5 text-[10px] font-normal">
+            <Icon className="size-3" aria-hidden />
+            {config.label}
+            {media?.type === "gif" && " · GIF"}
+            {media?.type === "clip" && " · Clip"}
+          </Badge>
+          {contentLabelText ? (
+            <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-normal">
+              {contentLabelText}
+            </Badge>
+          ) : null}
+        </div>
         <time
           dateTime={item.publishedAt}
           className="text-[10px] text-muted-foreground"
@@ -115,7 +141,7 @@ export function FeedItemCard({ item }: FeedItemProps) {
         </div>
       )}
 
-      <h3 className="text-sm font-semibold leading-snug">{item.title}</h3>
+      <h3 className="break-words text-sm font-semibold leading-snug">{item.title}</h3>
       <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
         {visibleBody}
       </p>
@@ -128,25 +154,60 @@ export function FeedItemCard({ item }: FeedItemProps) {
           {expanded ? "Show less" : "Show more"}
         </button>
       )}
-      {item.source && (
-        <p className="mt-1.5 text-[11px] text-muted-foreground">
-          Source:{" "}
-          {item.sourceUrl ? (
-            <a
-              href={item.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              {item.source}
-            </a>
+      {(item.author || item.source) && (
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          {item.author && (item.type === "pundit_quote" || item.type === "banter") ? (
+            <>
+              <span className="truncate-safe inline-block max-w-full font-medium text-foreground" title={item.author}>
+                {item.author}
+              </span>
+              {item.source ? (
+                <>
+                  {" · via "}
+                  {item.sourceUrl ? (
+                    sourceHref ? (
+                      <a
+                        href={sourceHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="break-anywhere text-primary hover:underline"
+                      >
+                        {item.source}
+                      </a>
+                    ) : (
+                      item.source
+                    )
+                  ) : (
+                    item.source
+                  )}
+                </>
+              ) : null}
+            </>
           ) : (
-            item.source
+            <>
+              Source:{" "}
+              {item.sourceUrl ? (
+                sourceHref ? (
+                  <a
+                    href={sourceHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    {item.source}
+                  </a>
+                ) : (
+                  item.source
+                )
+              ) : (
+                item.source
+              )}
+            </>
           )}
         </p>
       )}
       {/* Reactions row */}
-      <div className="mt-2.5 flex items-center gap-1.5">
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
         <button
           type="button"
           onClick={() => handleReact("agree")}

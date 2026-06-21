@@ -1,4 +1,5 @@
 using BanterApp.Api.Integrations.SportsData.Dtos;
+using BanterApp.Api.Integrations.FootballBanter;
 
 namespace BanterApp.Api.Integrations.Ai;
 
@@ -84,5 +85,25 @@ public interface IContentGenerator
         string headline,
         string reactionText,
         string? category = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Rewrite a feed headline + summary into Gen Z banter copy with a GIF mood tag.
+    /// </summary>
+    Task<FeedBanterCard> GenerateFeedBanterCardAsync(
+        string headline,
+        string summary,
+        string? category = null,
+        string? author = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Football Banter Engine JSON output for RSS/YouTube/enriched source content.
+    /// </summary>
+    Task<string> GenerateFootballBanterJsonAsync(
+        FootballBanterSourceInput input,
+        string systemPrompt,
+        FootballBanterOpenAiConfig openAiConfig,
+        int banterIntensity,
         CancellationToken cancellationToken = default);
 }

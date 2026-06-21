@@ -1,5 +1,4 @@
 using BanterApp.Api.Data.Entities;
-using BanterApp.Api.Features.Pundits;
 using BanterApp.Api.Integrations.News;
 using BanterApp.Api.Integrations.SportsData;
 using Microsoft.EntityFrameworkCore;
@@ -83,36 +82,7 @@ public static class DatabaseSeeder
             });
         }
 
-        var useLiveSports = sports is not MockSportsDataProvider;
-
-        if (!useLiveSports && !await db.Pundits.AnyAsync(cancellationToken))
-        {
-            var pundits = PunditPersonas.Defaults.Take(3).Select(PunditPersonas.ToEntity).ToArray();
-            db.Pundits.AddRange(pundits);
-
-            var finished = await db.Matches.Where(m => m.Status == "FT").Take(3).ToListAsync(cancellationToken);
-            foreach (var match in finished)
-            {
-                db.PunditPredictions.Add(new PunditPrediction
-                {
-                    Id = Guid.NewGuid(),
-                    PunditId = pundits[0].Id,
-                    MatchId = match.Id,
-                    Prediction = "Home Win",
-                    PublishedAt = match.KickoffTime.AddDays(-1)
-                });
-                db.PunditPredictions.Add(new PunditPrediction
-                {
-                    Id = Guid.NewGuid(),
-                    PunditId = pundits[1].Id,
-                    MatchId = match.Id,
-                    Prediction = "Draw",
-                    PublishedAt = match.KickoffTime.AddDays(-1)
-                });
-            }
-        }
-
-        await UpgradeLegacyPunditsAsync(db, cancellationToken);
+        await PurgeFictionalPersonasAsync(db, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
 
@@ -124,36 +94,30 @@ public static class DatabaseSeeder
             newsCount);
     }
 
-    /// <summary>Rewrites known seeded pundit rows to fictional desk personas.</summary>
-    private static async Task UpgradeLegacyPunditsAsync(AppDbContext db, CancellationToken cancellationToken)
+    /// <summary>Removes fictional parody desk rows so only real sourced pundits remain.</summary>
+    private static async Task PurgeFictionalPersonasAsync(AppDbContext db, CancellationToken cancellationToken)
     {
-        var changed = false;
-        foreach (var seed in PunditPersonas.Defaults)
+        var personaIds = await db.Pundits
+            .Where(p => p.Kind == PunditKind.Persona)
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken);
+
+        if (personaIds.Count == 0)
         {
-            var pundit = await db.Pundits.FindAsync([seed.Id], cancellationToken);
-            if (pundit is null)
-            {
-                continue;
-            }
-
-            if (pundit.Name == seed.Name &&
-                pundit.Organization == seed.Organization &&
-                pundit.Archetype == seed.Archetype &&
-                pundit.ParodyCue == seed.ParodyCue &&
-                pundit.StyleSlug == seed.StyleSlug &&
-                pundit.AttributionMode == PunditAttributionMode.Persona)
-            {
-                continue;
-            }
-
-            PunditPersonas.Apply(pundit, seed);
-            changed = true;
+            return;
         }
 
-        if (changed)
-        {
-            await db.SaveChangesAsync(cancellationToken);
-        }
+        await db.PunditPredictions
+            .Where(p => personaIds.Contains(p.PunditId))
+            .ExecuteDeleteAsync(cancellationToken);
+
+        await db.PunditOpinions
+            .Where(o => personaIds.Contains(o.PunditId))
+            .ExecuteDeleteAsync(cancellationToken);
+
+        await db.Pundits
+            .Where(p => personaIds.Contains(p.Id))
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
     private static async Task SeedMatchesAsync(

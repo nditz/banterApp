@@ -10,8 +10,7 @@ export default function RulesPage() {
       <div>
         <h1 className="text-xl font-semibold sm:text-2xl">Rules & how it works</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Scoring, content scripts, leagues, and taking on the pundits — everything
-          you need to know.
+          Swipe through the tour — picks, banter, scripts, scoring, leagues, and taking on the pundits.
         </p>
       </div>
 

@@ -2,11 +2,13 @@ namespace BanterApp.Api.Features.Auth;
 
 public sealed record RegisterRequest(
     string Email,
-    string Password);
+    string Password,
+    string? TurnstileToken = null);
 
 public sealed record LoginRequest(
     string Email,
-    string Password);
+    string Password,
+    string? TurnstileToken = null);
 
 public sealed record AuthResponse(
     string AccessToken,

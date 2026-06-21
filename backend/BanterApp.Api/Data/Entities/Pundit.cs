@@ -3,7 +3,12 @@ namespace BanterApp.Api.Data.Entities;
 public class Pundit
 {
     public Guid Id { get; set; }
+    public PunditKind Kind { get; set; } = PunditKind.Persona;
     public string Name { get; set; } = string.Empty;
+    public string NormalizedName { get; set; } = string.Empty;
+    public string? Role { get; set; }
+    public string? MetadataJson { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public string Organization { get; set; } = string.Empty;
     /// <summary>Short vibe label shown under the persona name.</summary>
     public string Archetype { get; set; } = string.Empty;
@@ -18,4 +23,5 @@ public class Pundit
     public string? SourceUrl { get; set; }
 
     public ICollection<PunditPrediction> Predictions { get; set; } = [];
+    public ICollection<PunditOpinion> Opinions { get; set; } = [];
 }

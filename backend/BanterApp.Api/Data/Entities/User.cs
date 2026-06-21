@@ -8,6 +8,9 @@ public class User
     public string? CountryCode { get; set; }
     public string? Avatar { get; set; }
     public bool IsAdultVerified { get; set; }
+    public bool IsPlatformAdmin { get; set; }
+    public AccountStatus AccountStatus { get; set; } = AccountStatus.Active;
+    public DateTimeOffset? EmailConfirmedAt { get; set; }
     public DateTimeOffset? TermsAcceptedAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 

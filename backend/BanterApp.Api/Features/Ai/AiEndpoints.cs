@@ -3,6 +3,7 @@ using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.Ai;
 using BanterApp.Api.Integrations.SportsData;
+using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace BanterApp.Api.Features.Ai;
@@ -16,14 +17,19 @@ public static class AiEndpoints
         var group = app.MapGroup("/api/ai").WithTags("AI");
 
         group.MapPost("/analyze", Analyze)
+            .RequireRateLimiting(RateLimitPolicies.OpenAiGenerate)
             .WithValidation<AnalyzeRequest>();
         group.MapPost("/banter", GenerateBanter)
+            .RequireRateLimiting(RateLimitPolicies.OpenAiGenerate)
             .WithValidation<BanterRequest>();
         group.MapPost("/meme", GenerateMeme)
+            .RequireRateLimiting(RateLimitPolicies.OpenAiGenerate)
             .WithValidation<MemeRequest>();
         group.MapPost("/video-script", GenerateVideoScript)
+            .RequireRateLimiting(RateLimitPolicies.OpenAiGenerate)
             .WithValidation<VideoScriptRequest>();
         group.MapPost("/broadcast-script", GenerateBroadcastScript)
+            .RequireRateLimiting(RateLimitPolicies.OpenAiGenerate)
             .WithValidation<BroadcastScriptRequest>();
 
         return app;
@@ -35,8 +41,14 @@ public static class AiEndpoints
         IUserContext user,
         IContentGenerator generator,
         ISportsDataProvider sports,
+        IProviderUsageGuard usageGuard,
         CancellationToken ct)
     {
+        if (!await usageGuard.CanInvokeAsync("openai", ct: ct))
+        {
+            return Results.Problem("AI service temporarily unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
         var (allowed, remaining, error) = await CheckAnonymousLimitAsync(db, user, ct);
         if (!allowed)
         {
@@ -51,9 +63,12 @@ public static class AiEndpoints
         }
 
         var userKey = ResolveUserKey(user);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         var content = await generator.GenerateAnalysisAsync(
             request.UserPrediction, stats, userKey, isAnonymous: false, ct);
+        sw.Stop();
 
+        await usageGuard.RecordSuccessAsync("openai", latencyMs: (int)sw.ElapsedMilliseconds, ct: ct);
         await RecordGenerationAsync(db, user, GeneratedContentType.Analyze, request.UserPrediction, content, ct);
 
         return Results.Ok(new AiGenerationResponse(content, "analyze", remaining));
@@ -64,8 +79,14 @@ public static class AiEndpoints
         AppDbContext db,
         IUserContext user,
         IContentGenerator generator,
+        IProviderUsageGuard usageGuard,
         CancellationToken ct)
     {
+        if (!await usageGuard.CanInvokeAsync("openai", ct: ct))
+        {
+            return Results.Problem("AI service temporarily unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
         var (allowed, remaining, error) = await CheckAnonymousLimitAsync(db, user, ct);
         if (!allowed)
         {
@@ -73,9 +94,12 @@ public static class AiEndpoints
         }
 
         var userKey = ResolveUserKey(user);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         var content = await generator.GenerateBanterAsync(
             request.UserPrediction, request.ActualResult, request.Tone, userKey, isAnonymous: false, ct);
+        sw.Stop();
 
+        await usageGuard.RecordSuccessAsync("openai", latencyMs: (int)sw.ElapsedMilliseconds, ct: ct);
         await RecordGenerationAsync(db, user, GeneratedContentType.Banter,
             $"{request.UserPrediction}|{request.ActualResult}", content, ct);
 
@@ -87,8 +111,14 @@ public static class AiEndpoints
         AppDbContext db,
         IUserContext user,
         IContentGenerator generator,
+        IProviderUsageGuard usageGuard,
         CancellationToken ct)
     {
+        if (!await usageGuard.CanInvokeAsync("openai", ct: ct))
+        {
+            return Results.Problem("AI service temporarily unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
         var (allowed, remaining, error) = await CheckAnonymousLimitAsync(db, user, ct);
         if (!allowed)
         {
@@ -96,13 +126,16 @@ public static class AiEndpoints
         }
 
         var userKey = ResolveUserKey(user);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         var content = await generator.GenerateMemeCaptionAsync(request.Context, userKey, isAnonymous: false, ct);
         var imageUrl = await generator.GenerateReactionImageUrlAsync(
             request.Context,
             content,
             "meme",
             ct);
+        sw.Stop();
 
+        await usageGuard.RecordSuccessAsync("openai", latencyMs: (int)sw.ElapsedMilliseconds, ct: ct);
         await RecordGenerationAsync(db, user, GeneratedContentType.Meme, request.Context, content, ct);
 
         return Results.Ok(new AiGenerationResponse(content, "meme", remaining, imageUrl));
@@ -113,8 +146,14 @@ public static class AiEndpoints
         AppDbContext db,
         IUserContext user,
         IContentGenerator generator,
+        IProviderUsageGuard usageGuard,
         CancellationToken ct)
     {
+        if (!await usageGuard.CanInvokeAsync("openai", ct: ct))
+        {
+            return Results.Problem("AI service temporarily unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
         var (allowed, remaining, error) = await CheckAnonymousLimitAsync(db, user, ct);
         if (!allowed)
         {
@@ -122,9 +161,12 @@ public static class AiEndpoints
         }
 
         var userKey = ResolveUserKey(user);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         var content = await generator.GenerateVideoScriptAsync(
             request.Format, request.Duration, request.Context, userKey, isAnonymous: false, ct);
+        sw.Stop();
 
+        await usageGuard.RecordSuccessAsync("openai", latencyMs: (int)sw.ElapsedMilliseconds, ct: ct);
         await RecordGenerationAsync(db, user, GeneratedContentType.VideoScript, request.Context, content, ct);
 
         return Results.Ok(new AiGenerationResponse(content, "video-script", remaining));

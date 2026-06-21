@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow, Barlow_Condensed, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/layout/AppShell";
+import { ClientErrorReporter } from "@/components/ClientErrorReporter";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { BRAND } from "@/lib/brand";
 import "./globals.css";
@@ -59,6 +60,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#0891b2",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -74,6 +78,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <QueryProvider>
+          <ClientErrorReporter />
           <AppShell>{children}</AppShell>
         </QueryProvider>
       </body>
