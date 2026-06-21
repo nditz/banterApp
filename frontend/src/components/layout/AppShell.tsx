@@ -37,9 +37,12 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [restoreOpen, setRestoreOpen] = useState(false);
-  const [restoreSheetOpen, setRestoreSheetOpen] = useState(false);
+  const [mobileMenuPath, setMobileMenuPath] = useState<string | null>(null);
+  const [restoreOpenPath, setRestoreOpenPath] = useState<string | null>(null);
+  const [restoreSheetPath, setRestoreSheetPath] = useState<string | null>(null);
+  const mobileMenuOpen = mobileMenuPath === pathname;
+  const restoreOpen = restoreOpenPath === pathname;
+  const restoreSheetOpen = restoreSheetPath === pathname;
   const restoreRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
   const isAdminRoute = pathname.startsWith("/admin");
@@ -47,16 +50,10 @@ export function AppShell({ children }: AppShellProps) {
   const mobileMenuId = "app-mobile-menu";
 
   useEffect(() => {
-    setMobileMenuOpen(false);
-    setRestoreOpen(false);
-    setRestoreSheetOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
     if (!restoreOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (restoreRef.current && !restoreRef.current.contains(event.target as Node)) {
-        setRestoreOpen(false);
+        setRestoreOpenPath(null);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -69,9 +66,9 @@ export function AppShell({ children }: AppShellProps) {
 
   const openSessionRestore = () => {
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches) {
-      setRestoreSheetOpen(true);
+      setRestoreSheetPath(pathname);
     } else {
-      setRestoreOpen((open) => !open);
+      setRestoreOpenPath((current) => (current === pathname ? null : pathname));
     }
   };
 
@@ -87,7 +84,9 @@ export function AppShell({ children }: AppShellProps) {
               variant="ghost"
               size="icon-sm"
               className="touch-target text-white hover:bg-white/10 lg:hidden"
-              onClick={() => setMobileMenuOpen((open) => !open)}
+              onClick={() =>
+                setMobileMenuPath(mobileMenuOpen ? null : pathname)
+              }
               aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileMenuOpen}
               aria-controls={mobileMenuId}
@@ -152,7 +151,7 @@ export function AppShell({ children }: AppShellProps) {
                 </Button>
                 {restoreOpen && (
                   <div className="absolute right-0 top-full z-50 mt-1.5 w-[min(18rem,calc(100vw-2rem))] sm:w-72">
-                    <SessionKeyRestore onClose={() => setRestoreOpen(false)} />
+                    <SessionKeyRestore onClose={() => setRestoreOpenPath(null)} />
                   </div>
                 )}
               </div>
@@ -196,7 +195,7 @@ export function AppShell({ children }: AppShellProps) {
                 <Link
                   key={link.href}
                   href={link.href}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => setMobileMenuPath(null)}
                   className={cn(
                     "min-h-11 rounded-md px-3 py-2.5 text-xs font-bold uppercase tracking-wider",
                     pathname === link.href
@@ -213,14 +212,14 @@ export function AppShell({ children }: AppShellProps) {
                   {restoreOpen ? (
                     <SessionKeyRestore
                       onClose={() => {
-                        setRestoreOpen(false);
-                        setMobileMenuOpen(false);
+                        setRestoreOpenPath(null);
+                        setMobileMenuPath(null);
                       }}
                     />
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setRestoreOpen(true)}
+                      onClick={() => setRestoreOpenPath(pathname)}
                       className="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-white/75 hover:bg-white/10"
                     >
                       <KeyRound className="size-4" aria-hidden />
@@ -290,12 +289,15 @@ export function AppShell({ children }: AppShellProps) {
         </footer>
       )}
 
-      <Sheet open={restoreSheetOpen} onOpenChange={setRestoreSheetOpen}>
+      <Sheet
+        open={restoreSheetOpen}
+        onOpenChange={(next) => setRestoreSheetPath(next ? pathname : null)}
+      >
         <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Restore session</SheetTitle>
           </SheetHeader>
-          <SessionKeyRestore onClose={() => setRestoreSheetOpen(false)} />
+          <SessionKeyRestore onClose={() => setRestoreSheetPath(null)} />
         </SheetContent>
       </Sheet>
     </div>

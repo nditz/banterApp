@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { adminNavItems, isAdminNavActive } from "@/components/admin/admin-nav-items";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,11 +16,8 @@ import { cn } from "@/lib/utils";
 
 export function AdminMobileNav() {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+  const [openPath, setOpenPath] = useState<string | null>(null);
+  const open = openPath === pathname;
 
   return (
     <>
@@ -29,7 +26,7 @@ export function AdminMobileNav() {
         variant="ghost"
         size="icon-sm"
         className="touch-target text-zinc-100 hover:bg-zinc-800 md:hidden"
-        onClick={() => setOpen(true)}
+        onClick={() => setOpenPath(pathname)}
         aria-label="Open admin menu"
         aria-expanded={open}
         aria-controls="admin-mobile-nav"
@@ -37,7 +34,7 @@ export function AdminMobileNav() {
         <Menu className="size-5" />
       </Button>
 
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet open={open} onOpenChange={(next) => setOpenPath(next ? pathname : null)}>
         <SheetContent
           id="admin-mobile-nav"
           side="left"
@@ -62,7 +59,7 @@ export function AdminMobileNav() {
                       : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
                   )}
                   aria-current={active ? "page" : undefined}
-                  onClick={() => setOpen(false)}
+                  onClick={() => setOpenPath(null)}
                 >
                   {item.label}
                 </Link>
