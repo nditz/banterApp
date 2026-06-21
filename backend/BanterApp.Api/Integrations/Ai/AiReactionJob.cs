@@ -17,6 +17,15 @@ public sealed class AiReactionJob
 {
     public const string JobId = "ai-reactions";
 
+    private static readonly string[] ReactionTitleTemplates =
+    [
+        "BanterBot said what we're all thinking 🎙️",
+        "Group chat official take 💬",
+        "The timeline needed this 🔥",
+        "No cap reaction incoming 🚫🧢",
+        "POV: BanterBot saw the headline 💀",
+    ];
+
     private readonly AppDbContext _db;
     private readonly IContentGenerator _ai;
     private readonly AiOptions _aiOptions;
@@ -82,9 +91,12 @@ public sealed class AiReactionJob
         var created = 0;
         foreach (var item in candidates)
         {
+            var headline = FeedBanterFormat.Strip(item.Title);
+            var summary = FeedBanterFormat.Strip(item.Summary ?? item.Title);
+
             var reaction = await _ai.GenerateNewsReactionAsync(
-                item.Title,
-                item.Summary ?? item.Title,
+                headline,
+                summary,
                 item.Category,
                 cancellationToken);
 
@@ -94,7 +106,7 @@ public sealed class AiReactionJob
             try
             {
                 var visual = await _ai.SuggestFeedVisualAsync(
-                    item.Title,
+                    headline,
                     reaction,
                     item.Category,
                     cancellationToken);
@@ -111,7 +123,7 @@ public sealed class AiReactionJob
                         : visual.ImagePrompt;
 
                     imageUrl = await _ai.GenerateReactionImageUrlAsync(
-                        item.Title,
+                        headline,
                         prompt,
                         item.Category,
                         cancellationToken);
@@ -119,7 +131,7 @@ public sealed class AiReactionJob
                     if (string.IsNullOrWhiteSpace(imageUrl) && _aiOptions.EnableImageGeneration)
                     {
                         imageUrl = await _ai.GenerateReactionImageUrlAsync(
-                            item.Title,
+                            headline,
                             reaction,
                             item.Category,
                             cancellationToken);
@@ -141,12 +153,14 @@ public sealed class AiReactionJob
                 mediaType = "gif";
             }
 
+            var reactionTitle = PickReactionTitle(headline, item.Category);
+
             _db.NewsFeedItems.Add(new NewsFeedItem
             {
                 Id = $"ai-{Guid.NewGuid():N}",
-                Source = "BanterApp AI",
-                Title = $"Pundit take: {item.Title}",
-                Summary = reaction,
+                Source = "BanterBot",
+                Title = FeedBanterFormat.Mark(reactionTitle),
+                Summary = FeedBanterFormat.Mark(reaction),
                 Url = item.Url,
                 Author = "BanterBot",
                 Category = "ai_reaction",
@@ -161,5 +175,23 @@ public sealed class AiReactionJob
 
         await _db.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("AI reactions: generated {Count} pundit posts with visuals.", created);
+    }
+
+    private static string PickReactionTitle(string headline, string? category)
+    {
+        var seed = $"{headline}|{category}";
+        var template = ReactionTitleTemplates[Math.Abs(seed.GetHashCode()) % ReactionTitleTemplates.Length];
+        if (category == "pundit_quote")
+        {
+            return $"{template} (re: {Truncate(headline, 60)})";
+        }
+
+        return template;
+    }
+
+    private static string Truncate(string value, int max)
+    {
+        var trimmed = value.Trim();
+        return trimmed.Length <= max ? trimmed : trimmed[..(max - 1)] + "…";
     }
 }

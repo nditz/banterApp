@@ -36,64 +36,28 @@ public static class PersonalizedFeedService
         int maxItems,
         CancellationToken ct)
     {
-        var rows = await db.PunditPredictions
-            .Include(p => p.Pundit)
-            .Include(p => p.Match)
-            .Where(p => p.Match != null)
-            .OrderByDescending(p => p.PublishedAt ?? p.Match!.KickoffTime)
-            .Take(maxItems * 2)
+        var sourceOpinions = await LoadSourcePunditOpinionFeedAsync(db, maxItems, ct);
+        return sourceOpinions;
+    }
+
+    private static async Task<List<FeedItemResponse>> LoadSourcePunditOpinionFeedAsync(
+        AppDbContext db,
+        int maxItems,
+        CancellationToken ct)
+    {
+        var opinions = await db.PunditOpinions
+            .AsNoTracking()
+            .Include(o => o.Pundit)
+            .Include(o => o.SourceItem)
+            .ThenInclude(i => i.MediaSource)
+            .Where(o => o.Pundit.Kind == PunditKind.Source && !o.NeedsHumanReview && o.ReviewStatus != "rejected")
+            .OrderByDescending(o => o.SourceItem.PublishedAt ?? o.CreatedAt)
+            .Take(maxItems)
             .ToListAsync(ct);
 
-        var items = new List<FeedItemResponse>();
-
-        foreach (var row in rows)
-        {
-            var match = row.Match!;
-            if (!MatchOutcomeHelper.IsFinished(match))
-            {
-                continue;
-            }
-
-            var hit = MatchOutcomeHelper.PunditHit(row.Prediction, match);
-            var display = row.Pundit is not null
-                ? PunditDisplayResolver.Resolve(row.Pundit, row)
-                : new PunditDisplay(
-                    "Desk analyst",
-                    "Pundit desk",
-                    null,
-                    "Parody · generic pundit desk",
-                    null,
-                    true,
-                    row.SourceUrl,
-                    PunditSourcePlatform.Normalize(row.SourceType),
-                    PunditDisplayResolver.PersonaDisclaimer,
-                    row.Id.ToString("N"));
-            var scoreline = MatchOutcomeHelper.FormatScoreline(match);
-
-            var media = FeedMediaMapper.FromGifMood(
-                hit ? "celebrate" : "roast",
-                hit ? "Pundit called it" : "Pundit roast");
-
-            items.Add(new FeedItemResponse(
-                $"pundit-{row.Id:N}",
-                hit ? "prediction_highlight" : "banter",
-                PunditDisplayResolver.FeedTitle(display, hit),
-                PunditDisplayResolver.FeedBody(display, row.Prediction, scoreline, hit),
-                media.Url,
-                PunditDisplayResolver.FormatSourceLine(display),
-                display.SourceUrl ?? row.SourceUrl,
-                row.PublishedAt ?? match.KickoffTime,
-                Random.Shared.Next(40, 400),
-                Reactions: null,
-                Media: media));
-
-            if (items.Count >= maxItems)
-            {
-                break;
-            }
-        }
-
-        return items;
+        return opinions
+            .Select(o => PunditOpinionFeedMapper.ToFeedItem(o, o.Pundit, o.SourceItem))
+            .ToList();
     }
 
     private static async Task<List<FeedItemResponse>> BuildPersonalFeedAsync(
@@ -173,18 +137,39 @@ public static class PersonalizedFeedService
         string matchId,
         CancellationToken ct)
     {
+        var sourceOpinion = await db.PunditOpinions
+            .AsNoTracking()
+            .Include(o => o.Pundit)
+            .Include(o => o.SourceItem)
+            .ThenInclude(i => i.MediaSource)
+            .Where(o => o.Pundit.Kind == PunditKind.Source &&
+                        !o.NeedsHumanReview &&
+                        o.ReviewStatus != "rejected" &&
+                        (o.MatchName != null && o.MatchName.Contains(matchId, StringComparison.OrdinalIgnoreCase) ||
+                         o.Team != null))
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (sourceOpinion is not null)
+        {
+            var publication = sourceOpinion.SourceItem.Publication
+                ?? sourceOpinion.SourceItem.MediaSource.Name;
+            var take = sourceOpinion.Prediction ?? sourceOpinion.Opinion;
+            return $" {sourceOpinion.Pundit.Name} ({publication}) said {take}.";
+        }
+
         var punditPick = await db.PunditPredictions
             .Include(p => p.Pundit)
-            .Where(p => p.MatchId == matchId)
+            .Where(p => p.MatchId == matchId && p.Pundit.Kind == PunditKind.Source)
             .OrderByDescending(p => p.PublishedAt)
             .FirstOrDefaultAsync(ct);
 
-        if (punditPick?.Pundit is null)
+        if (punditPick?.Pundit is not null)
         {
-            return string.Empty;
+            var display = PunditDisplayResolver.Resolve(punditPick.Pundit, punditPick);
+            return $" {display.DisplayName} at {display.DeskLabel} had {punditPick.Prediction} on the desk.";
         }
 
-        var display = PunditDisplayResolver.Resolve(punditPick.Pundit, punditPick);
-        return $" {display.DisplayName} at {display.DeskLabel} had {punditPick.Prediction} on the desk.";
+        return string.Empty;
     }
 }

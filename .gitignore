@@ -44,6 +44,9 @@ supabase/.temp/
 # Internal — data sourcing playbook (APIs, scrapers, key notes)
 docs/DATA-SOURCES-INTERNAL.md
 
+# Internal — GitHub / Vercel / Supabase deploy settings (secrets checklist)
+docs/GITHUB-DEPLOY-SETTINGS-PRIVATE.md
+
 # Test / coverage
 coverage/
 TestResults/

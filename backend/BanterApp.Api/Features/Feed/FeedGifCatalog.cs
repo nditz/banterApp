@@ -17,6 +17,10 @@ public static class FeedGifCatalog
         ["trophy"] = "https://media.giphy.com/media/3o6Zt6MLCHB0UiZ48I/giphy.gif",
         ["news"] = "https://media.giphy.com/media/26BRuo6sGiljlMz4s/giphy.gif",
         ["pundit"] = "https://media.giphy.com/media/3o7aD2saQq3B5iyTFS/giphy.gif",
+        ["cooked"] = "https://media.giphy.com/media/l0HlBO7eyXzSZkJri/giphy.gif",
+        ["ratio"] = "https://media.giphy.com/media/3o6Zt8rCfNXzYvNj2E/giphy.gif",
+        ["delulu"] = "https://media.giphy.com/media/3o7TKSjRrfIPjeiVy/giphy.gif",
+        ["maincharacter"] = "https://media.giphy.com/media/l0HlBO7eyXzSZkJri/giphy.gif",
     };
 
     public static string ResolveGifUrl(string? mood, string fallbackMood = "news")

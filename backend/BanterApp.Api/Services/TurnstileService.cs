@@ -3,15 +3,25 @@ using System.Text.Json.Serialization;
 
 namespace BanterApp.Api.Services;
 
-public sealed class TurnstileService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+public sealed class TurnstileService(
+    IHttpClientFactory httpClientFactory,
+    IConfiguration configuration,
+    IWebHostEnvironment environment)
 {
+    public const string DevBypassToken = "dev-bypass";
+
     public async Task<bool> VerifyAsync(string? token, string? remoteIp, CancellationToken ct = default)
     {
+        if (string.Equals(token, DevBypassToken, StringComparison.Ordinal))
+        {
+            return !environment.IsProduction();
+        }
+
         var secret = configuration["Security:TurnstileSecretKey"];
 
         if (string.IsNullOrWhiteSpace(secret))
         {
-            return true;
+            return !environment.IsProduction();
         }
 
         if (string.IsNullOrWhiteSpace(token))

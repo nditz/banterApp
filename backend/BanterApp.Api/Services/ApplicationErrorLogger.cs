@@ -1,7 +1,5 @@
 using BanterApp.Api.Common;
-using BanterApp.Api.Data;
-using BanterApp.Api.Data.Entities;
-using Microsoft.EntityFrameworkCore;
+using BanterApp.Api.Services;
 
 namespace BanterApp.Api.Services;
 
@@ -29,9 +27,7 @@ public interface IApplicationErrorLogger
         CancellationToken ct = default);
 }
 
-public sealed class ApplicationErrorLogger(
-    IServiceScopeFactory scopeFactory,
-    ILogger<ApplicationErrorLogger> logger) : IApplicationErrorLogger
+public sealed class ApplicationErrorLogger(IServiceScopeFactory scopeFactory) : IApplicationErrorLogger
 {
     public Task LogAsync(
         string source,
@@ -44,16 +40,19 @@ public sealed class ApplicationErrorLogger(
         Guid? syncRunId = null,
         CancellationToken ct = default)
     {
-        return PersistAsync(
-            source,
-            StringLimits.Truncate(message, StringLimits.ApplicationErrorMessage) ?? string.Empty,
-            category,
-            StringLimits.Truncate(detail, StringLimits.ApplicationErrorDetail),
-            requestMethod,
-            requestPath,
-            statusCode,
-            syncRunId,
-            ct);
+        return TrackAsync(new ErrorTrackRequest
+        {
+            Source = source,
+            ErrorCode = MapCategoryToCode(category, source),
+            MessageSafe = message,
+            MessageInternal = detail,
+            Route = requestPath,
+            Method = requestMethod,
+            StatusCode = statusCode,
+            JobKey = category,
+            JobRunId = syncRunId,
+            Provider = MapProvider(source, category)
+        }, ct);
     }
 
     public Task LogExceptionAsync(
@@ -66,63 +65,88 @@ public sealed class ApplicationErrorLogger(
         Guid? syncRunId = null,
         CancellationToken ct = default)
     {
-        var detail = exception.ToString();
-        return LogAsync(
-            source,
-            exception.Message,
-            category,
-            detail,
-            requestMethod,
-            requestPath,
-            statusCode,
-            syncRunId,
-            ct);
+        return TrackExceptionAsync(new ErrorTrackRequest
+        {
+            Source = source,
+            ErrorCode = MapCategoryToCode(category, source),
+            MessageSafe = "An unexpected error occurred.",
+            Route = requestPath,
+            Method = requestMethod,
+            StatusCode = statusCode ?? StatusCodes.Status500InternalServerError,
+            JobKey = category,
+            JobRunId = syncRunId,
+            Provider = MapProvider(source, category)
+        }, exception, ct);
     }
 
-    private async Task PersistAsync(
-        string source,
-        string message,
-        string? category,
-        string? detail,
-        string? requestMethod,
-        string? requestPath,
-        int? statusCode,
-        Guid? syncRunId,
-        CancellationToken ct)
+    private async Task TrackAsync(ErrorTrackRequest request, CancellationToken ct)
     {
-        logger.LogError(
-            "Application error [{Source}/{Category}]: {Message}",
-            source,
-            category ?? "general",
-            message);
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var tracking = scope.ServiceProvider.GetRequiredService<IErrorTrackingService>();
+        await tracking.TrackAsync(request, ct);
+    }
 
-        try
+    private async Task TrackExceptionAsync(ErrorTrackRequest request, Exception exception, CancellationToken ct)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var tracking = scope.ServiceProvider.GetRequiredService<IErrorTrackingService>();
+        await tracking.TrackExceptionAsync(request, exception, ct);
+    }
+
+    private static string MapCategoryToCode(string? category, string source)
+    {
+        if (string.Equals(source, "background", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(source, "job", StringComparison.OrdinalIgnoreCase))
         {
-            await using var scope = scopeFactory.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.ApplicationErrorLogs.Add(new ApplicationErrorLog
-            {
-                Id = Guid.NewGuid(),
-                Source = StringLimits.Truncate(source, 32) ?? source,
-                Category = StringLimits.Truncate(category, 128),
-                Message = message,
-                Detail = detail,
-                RequestMethod = StringLimits.Truncate(requestMethod, 16),
-                RequestPath = StringLimits.Truncate(requestPath, 512),
-                StatusCode = statusCode,
-                SyncRunId = syncRunId,
-                OccurredAt = DateTimeOffset.UtcNow
-            });
-            await db.SaveChangesAsync(ct);
+            return ErrorCodes.JobFailed;
         }
-        catch (Exception ex)
+
+        if (string.Equals(source, "frontend", StringComparison.OrdinalIgnoreCase))
         {
-            logger.LogError(
-                ex,
-                "Failed to persist application error log for [{Source}/{Category}]: {Message}",
-                source,
-                category ?? "general",
-                message);
+            return ErrorCodes.UnknownError;
         }
+
+        if (category?.Contains("openai", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return ErrorCodes.OpenAiApiError;
+        }
+
+        if (category?.Contains("youtube", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return ErrorCodes.YouTubeApiError;
+        }
+
+        if (category?.Contains("rss", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return ErrorCodes.RssFetchError;
+        }
+
+        return ErrorCodes.InternalServerError;
+    }
+
+    private static string? MapProvider(string source, string? category)
+    {
+        if (category?.Contains("openai", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return "openai";
+        }
+
+        if (category?.Contains("youtube", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return "youtube";
+        }
+
+        if (category?.Contains("rss", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return "rss";
+        }
+
+        return source switch
+        {
+            "api" or "backend" => "app",
+            "background" or "job" => "job",
+            "frontend" => "app",
+            _ => "unknown"
+        };
     }
 }

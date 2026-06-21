@@ -18,7 +18,9 @@ public sealed record FeedItemResponse(
     DateTimeOffset PublishedAt,
     int? Likes,
     FeedReactions? Reactions = null,
-    FeedMediaResponse? Media = null);
+    FeedMediaResponse? Media = null,
+    string? Author = null,
+    string? ContentLabel = null);
 
 public sealed record PaginatedFeedResponse(
     IReadOnlyList<FeedItemResponse> Items,

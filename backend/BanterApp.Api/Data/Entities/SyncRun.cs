@@ -12,4 +12,8 @@ public class SyncRun
     public int RecordsUpdated { get; set; }
     public int RecordsFailed { get; set; }
     public string? ErrorMessage { get; set; }
+    public long? DurationMs { get; set; }
+    public int ItemsProcessed { get; set; }
+    public int ItemsSkipped { get; set; }
+    public string? MetadataJson { get; set; }
 }

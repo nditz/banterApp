@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -19,16 +19,20 @@ import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [oauthError, setOauthError] = useState(false);
+  const [redirectTo] = useState(() => {
+    if (typeof window === "undefined") return "/";
+    const redirect = new URLSearchParams(window.location.search).get("redirect");
+    return redirect?.startsWith("/") ? redirect : "/";
+  });
+  const [oauthError] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).has("error")
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setOauthError(params.has("error"));
-  }, []);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +63,7 @@ export default function LoginPage() {
       // Non-blocking — session cookies are set.
     }
 
-    router.push("/");
+    router.push(redirectTo.startsWith("/") ? redirectTo : "/");
     router.refresh();
   };
 
@@ -71,10 +75,11 @@ export default function LoginPage() {
       return;
     }
 
+    const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/";
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: getOAuthRedirectUrl("/"),
+        redirectTo: getOAuthRedirectUrl(safeRedirect),
       },
     });
 
@@ -84,7 +89,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-md flex-col justify-center py-8">
+    <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center py-8">
       <Card className="border-border shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg">Log in</CardTitle>

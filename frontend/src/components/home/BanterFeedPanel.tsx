@@ -11,9 +11,9 @@ import { useFeed } from "@/hooks/useFeed";
 const LOCAL_BATCH = 4;
 
 const FEED_SUBTITLES = {
-  personal: "Your picks vs reality — plus the chaos around you",
-  pundit: "Fictional pundit desks vs full-time receipts — clip the L's",
-  default: "Hot takes, memes & matchday chaos",
+  personal: "Your picks vs reality — plus spicy pundit takes with GIFs",
+  pundit: "Real pundit heat, Gen Z banter, memes & source tags",
+  default: "RSS + YouTube + AI banter — GIFs, memes & football jokes",
 } as const;
 
 export function BanterFeedPanel() {

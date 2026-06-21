@@ -2,18 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { WelcomeSlideBody } from "@/components/home/WelcomeSlideBody";
 import { WelcomeSlidePanel } from "@/components/home/WelcomeSlidePanel";
 import { Button } from "@/components/ui/button";
 import { BRAND } from "@/lib/brand";
 import { CONCEPT_SLIDES } from "@/lib/scoring-rules";
 import { cn } from "@/lib/utils";
 
-const accentText: Record<string, string> = {
-  gold: "text-gold",
-  pitch: "text-pitch",
-  flare: "text-flare",
-  brand: "text-brand",
-};
+const AUTOPLAY_MS = 7000;
 
 interface ConceptSliderProps {
   autoPlay?: boolean;
@@ -28,91 +24,108 @@ export function ConceptSlider({
   embedded = false,
 }: ConceptSliderProps) {
   const [index, setIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
   const slide = CONCEPT_SLIDES[index];
   const total = CONCEPT_SLIDES.length;
 
   const next = useCallback(() => {
     setIndex((i) => (i + 1) % total);
+    setProgress(0);
   }, [total]);
 
   const prev = useCallback(() => {
     setIndex((i) => (i - 1 + total) % total);
+    setProgress(0);
   }, [total]);
+
+  const goToSlide = useCallback((i: number) => {
+    setIndex(i);
+    setProgress(0);
+  }, []);
 
   useEffect(() => {
     if (!autoPlay) return;
-    const timer = setInterval(next, 6000);
+
+    const tickMs = 50;
+    const step = (tickMs / AUTOPLAY_MS) * 100;
+    const timer = setInterval(() => {
+      setProgress((p) => {
+        if (p + step >= 100) {
+          next();
+          return 0;
+        }
+        return p + step;
+      });
+    }, tickMs);
+
     return () => clearInterval(timer);
-  }, [autoPlay, next]);
+  }, [autoPlay, next, index]);
 
   const slideContent = (
     <>
-      <WelcomeSlidePanel
-        backgroundImage={slide.backgroundImage}
-        accent={slide.accent}
-        ariaLabel={slide.title}
-        className={cn(
-          embedded ? "min-h-[11rem]" : "min-h-[12rem] rounded-t-md",
-          "border-b border-border/40"
-        )}
-      >
-        <div className="flex h-full flex-col justify-center py-1">
-          <p
-            className={cn(
-              "text-[10px] font-bold uppercase tracking-widest",
-              accentText[slide.accent]
-            )}
-          >
-            {slide.subtitle}
-          </p>
-          <h2 className="mt-1 text-base font-bold leading-snug sm:text-lg">
-            {slide.title}
-          </h2>
-          <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
-            {slide.body}
-          </p>
-        </div>
+      <WelcomeSlidePanel accent={slide.accent} ariaLabel={slide.title} className="min-h-[13rem]">
+        <WelcomeSlideBody slide={slide} variant="compact" />
       </WelcomeSlidePanel>
 
-      <div className="flex items-center justify-between gap-2 px-4 py-2">
-        <div className="flex gap-1.5" role="tablist" aria-label="Concept slides">
-          {CONCEPT_SLIDES.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              role="tab"
-              aria-selected={i === index}
-              aria-label={`Slide ${i + 1}: ${s.title}`}
-              onClick={() => setIndex(i)}
-              className={cn(
-                "h-1.5 rounded-full transition-all",
-                i === index ? "w-6 bg-brand" : "w-1.5 bg-muted-foreground/30"
-              )}
-            />
-          ))}
+      <div className="space-y-2.5 px-4 py-3">
+        <div
+          className="h-1 overflow-hidden rounded-full bg-muted/60"
+          role="progressbar"
+          aria-valuenow={Math.round(progress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Slide autoplay progress"
+        >
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-brand via-pitch to-electric transition-[width] duration-100 ease-linear motion-reduce:transition-none"
+            style={{ width: `${progress}%` }}
+          />
         </div>
 
-        <div className="flex gap-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            className="size-7"
-            onClick={prev}
-            aria-label="Previous slide"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            className="size-7"
-            onClick={next}
-            aria-label="Next slide"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-1 gap-1 overflow-x-auto scrollbar-none" role="tablist" aria-label="Concept slides">
+            {CONCEPT_SLIDES.map((s, i) => (
+              <button
+                key={s.id}
+                type="button"
+                role="tab"
+                aria-selected={i === index}
+                aria-label={`Slide ${i + 1}: ${s.title}`}
+                onClick={() => goToSlide(i)}
+                className={cn(
+                  "cursor-pointer shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide transition-all duration-200",
+                  i === index
+                    ? "border-logo-green/50 bg-logo-green/15 text-foreground"
+                    : "border-transparent bg-muted/40 text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {s.subtitle.split("·").pop()?.trim() ?? s.subtitle}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex shrink-0 gap-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              className="size-7 cursor-pointer"
+              onClick={prev}
+              aria-label="Previous slide"
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              className="size-7 cursor-pointer"
+              onClick={next}
+              aria-label="Next slide"
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </>
@@ -121,7 +134,7 @@ export function ConceptSlider({
   if (embedded) {
     return (
       <div
-        className={cn("bg-card", className)}
+        className={cn("overflow-hidden rounded-2xl bg-card", className)}
         aria-roledescription="carousel"
         aria-label={`${BRAND.name} core concepts`}
       >
@@ -133,7 +146,7 @@ export function ConceptSlider({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-md border border-logo-green/50 bg-card shadow-sm",
+        "welcome-panel relative overflow-hidden rounded-2xl shadow-sm",
         className
       )}
       aria-roledescription="carousel"

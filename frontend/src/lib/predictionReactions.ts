@@ -5,6 +5,7 @@ import {
 import {
   getPredictionReaction,
   getPostMatchReaction,
+  getSupplementalReactions,
   type FixturePredictionContext,
   type PredictionOutcome,
   type PredictionReaction,
@@ -71,10 +72,49 @@ export function getPreMatchReaction(input: {
     probabilities,
     predictedScore:
       input.predictionType === "correct_score" ? input.predictionValue : undefined,
+    predictionType: input.predictionType,
     tone: input.tone,
   };
 
   return getPredictionReaction(ctx);
+}
+
+export function getPreMatchReactionBundle(input: {
+  fixtureId: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  predictionType: Prediction["predictionType"];
+  predictionValue: string;
+  tone?: ReactionTone;
+  probabilities?: Record<PredictionOutcome, number>;
+}): { primary: PredictionReaction; supplemental: PredictionReaction[] } | null {
+  let userPick = pickToOutcome(input.predictionType, input.predictionValue);
+
+  if (input.predictionType === "correct_score") {
+    userPick = scorelineToOutcome(input.predictionValue);
+  }
+
+  if (!userPick) return null;
+
+  const probabilities =
+    input.probabilities ??
+    estimateFixtureProbabilities(input.fixtureId, input.homeTeamName, input.awayTeamName);
+
+  const ctx: FixturePredictionContext = {
+    fixtureId: input.fixtureId,
+    homeTeamName: input.homeTeamName,
+    awayTeamName: input.awayTeamName,
+    userPick,
+    probabilities,
+    predictedScore:
+      input.predictionType === "correct_score" ? input.predictionValue : undefined,
+    predictionType: input.predictionType,
+    tone: input.tone,
+  };
+
+  const primary = getPredictionReaction(ctx);
+  const supplemental = getSupplementalReactions(primary.key, ctx);
+  return { primary, supplemental };
 }
 
 export function getFinishedMatchReaction(

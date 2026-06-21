@@ -44,13 +44,13 @@ export function LeaderboardTabs({ embedded = false, punditsOnly = false }: Leade
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as LeaderboardTab)}
       >
-        <TabsList className="flex h-auto w-full gap-1 rounded-full border border-border bg-muted/70 p-1 backdrop-blur-sm">
+        <TabsList className="flex h-auto w-full gap-1 overflow-x-auto rounded-full border border-border bg-muted/70 p-1 backdrop-blur-sm scrollbar-none">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
               className={cn(
-                "flex-1 rounded-full border-0 bg-transparent px-1 py-1.5 text-[11px] font-medium text-muted-foreground transition-all duration-200",
+                "shrink-0 rounded-full border-0 bg-transparent px-2 py-2 text-xs font-medium text-muted-foreground transition-all duration-200 sm:flex-1 sm:px-1 sm:py-1.5 sm:text-[11px]",
                 "hover:text-foreground",
                 "data-[state=active]:-translate-y-px data-[state=active]:bg-card data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-gold/40"
               )}

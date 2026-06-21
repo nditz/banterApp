@@ -48,7 +48,7 @@ public sealed class SupabaseAuthService(
         if (!response.IsSuccessStatusCode)
         {
             logger.LogWarning("Supabase register failed: {Status} {Body}", response.StatusCode, body);
-            return (null, ParseSupabaseError(body) ?? "Registration failed.");
+            return (null, null);
         }
 
         var session = JsonSerializer.Deserialize<SupabaseSession>(body, JsonOptions);
@@ -76,7 +76,7 @@ public sealed class SupabaseAuthService(
         if (!response.IsSuccessStatusCode)
         {
             logger.LogWarning("Supabase login failed: {Status}", response.StatusCode);
-            return (null, ParseSupabaseError(body) ?? "Invalid email or password.");
+            return (null, null);
         }
 
         var session = JsonSerializer.Deserialize<SupabaseSession>(body, JsonOptions);
@@ -114,13 +114,23 @@ public sealed class SupabaseAuthService(
             {
                 Id = userId,
                 Email = supabaseUser.Email ?? string.Empty,
-                DisplayName = displayName
+                DisplayName = displayName,
+                AccountStatus = AccountStatus.PendingVerification,
+                EmailConfirmedAt = supabaseUser.EmailConfirmedAt
             });
         }
         else
         {
             user.Email = supabaseUser.Email ?? user.Email;
             user.DisplayName = displayName;
+            if (supabaseUser.EmailConfirmedAt is not null)
+            {
+                user.EmailConfirmedAt = supabaseUser.EmailConfirmedAt;
+                if (user.AccountStatus == AccountStatus.PendingVerification)
+                {
+                    user.AccountStatus = AccountStatus.Active;
+                }
+            }
         }
 
         await db.SaveChangesAsync(ct);
@@ -189,6 +199,9 @@ public sealed class SupabaseAuthService(
     {
         public string? Id { get; set; }
         public string? Email { get; set; }
+
+        [JsonPropertyName("email_confirmed_at")]
+        public DateTimeOffset? EmailConfirmedAt { get; set; }
 
         [JsonPropertyName("user_metadata")]
         public SupabaseUserMetadata? UserMetadata { get; set; }

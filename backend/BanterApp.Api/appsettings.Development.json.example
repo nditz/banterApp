@@ -62,7 +62,40 @@
     "AiReactionsStartMinute": 7,
     "NewsIngestStartMinute": 10,
     "MediaIngestStartMinute": 20,
-    "AiReactionsBatchSize": 5
+    "AiReactionsBatchSize": 5,
+    "FeedBanterEnrichmentIntervalMinutes": 15,
+    "FeedBanterEnrichmentStartMinute": 12,
+    "FeedBanterEnrichmentBatchSize": 8,
+    "RssOpinionSyncIntervalMinutes": 20,
+    "RssOpinionSyncStartMinute": 5,
+    "YouTubeSearchSyncIntervalMinutes": 180,
+    "YouTubeSearchSyncStartMinute": 20,
+    "PunditExtractionIntervalMinutes": 10,
+    "PunditExtractionStartMinute": 35,
+    "PunditContentEnrichIntervalMinutes": 10,
+    "PunditContentEnrichStartMinute": 10
+  },
+  "PunditIngest": {
+    "Enabled": true,
+    "YouTubeSearchQueries": [
+      "World Cup 2026 predictions pundits",
+      "football pundits predictions",
+      "BBC Sport World Cup predictions",
+      "Sky Sports World Cup predictions",
+      "ESPN FC predictions",
+      "Guardian Football World Cup analysis"
+    ],
+    "RssFeedUrls": [
+      "https://feeds.bbci.co.uk/sport/football/world-cup/rss.xml",
+      "https://www.espn.com/espn/rss/soccer/news",
+      "https://www.theguardian.com/football/world-cup-2026/rss",
+      "https://www.skysports.com/rss/12040"
+    ],
+    "MaxItemsPerSource": 25,
+    "ExtractionBatchSize": 5,
+    "MinConfidenceWithoutReview": 0.6,
+    "FetchArticleBodies": true,
+    "MinSourceTextLength": 200
   },
   "NewsIngest": {
     "Enabled": true,
@@ -147,7 +180,20 @@
     "EnableImageGeneration": false,
     "ImageModel": "dall-e-3",
     "ImageSize": "1024x1024",
-    "NewsReactionSystemPrompt": "You are a witty football pundit on a banter app. React to the news in 2-3 sentences like a TV journalist or online personality — opinionated, fun, PG-rated. Never encourage gambling.",
-    "MemeImagePrompt": "Funny football banter meme illustration, bold expressive cartoon style, single frozen frame like a viral sports GIF, PG-rated, no text in image."
+    "NewsReactionSystemPrompt": "You are BanterBot — a chaotic Gen Z football fan running the group chat on a banter app. React in 2-3 short sentences: spicy, funny, PG-rated, meme-adjacent. Sprinkle light Gen Z slang (no cap, lowkey, cooked, it's giving, delulu, ratio) but stay readable. Drop football jokes and banter — never encourage gambling or hate.",
+    "FeedBanterSystemPrompt": "You rewrite football news and pundit takes for a Gen Z banter feed. Reply ONLY with JSON: {\"title\":\"short punchy headline (max 100 chars, may use 1 emoji)\",\"body\":\"2-4 sentences of fun banter that keeps the facts but makes it entertaining\",\"mood\":\"celebrate|hype|debate|shock|chaos|facepalm|miss|roast|trophy|news|pundit|cooked|ratio|delulu\",\"jokeLine\":\"one optional football meme one-liner or POV caption\"}. Keep real pundit names and predictions accurate. PG-rated. Never encourage gambling.",
+    "MemeImagePrompt": "Funny football banter meme illustration, bold expressive cartoon style, single frozen frame like a viral sports GIF, PG-rated, no text in image.",
+    "PunditExtractionMaxTokens": 4096,
+    "PunditExtractionTemperature": 0.2
+  },
+  "Admin": {
+    "AllowedEmails": ["you@example.com"],
+    "AllowedUserIds": [],
+    "ExposeErrorDetail": true
+  },
+  "Legal": {
+    "PrivacyPolicyUrl": "",
+    "TermsUrl": "/terms",
+    "DisclaimerText": ""
   }
 }

@@ -88,7 +88,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-md flex-col justify-center py-8">
+    <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center py-8">
       <Card className="border-border shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg">Create account</CardTitle>

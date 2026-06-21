@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using BanterApp.Api.Integrations.FootballBanter;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -178,6 +179,95 @@ public sealed class OpenAiContentGenerator : IContentGenerator
         }
     }
 
+    public async Task<FeedBanterCard> GenerateFeedBanterCardAsync(
+        string headline,
+        string summary,
+        string? category = null,
+        string? author = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        {
+            return StubFeedBanterFromSeed(headline, summary, category, author);
+        }
+
+        var userPrompt =
+            $"Category: {category ?? "news"}\n" +
+            (string.IsNullOrWhiteSpace(author) ? "" : $"Pundit/author: {author}\n") +
+            $"Headline: {headline}\nSummary: {summary}";
+
+        try
+        {
+            var json = await CompleteChatAsync(
+                _options.FeedBanterSystemPrompt,
+                userPrompt,
+                cancellationToken,
+                responseFormatJson: true);
+
+            var parsed = ParseFeedBanterCard(json);
+            if (parsed is not null)
+            {
+                return parsed;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Feed banter rewrite failed; using stub fallback.");
+        }
+
+        return StubFeedBanterFromSeed(headline, summary, category, author);
+    }
+
+    private static FeedBanterCard StubFeedBanterFromSeed(
+        string headline,
+        string summary,
+        string? category,
+        string? author)
+    {
+        var moods = new[] { "celebrate", "debate", "shock", "facepalm", "hype", "pundit", "cooked", "ratio" };
+        var mood = moods[Math.Abs($"{headline}|{category}".GetHashCode()) % moods.Length];
+        var hook = headline.Length > 80 ? headline[..77] + "…" : headline;
+        var title = category == "pundit_quote" && !string.IsNullOrWhiteSpace(author)
+            ? $"{author} said WHAT now? 💀"
+            : $"No cap: {hook}";
+
+        var body = $"Lowkey this is giving chaos energy — {summary.Trim()}";
+        if (!string.IsNullOrWhiteSpace(author))
+        {
+            body += $"\n\n({author} really said that on the record. The group chat is not recovering.)";
+        }
+
+        return new FeedBanterCard(title, body, mood, "POV: you read this headline and immediately opened the comments.");
+    }
+
+    private static FeedBanterCard? ParseFeedBanterCard(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var title = root.TryGetProperty("title", out var t) ? t.GetString() : null;
+            var body = root.TryGetProperty("body", out var b) ? b.GetString() : null;
+            var mood = root.TryGetProperty("mood", out var m) ? m.GetString() : "news";
+            var jokeLine = root.TryGetProperty("jokeLine", out var j) ? j.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(body))
+            {
+                return null;
+            }
+
+            return new FeedBanterCard(
+                title.Trim(),
+                body.Trim(),
+                string.IsNullOrWhiteSpace(mood) ? "news" : mood.Trim(),
+                string.IsNullOrWhiteSpace(jokeLine) ? null : jokeLine.Trim());
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private static FeedVisualSuggestion StubVisualFromSeed(
         string headline,
         string reactionText,
@@ -219,21 +309,24 @@ public sealed class OpenAiContentGenerator : IContentGenerator
         string systemPrompt,
         string userPrompt,
         CancellationToken cancellationToken,
-        bool responseFormatJson = false)
+        bool responseFormatJson = false,
+        string? model = null,
+        double? temperature = null,
+        int? maxTokens = null)
     {
         var baseUrl = ResolveBaseUrl();
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/chat/completions");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
         request.Content = JsonContent.Create(new
         {
-            model = _options.Model,
+            model = model ?? _options.Model,
             messages = new object[]
             {
                 new { role = "system", content = systemPrompt },
                 new { role = "user", content = userPrompt }
             },
-            max_tokens = _options.MaxTokens,
-            temperature = _options.Temperature,
+            max_tokens = maxTokens ?? _options.MaxTokens,
+            temperature = temperature ?? _options.Temperature,
             response_format = responseFormatJson ? new { type = "json_object" } : null
         });
 
@@ -294,6 +387,51 @@ public sealed class OpenAiContentGenerator : IContentGenerator
 
         var url = data[0].TryGetProperty("url", out var urlEl) ? urlEl.GetString() : null;
         return string.IsNullOrWhiteSpace(url) ? null : url;
+    }
+
+    public async Task<string> GenerateFootballBanterJsonAsync(
+        FootballBanterSourceInput input,
+        string systemPrompt,
+        FootballBanterOpenAiConfig openAiConfig,
+        int banterIntensity,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        {
+            return FootballBanterStubOutputBuilder.BuildJson(input);
+        }
+
+        var userPrompt = BuildFootballBanterUserPrompt(input, banterIntensity);
+        return await CompleteChatAsync(
+            systemPrompt,
+            userPrompt,
+            cancellationToken,
+            responseFormatJson: true,
+            model: openAiConfig.Model,
+            temperature: openAiConfig.Temperature,
+            maxTokens: openAiConfig.MaxOutputTokens);
+    }
+
+    private static string BuildFootballBanterUserPrompt(FootballBanterSourceInput input, int banterIntensity)
+    {
+        var payload = new Dictionary<string, object?>
+        {
+            ["source_type"] = input.SourceType,
+            ["source_name"] = input.SourceName,
+            ["source_url"] = input.SourceUrl,
+            ["source_title"] = input.SourceTitle,
+            ["published_at"] = input.PublishedAt?.ToString("O"),
+            ["pundit_name"] = input.PunditName,
+            ["source_text"] = input.SourceText,
+            ["prediction"] = input.Prediction,
+            ["confidence"] = input.Confidence,
+            ["statement_type"] = input.StatementType is null
+                ? null
+                : FootballBanterOutputParser.ToJsonString(input.StatementType.Value),
+            ["banter_intensity"] = banterIntensity
+        };
+
+        return JsonSerializer.Serialize(payload, FootballBanterJson.OutputOptions);
     }
 
     private string ResolveBaseUrl() =>

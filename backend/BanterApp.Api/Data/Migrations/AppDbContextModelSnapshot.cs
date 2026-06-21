@@ -22,6 +22,52 @@ namespace BanterApp.Api.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.AdminAuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("AdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TargetId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminUserId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.ToTable("admin_audit_logs", (string)null);
+                });
+
             modelBuilder.Entity("BanterApp.Api.Data.Entities.AnonymousUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -60,6 +106,33 @@ namespace BanterApp.Api.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("anonymous_users", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.AppMetric", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DimensionsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MetricKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<double>("MetricValue")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MetricKey", "RecordedAt");
+
+                    b.ToTable("app_metrics", (string)null);
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.ApplicationErrorLog", b =>
@@ -109,6 +182,53 @@ namespace BanterApp.Api.Data.Migrations
                     b.HasIndex("Source");
 
                     b.ToTable("application_error_logs", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.AuthAuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Success")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email");
+
+                    b.HasIndex("EventType");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.ToTable("auth_audit_logs", (string)null);
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.BracketPick", b =>
@@ -230,6 +350,110 @@ namespace BanterApp.Api.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("generated_content", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.IngestionError", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("JobKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("MediaItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("StackTrace")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid?>("SyncRunId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastSeenAt");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("Source", "JobKey", "Message");
+
+                    b.ToTable("ingestion_errors", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.JobRegistryState", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("JobKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Paused")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Schedule")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobKey")
+                        .IsUnique();
+
+                    b.ToTable("job_registry_state", (string)null);
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.League", b =>
@@ -476,6 +700,14 @@ namespace BanterApp.Api.Data.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
+                    b.Property<string>("Author")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
@@ -490,8 +722,33 @@ namespace BanterApp.Api.Data.Migrations
                     b.Property<Guid>("MediaSourceId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ProcessingError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ProcessingStatus")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Publication")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
                     b.Property<DateTimeOffset?>("PublishedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RawPayloadJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RawSummary")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RawText")
+                        .HasColumnType("text");
 
                     b.Property<string>("SourceUrl")
                         .IsRequired()
@@ -508,8 +765,12 @@ namespace BanterApp.Api.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ContentHash");
+
                     b.HasIndex("MediaSourceId", "ExternalId")
                         .IsUnique();
+
+                    b.HasIndex("ProcessingStatus", "ProcessedAt");
 
                     b.ToTable("media_items", (string)null);
                 });
@@ -519,6 +780,9 @@ namespace BanterApp.Api.Data.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ConfigJson")
+                        .HasColumnType("text");
 
                     b.Property<bool>("CrawlAllowed")
                         .HasColumnType("boolean");
@@ -553,6 +817,9 @@ namespace BanterApp.Api.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -608,6 +875,135 @@ namespace BanterApp.Api.Data.Migrations
                     b.ToTable("news_feed_items", (string)null);
                 });
 
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.OperationalError", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Environment")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ErrorCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ErrorType")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("JobKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("JobRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MessageInternal")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("MessageSafe")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Method")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int>("OccurrenceCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ProviderRequestId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("RequestId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Route")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid?>("SourceItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StackTrace")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int?>("StatusCode")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Fingerprint");
+
+                    b.HasIndex("LastSeenAt");
+
+                    b.HasIndex("RequestId");
+
+                    b.HasIndex("Fingerprint", "Status");
+
+                    b.HasIndex("Severity", "Status");
+
+                    b.HasIndex("Source", "Provider");
+
+                    b.ToTable("errors", (string)null);
+                });
+
             modelBuilder.Entity("BanterApp.Api.Data.Entities.Prediction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -654,6 +1050,99 @@ namespace BanterApp.Api.Data.Migrations
                     b.ToTable("predictions", (string)null);
                 });
 
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.PredictionAggregate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("ConfidenceScore")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ConsensusSummary")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EntityName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("NegativeCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NeutralCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PositiveCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PredictionType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("SourceCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EntityType", "EntityName", "PredictionType")
+                        .IsUnique();
+
+                    b.ToTable("prediction_aggregates", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.ProviderUsageDaily", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("AverageLatencyMs")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("EstimatedUnits")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FailureCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LatencySamples")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("RequestCount")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("TotalLatencyMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("UsageDate")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider", "UsageDate")
+                        .IsUnique();
+
+                    b.ToTable("provider_usage_daily", (string)null);
+                });
+
             modelBuilder.Entity("BanterApp.Api.Data.Entities.Pundit", b =>
                 {
                     b.Property<Guid>("Id")
@@ -671,9 +1160,23 @@ namespace BanterApp.Api.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
 
                     b.Property<string>("Organization")
                         .IsRequired()
@@ -682,6 +1185,10 @@ namespace BanterApp.Api.Data.Migrations
                     b.Property<string>("ParodyCue")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("SourceUrl")
                         .HasColumnType("text");
@@ -692,7 +1199,101 @@ namespace BanterApp.Api.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Kind");
+
+                    b.HasIndex("NormalizedName");
+
                     b.ToTable("pundits", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.PunditOpinion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("Confidence")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EvidenceQuote")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExtractedJson")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDirectQuote")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MatchName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("NeedsHumanReview")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Opinion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Player")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Prediction")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PredictionType")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("PunditId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("QuoteContext")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ReviewStatus")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SourceItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Team")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("Topic")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NeedsHumanReview");
+
+                    b.HasIndex("PunditId");
+
+                    b.HasIndex("ReviewStatus");
+
+                    b.HasIndex("SourceItemId");
+
+                    b.HasIndex("Team");
+
+                    b.ToTable("pundit_opinions", (string)null);
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.PunditPrediction", b =>
@@ -869,6 +1470,9 @@ namespace BanterApp.Api.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<long?>("DurationMs")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("ErrorMessage")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
@@ -876,10 +1480,19 @@ namespace BanterApp.Api.Data.Migrations
                     b.Property<DateTimeOffset?>("FinishedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("ItemsProcessed")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ItemsSkipped")
+                        .HasColumnType("integer");
+
                     b.Property<string>("JobName")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
 
                     b.Property<string>("Provider")
                         .IsRequired()
@@ -988,6 +1601,9 @@ namespace BanterApp.Api.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AccountStatus")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Avatar")
                         .HasColumnType("text");
 
@@ -1007,13 +1623,23 @@ namespace BanterApp.Api.Data.Migrations
                         .HasMaxLength(320)
                         .HasColumnType("character varying(320)");
 
+                    b.Property<DateTimeOffset?>("EmailConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsAdultVerified")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPlatformAdmin")
                         .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("TermsAcceptedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AccountStatus");
+
+                    b.HasIndex("IsPlatformAdmin");
 
                     b.ToTable("users", (string)null);
                 });
@@ -1150,6 +1776,25 @@ namespace BanterApp.Api.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.PunditOpinion", b =>
+                {
+                    b.HasOne("BanterApp.Api.Data.Entities.Pundit", "Pundit")
+                        .WithMany("Opinions")
+                        .HasForeignKey("PunditId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BanterApp.Api.Data.Entities.MediaItem", "SourceItem")
+                        .WithMany("Opinions")
+                        .HasForeignKey("SourceItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Pundit");
+
+                    b.Navigation("SourceItem");
+                });
+
             modelBuilder.Entity("BanterApp.Api.Data.Entities.PunditPrediction", b =>
                 {
                     b.HasOne("BanterApp.Api.Data.Entities.Match", "Match")
@@ -1212,6 +1857,11 @@ namespace BanterApp.Api.Data.Migrations
                     b.Navigation("PunditPredictions");
                 });
 
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.MediaItem", b =>
+                {
+                    b.Navigation("Opinions");
+                });
+
             modelBuilder.Entity("BanterApp.Api.Data.Entities.MediaSource", b =>
                 {
                     b.Navigation("Items");
@@ -1219,6 +1869,8 @@ namespace BanterApp.Api.Data.Migrations
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.Pundit", b =>
                 {
+                    b.Navigation("Opinions");
+
                     b.Navigation("Predictions");
                 });
 

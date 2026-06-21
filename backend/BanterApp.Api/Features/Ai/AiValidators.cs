@@ -25,7 +25,7 @@ public sealed class MemeRequestValidator : AbstractValidator<MemeRequest>
 {
     public MemeRequestValidator()
     {
-        RuleFor(x => x.Context).NotEmpty().MaximumLength(500);
+        RuleFor(x => x.Context).NotEmpty().MaximumLength(4000);
     }
 }
 
@@ -33,7 +33,7 @@ public sealed class VideoScriptRequestValidator : AbstractValidator<VideoScriptR
 {
     public VideoScriptRequestValidator()
     {
-        RuleFor(x => x.Context).NotEmpty().MaximumLength(500);
+        RuleFor(x => x.Context).NotEmpty().MaximumLength(4000);
         RuleFor(x => x.Format).IsInEnum();
         RuleFor(x => x.Duration).IsInEnum();
     }

@@ -1,5 +1,6 @@
 using BanterApp.Api.Data;
 using BanterApp.Api.Integrations.Media;
+using BanterApp.Api.Integrations.Pundits;
 using BanterApp.Api.Integrations.SportsData;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,7 @@ public static class SyncEndpoints
     {
         var group = app.MapGroup("/api/sync")
             .WithTags("Sync")
-            .AllowAnonymous();
+            .RequireAuthorization("Admin");
 
         group.MapGet("/runs", async (AppDbContext db, int? limit, CancellationToken ct) =>
         {
@@ -121,6 +122,12 @@ public static class SyncEndpoints
                 "news-ingest" => Integrations.News.NewsIngestJob.JobId,
                 "media-ingest" => MediaIngestJob.JobId,
                 "ai-reactions" => Integrations.Ai.AiReactionJob.JobId,
+                "feed-banter-enrich" => Integrations.Ai.FeedBanterEnrichmentJob.JobId,
+                "youtube-opinion-sync" => YouTubeSearchSyncJob.JobId,
+                "rss-opinion-sync" => RssOpinionSyncJob.JobId,
+                "pundit-content-enrich" => ContentEnrichmentJob.JobId,
+                "pundit-extraction" => PunditExtractionJob.JobId,
+                "prediction-aggregate-refresh" => PredictionAggregateJob.JobId,
                 _ => null
             };
 
@@ -167,7 +174,13 @@ public static class SyncEndpoints
                          MatchDetailsSyncJob.JobId,
                          Integrations.News.NewsIngestJob.JobId,
                          MediaIngestJob.JobId,
-                         Integrations.Ai.AiReactionJob.JobId
+                         Integrations.Ai.AiReactionJob.JobId,
+                         Integrations.Ai.FeedBanterEnrichmentJob.JobId,
+                         YouTubeSearchSyncJob.JobId,
+                         RssOpinionSyncJob.JobId,
+                         ContentEnrichmentJob.JobId,
+                         PunditExtractionJob.JobId,
+                         PredictionAggregateJob.JobId
                      })
             {
                 recurring.Trigger(jobId);

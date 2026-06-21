@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <Content Update="Data\fifa-2026-annex-c-assignments.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="config\football-banter.config.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="prompts\football-banter-system-prompt.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

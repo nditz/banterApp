@@ -27,7 +27,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LineupPlayer> LineupPlayers => Set<LineupPlayer>();
     public DbSet<MediaSource> MediaSources => Set<MediaSource>();
     public DbSet<MediaItem> MediaItems => Set<MediaItem>();
+    public DbSet<PunditOpinion> PunditOpinions => Set<PunditOpinion>();
+    public DbSet<PredictionAggregate> PredictionAggregates => Set<PredictionAggregate>();
     public DbSet<ApplicationErrorLog> ApplicationErrorLogs => Set<ApplicationErrorLog>();
+    public DbSet<AdminAuditLog> AdminAuditLogs => Set<AdminAuditLog>();
+    public DbSet<AuthAuditLog> AuthAuditLogs => Set<AuthAuditLog>();
+    public DbSet<ProviderUsageDaily> ProviderUsageDaily => Set<ProviderUsageDaily>();
+    public DbSet<JobRegistryState> JobRegistryStates => Set<JobRegistryState>();
+    public DbSet<IngestionError> IngestionErrors => Set<IngestionError>();
+    public DbSet<OperationalError> OperationalErrors => Set<OperationalError>();
+    public DbSet<AppMetric> AppMetrics => Set<AppMetric>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,6 +46,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(x => x.Id);
             e.Property(x => x.Email).HasMaxLength(320);
             e.Property(x => x.DisplayName).HasMaxLength(100);
+            e.HasIndex(x => x.IsPlatformAdmin);
+            e.HasIndex(x => x.AccountStatus);
         });
 
         modelBuilder.Entity<AnonymousUser>(e =>
@@ -97,6 +108,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.ToTable("pundits");
             e.HasKey(x => x.Id);
+            e.Property(x => x.NormalizedName).HasMaxLength(StringLimits.PunditNormalizedName);
+            e.Property(x => x.Role).HasMaxLength(StringLimits.PunditRole);
+            e.HasIndex(x => x.NormalizedName);
+            e.HasIndex(x => x.Kind);
         });
 
         modelBuilder.Entity<PunditPrediction>(e =>
@@ -180,6 +195,107 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.JobName).HasMaxLength(64);
             e.Property(x => x.Status).HasMaxLength(16);
             e.Property(x => x.ErrorMessage).HasMaxLength(2000);
+            e.Property(x => x.MetadataJson).HasColumnType("text");
+        });
+
+        modelBuilder.Entity<AdminAuditLog>(e =>
+        {
+            e.ToTable("admin_audit_logs");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.CreatedAt);
+            e.HasIndex(x => x.AdminUserId);
+            e.Property(x => x.Action).HasMaxLength(64);
+            e.Property(x => x.TargetType).HasMaxLength(64);
+            e.Property(x => x.TargetId).HasMaxLength(128);
+            e.Property(x => x.IpAddress).HasMaxLength(64);
+            e.Property(x => x.UserAgent).HasMaxLength(512);
+            e.Property(x => x.MetadataJson).HasColumnType("text");
+        });
+
+        modelBuilder.Entity<AuthAuditLog>(e =>
+        {
+            e.ToTable("auth_audit_logs");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.OccurredAt);
+            e.HasIndex(x => x.EventType);
+            e.HasIndex(x => x.Email);
+            e.Property(x => x.EventType).HasMaxLength(64);
+            e.Property(x => x.Email).HasMaxLength(320);
+            e.Property(x => x.IpAddress).HasMaxLength(64);
+            e.Property(x => x.UserAgent).HasMaxLength(512);
+            e.Property(x => x.Details).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<ProviderUsageDaily>(e =>
+        {
+            e.ToTable("provider_usage_daily");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.Provider, x.UsageDate }).IsUnique();
+            e.Property(x => x.Provider).HasMaxLength(64);
+        });
+
+        modelBuilder.Entity<JobRegistryState>(e =>
+        {
+            e.ToTable("job_registry_state");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.JobKey).IsUnique();
+            e.Property(x => x.JobKey).HasMaxLength(64);
+            e.Property(x => x.Schedule).HasMaxLength(64);
+            e.Property(x => x.MetadataJson).HasColumnType("text");
+        });
+
+        modelBuilder.Entity<OperationalError>(e =>
+        {
+            e.ToTable("errors");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Fingerprint);
+            e.HasIndex(x => new { x.Fingerprint, x.Status });
+            e.HasIndex(x => x.LastSeenAt);
+            e.HasIndex(x => new { x.Severity, x.Status });
+            e.HasIndex(x => new { x.Source, x.Provider });
+            e.HasIndex(x => x.RequestId);
+            e.Property(x => x.Fingerprint).HasMaxLength(64);
+            e.Property(x => x.RequestId).HasMaxLength(64);
+            e.Property(x => x.Source).HasMaxLength(32);
+            e.Property(x => x.Environment).HasMaxLength(32);
+            e.Property(x => x.Severity).HasMaxLength(16);
+            e.Property(x => x.Status).HasMaxLength(32);
+            e.Property(x => x.ErrorCode).HasMaxLength(64);
+            e.Property(x => x.ErrorType).HasMaxLength(128);
+            e.Property(x => x.MessageSafe).HasMaxLength(2000);
+            e.Property(x => x.MessageInternal).HasMaxLength(4000);
+            e.Property(x => x.StackTrace).HasColumnType("text");
+            e.Property(x => x.Route).HasMaxLength(512);
+            e.Property(x => x.Method).HasMaxLength(16);
+            e.Property(x => x.JobKey).HasMaxLength(64);
+            e.Property(x => x.Provider).HasMaxLength(32);
+            e.Property(x => x.ProviderRequestId).HasMaxLength(128);
+            e.Property(x => x.MetadataJson).HasColumnType("text");
+        });
+
+        modelBuilder.Entity<IngestionError>(e =>
+        {
+            e.ToTable("ingestion_errors");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Status);
+            e.HasIndex(x => x.LastSeenAt);
+            e.HasIndex(x => new { x.Source, x.JobKey, x.Message });
+            e.Property(x => x.Source).HasMaxLength(64);
+            e.Property(x => x.JobKey).HasMaxLength(64);
+            e.Property(x => x.Severity).HasMaxLength(16);
+            e.Property(x => x.Message).HasMaxLength(2000);
+            e.Property(x => x.Status).HasMaxLength(32);
+            e.Property(x => x.MetadataJson).HasColumnType("text");
+            e.Property(x => x.StackTrace).HasColumnType("text");
+        });
+
+        modelBuilder.Entity<AppMetric>(e =>
+        {
+            e.ToTable("app_metrics");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.MetricKey, x.RecordedAt });
+            e.Property(x => x.MetricKey).HasMaxLength(128);
+            e.Property(x => x.DimensionsJson).HasColumnType("text");
         });
 
         modelBuilder.Entity<ApplicationErrorLog>(e =>
@@ -263,11 +379,48 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.ToTable("media_items");
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.MediaSourceId, x.ExternalId }).IsUnique();
+            e.HasIndex(x => x.ContentHash);
+            e.HasIndex(x => new { x.ProcessingStatus, x.ProcessedAt });
             e.Property(x => x.ExternalId).HasMaxLength(128);
             e.Property(x => x.Title).HasMaxLength(300);
             e.Property(x => x.SourceUrl).HasMaxLength(512);
             e.Property(x => x.AudioUrl).HasMaxLength(512);
+            e.Property(x => x.Author).HasMaxLength(StringLimits.MediaAuthor);
+            e.Property(x => x.Publication).HasMaxLength(StringLimits.MediaPublication);
+            e.Property(x => x.ContentHash).HasMaxLength(StringLimits.ContentHash);
+            e.Property(x => x.ProcessingStatus).HasMaxLength(StringLimits.ProcessingStatus);
+            e.Property(x => x.ProcessingError).HasMaxLength(StringLimits.ProcessingError);
             e.HasOne(x => x.MediaSource).WithMany(s => s.Items).HasForeignKey(x => x.MediaSourceId);
+        });
+
+        modelBuilder.Entity<PunditOpinion>(e =>
+        {
+            e.ToTable("pundit_opinions");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Team);
+            e.HasIndex(x => x.PunditId);
+            e.HasIndex(x => x.NeedsHumanReview);
+            e.HasIndex(x => x.ReviewStatus);
+            e.HasIndex(x => x.SourceItemId);
+            e.Property(x => x.ReviewStatus).HasMaxLength(16);
+            e.Property(x => x.ReviewNotes).HasMaxLength(2000);
+            e.Property(x => x.Topic).HasMaxLength(StringLimits.OpinionTopic);
+            e.Property(x => x.Team).HasMaxLength(StringLimits.OpinionTeam);
+            e.Property(x => x.Player).HasMaxLength(StringLimits.OpinionPlayer);
+            e.Property(x => x.MatchName).HasMaxLength(StringLimits.OpinionMatchName);
+            e.Property(x => x.PredictionType).HasMaxLength(StringLimits.PredictionType);
+            e.HasOne(x => x.SourceItem).WithMany(i => i.Opinions).HasForeignKey(x => x.SourceItemId);
+            e.HasOne(x => x.Pundit).WithMany(p => p.Opinions).HasForeignKey(x => x.PunditId);
+        });
+
+        modelBuilder.Entity<PredictionAggregate>(e =>
+        {
+            e.ToTable("prediction_aggregates");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.EntityType, x.EntityName, x.PredictionType }).IsUnique();
+            e.Property(x => x.EntityType).HasMaxLength(StringLimits.PredictionEntityType);
+            e.Property(x => x.EntityName).HasMaxLength(StringLimits.PredictionEntityName);
+            e.Property(x => x.PredictionType).HasMaxLength(StringLimits.PredictionType);
         });
     }
 }

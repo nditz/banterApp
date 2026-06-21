@@ -38,7 +38,7 @@ export function TermsGate() {
   return (
     <>
       <Dialog open={needsTerms}>
-        <DialogContent showCloseButton={false} className="z-[100] sm:max-w-lg">
+        <DialogContent showCloseButton={false} className="z-[100] max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Terms of Use</DialogTitle>
             <DialogDescription>
@@ -49,7 +49,6 @@ export function TermsGate() {
           <TermsAcceptPanel variant="compact" />
         </DialogContent>
       </Dialog>
-
       {showRecoveryKey && recoveryToken && (
         <div className="mx-auto mb-4 max-w-[1200px] rounded-md border border-gold/30 bg-gold/5 px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">

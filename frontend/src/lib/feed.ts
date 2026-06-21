@@ -17,6 +17,7 @@ type ApiFeedItem = {
   source?: string;
   sourceUrl?: string;
   url?: string;
+  author?: string;
   publishedAt?: string;
   likes?: number;
   viewCount?: number;
@@ -62,6 +63,7 @@ function mapFeedItem(raw: ApiFeedItem, index: number): FeedItem | null {
     media,
     source: raw.source,
     sourceUrl: raw.sourceUrl ?? raw.url,
+    author: raw.author,
     publishedAt: raw.publishedAt ?? new Date().toISOString(),
     likes: raw.likes ?? raw.viewCount,
   };
@@ -78,6 +80,7 @@ function isFeedItemType(value: string): value is FeedItem["type"] {
     "news",
     "leaderboard",
     "prediction_highlight",
+    "pundit_quote",
   ].includes(value);
 }
 

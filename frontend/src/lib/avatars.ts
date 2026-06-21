@@ -1,5 +1,5 @@
 import { getInitials } from "@/lib/leaderboard";
-import type { League, LeagueKind } from "@/lib/types";
+import type { LeagueKind } from "@/lib/types";
 
 const AVATAR_COLORS = [
   "1a472a",

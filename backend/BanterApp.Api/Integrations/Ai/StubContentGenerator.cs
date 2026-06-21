@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using BanterApp.Api.Integrations.FootballBanter;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 
 namespace BanterApp.Api.Integrations.Ai;
@@ -228,11 +229,38 @@ public sealed class StubContentGenerator : IContentGenerator
 
     private static readonly string[] NewsReactionTemplates =
     [
-        "Right, so {headline} — and honestly? That's exactly the kind of chaos we live for. {summary}",
-        "Breaking: {headline}. My take? The timeline is not ready for this. {summary}",
-        "I've seen a lot of football in my time, but {headline} has the group chat buzzing. {summary}",
-        "Hold up — {headline}. That's a headline you read twice. {summary}",
-        "The data desk just pinged me: {headline}. Football Twitter is going to have a field day with this one.",
+        "Bro {headline}?? The timeline is COOKED and I'm here for it. {summary} No cap this is main-character arc stuff.",
+        "Hold up — {headline}. Football Twitter about to ratio someone and I'm grabbing popcorn. {summary}",
+        "Lowkey {headline} has the group chat in shambles. {summary} It's giving delulu season energy fr.",
+        "Not me reading '{headline}' and immediately checking who said it out loud. {summary} The banter writes itself.",
+        "POV: you wake up to '{headline}' and pretend you saw it coming. {summary} VAR couldn't save this narrative.",
+    ];
+
+    private static readonly string[] FeedBanterTitleTemplates =
+    [
+        "No cap: {hook} 🚫🧢",
+        "{hook} — the timeline is COOKED 🔥",
+        "It's giving {vibe} energy: {hook}",
+        "Bro really said {hook} 💀",
+        "{hook} and I'm not okay",
+    ];
+
+    private static readonly string[] FeedBanterBodyTemplates =
+    [
+        "Lowkey {summary} — football Twitter is about to have a field day with this one.",
+        "Not me reading this and immediately opening the group chat. {summary}",
+        "The banter writes itself: {summary} Main character energy, zero cap.",
+        "This is giving chaos ball knowledge. {summary}",
+        "POV: you saw this headline and knew the memes were coming. {summary}",
+    ];
+
+    private static readonly string[] FootballJokeLines =
+    [
+        "Me explaining why this was obvious all along (it wasn't).",
+        "When the pundit is cooking and the defence is not.",
+        "That face you make when the transfer rumour was actually true.",
+        "Nobody: … Football Twitter: allow me to introduce myself.",
+        "VAR review on my ability to cope with this headline.",
     ];
 
     public Task<string> GenerateNewsReactionAsync(
@@ -268,13 +296,62 @@ public sealed class StubContentGenerator : IContentGenerator
         CancellationToken cancellationToken = default)
     {
         var seed = $"{headline}|{reactionText}|{category}";
-        var moods = new[] { "celebrate", "debate", "shock", "facepalm", "hype", "pundit", "news" };
+        var moods = new[] { "celebrate", "debate", "shock", "facepalm", "hype", "pundit", "news", "cooked", "ratio" };
         var mood = moods[Math.Abs(seed.GetHashCode()) % moods.Length];
         var useGif = Math.Abs(seed.GetHashCode()) % 4 != 0;
         return Task.FromResult(useGif
             ? new FeedVisualSuggestion("gif", mood, null)
             : new FeedVisualSuggestion("image", null, $"Football banter: {headline}"));
     }
+
+    public Task<FeedBanterCard> GenerateFeedBanterCardAsync(
+        string headline,
+        string summary,
+        string? category = null,
+        string? author = null,
+        CancellationToken cancellationToken = default)
+    {
+        var hook = headline.Length > 72 ? headline[..69] + "…" : headline;
+        var vibe = category switch
+        {
+            "pundit_quote" => "hot take",
+            "match_live" => "matchday chaos",
+            "match_result" => "full-time meltdown",
+            "match_fixture" => "fixture anxiety",
+            _ => "headline",
+        };
+
+        var titleTemplate = category == "pundit_quote" && !string.IsNullOrWhiteSpace(author)
+            ? "{author} said WHAT now? 💀"
+            : PickTemplate(FeedBanterTitleTemplates, headline, category ?? "news");
+
+        var title = titleTemplate
+            .Replace("{hook}", hook, StringComparison.Ordinal)
+            .Replace("{vibe}", vibe, StringComparison.Ordinal)
+            .Replace("{author}", author?.Trim() ?? "This pundit", StringComparison.Ordinal);
+
+        var body = PickTemplate(FeedBanterBodyTemplates, summary, category ?? "news")
+            .Replace("{summary}", summary.Trim(), StringComparison.Ordinal);
+
+        if (!string.IsNullOrWhiteSpace(author) && category == "pundit_quote")
+        {
+            body += $"\n\n— {author.Trim()} via the football industrial complex (real take, no cap).";
+        }
+
+        var jokeLine = PickTemplate(FootballJokeLines, headline);
+        var moods = new[] { "celebrate", "debate", "shock", "facepalm", "hype", "pundit", "cooked", "ratio", "delulu" };
+        var mood = moods[Math.Abs($"{headline}|{category}".GetHashCode()) % moods.Length];
+
+        return Task.FromResult(new FeedBanterCard(title, body, mood, jokeLine));
+    }
+
+    public Task<string> GenerateFootballBanterJsonAsync(
+        FootballBanterSourceInput input,
+        string systemPrompt,
+        FootballBanterOpenAiConfig openAiConfig,
+        int banterIntensity,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(FootballBanterStubOutputBuilder.BuildJson(input));
 
     private static string ResolveUserKey(string? userId, bool isAnonymous)
     {

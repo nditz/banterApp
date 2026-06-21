@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
+using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.News;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,9 +16,9 @@ public static class FeedEndpoints
     {
         var group = app.MapGroup("/api/feed").WithTags("Feed");
 
-        group.MapGet("/", GetFeed);
-        group.MapGet("/trending", GetTrendingFeed);
-        group.MapPost("/{id}/react", ReactToFeedItem).RequireRateLimiting("write");
+        group.MapGet("/", GetFeed).RequireRateLimiting(RateLimitPolicies.PublicFeed);
+        group.MapGet("/trending", GetTrendingFeed).RequireRateLimiting(RateLimitPolicies.PublicFeed);
+        group.MapPost("/{id}/react", ReactToFeedItem).RequireRateLimiting(RateLimitPolicies.PublicReactions);
 
         return app;
     }
@@ -55,6 +56,7 @@ public static class FeedEndpoints
         AppDbContext db,
         INewsProvider news,
         IUserContext user,
+        HttpContext http,
         CancellationToken ct)
     {
         var currentPage = Math.Max(page ?? 1, 1);
@@ -69,6 +71,7 @@ public static class FeedEndpoints
             .ToList();
 
         var pageItems = merged.Skip(skip).Take(size).ToList();
+        http.Response.Headers.CacheControl = "public, max-age=60";
         return Results.Ok(BuildPage(pageItems, currentPage, size, merged.Count, feedMode));
     }
 
@@ -79,6 +82,7 @@ public static class FeedEndpoints
         AppDbContext db,
         INewsProvider news,
         IUserContext user,
+        HttpContext http,
         CancellationToken ct)
     {
         var currentPage = Math.Max(page ?? 1, 1);
@@ -94,6 +98,7 @@ public static class FeedEndpoints
             .ToList();
 
         var pageItems = merged.Skip(skip).Take(size).ToList();
+        http.Response.Headers.CacheControl = "public, max-age=60";
         return Results.Ok(BuildPage(pageItems, currentPage, size, merged.Count, feedMode));
     }
 
@@ -110,7 +115,9 @@ public static class FeedEndpoints
 
         if (items.Count > 0)
         {
-            return items.Select(MapFromEntity).ToList();
+            var mapped = items.Select(MapFromEntity).ToList();
+            await AppendMissingPunditOpinionItemsAsync(db, mapped, maxItems, ct);
+            return mapped;
         }
 
         var articles = await news.GetLatestArticlesAsync(maxItems, ct);
@@ -137,34 +144,44 @@ public static class FeedEndpoints
     private static FeedReactions? GetReactions(string id) =>
         _reactions.TryGetValue(id, out var r) ? new FeedReactions(r.Agree, r.Stale, r.Disagree) : null;
 
-    private static string MapCategoryToType(string? category) =>
+    private static string MapCategoryToType(string? category, bool isBanterized) =>
         category?.Trim().ToLowerInvariant() switch
         {
+            "pundit_quote" when isBanterized => "banter",
+            "pundit_quote" => "pundit_quote",
             "banter" or "meme" or "prediction_highlight" or "leaderboard" or "ai_reaction" =>
                 category.Trim().ToLowerInvariant() switch
                 {
                     "ai_reaction" => "banter",
                     _ => category.Trim().ToLowerInvariant(),
                 },
+            _ when isBanterized => "banter",
             _ => "news",
         };
 
     private static FeedItemResponse MapFromEntity(Data.Entities.NewsFeedItem n)
     {
         var sid = n.Id.ToString();
+        var isBanterized = FeedBanterFormat.IsBanterized(n.Summary) || FeedBanterFormat.IsBanterized(n.Title);
+        var title = FeedBanterFormat.Strip(n.Title);
+        var summary = FeedBanterFormat.Strip(n.Summary ?? n.Title);
         var media = FeedMediaMapper.FromNewsItem(n);
+        var type = MapCategoryToType(n.Category, isBanterized);
+
         return new(
             sid,
-            MapCategoryToType(n.Category),
-            n.Title,
-            n.Summary ?? n.Title,
+            type,
+            title,
+            summary,
             n.ImageUrl,
             n.Source,
             n.Url,
             n.PublishedAt,
             n.ViewCount,
             GetReactions(sid),
-            media);
+            media,
+            n.Author,
+            isBanterized ? "ai_summary" : "news");
     }
 
     private static FeedItemResponse MapFromDto(NewsArticleDto a, int? likes = null)
@@ -183,6 +200,34 @@ public static class FeedEndpoints
             a.PublishedAt,
             likes ?? Random.Shared.Next(100, 5000),
             GetReactions(a.Id),
-            media);
+            media,
+            ContentLabel: "news");
+    }
+
+    private static async Task AppendMissingPunditOpinionItemsAsync(
+        AppDbContext db,
+        List<FeedItemResponse> target,
+        int maxItems,
+        CancellationToken ct)
+    {
+        var existingIds = target.Select(i => i.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var opinions = await db.PunditOpinions
+            .AsNoTracking()
+            .Include(o => o.Pundit)
+            .Include(o => o.SourceItem)
+            .ThenInclude(i => i.MediaSource)
+            .Where(o => o.Pundit.Kind == PunditKind.Source && !o.NeedsHumanReview && o.ReviewStatus != "rejected")
+            .OrderByDescending(o => o.SourceItem.PublishedAt ?? o.CreatedAt)
+            .Take(maxItems)
+            .ToListAsync(ct);
+
+        foreach (var opinion in opinions)
+        {
+            var feedItem = PunditOpinionFeedMapper.ToFeedItem(opinion, opinion.Pundit, opinion.SourceItem);
+            if (existingIds.Add(feedItem.Id))
+            {
+                target.Add(feedItem);
+            }
+        }
     }
 }

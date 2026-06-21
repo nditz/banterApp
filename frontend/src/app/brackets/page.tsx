@@ -6,7 +6,7 @@ export default function BracketsPage() {
     <PageWithSideAds>
       <div className="mx-auto max-w-[1200px]">
         <header className="mb-4">
-          <h1 className="text-xl font-bold">Tournament bracket</h1>
+          <h1 className="text-xl font-bold sm:text-2xl">Tournament bracket</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Predict the full 2026 World Cup path — 12 groups, Round of 32, through the Final. Pick
             group results to populate the knockout tree, then call the champion. Fixtures sync from
