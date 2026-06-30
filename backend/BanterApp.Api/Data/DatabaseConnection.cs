@@ -33,6 +33,27 @@ public static class DatabaseConnection
         return null;
     }
 
+    /// <summary>
+    /// True when the connection string targets Supabase's <c>db.&lt;ref&gt;.supabase.co</c>
+    /// direct endpoint, which is IPv6-only and therefore unreachable from IPv4-only
+    /// hosts such as Render. Detected in both URI and ADO.NET key/value forms.
+    /// </summary>
+    public static bool IsDirectSupabaseConnection(string? connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return false;
+        }
+
+        var isDirectHost =
+            connectionString.Contains("@db.", StringComparison.OrdinalIgnoreCase) ||
+            connectionString.Contains("Host=db.", StringComparison.OrdinalIgnoreCase);
+
+        return isDirectHost &&
+            connectionString.Contains(".supabase.co", StringComparison.OrdinalIgnoreCase) &&
+            !connectionString.Contains(".pooler.supabase.com", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static IEnumerable<string?> GetCandidates(IConfiguration configuration)
     {
         // DATABASE_URL is read through IConfiguration so the default environment-variable

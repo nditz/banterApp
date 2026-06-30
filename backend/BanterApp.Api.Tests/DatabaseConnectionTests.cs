@@ -127,6 +127,17 @@ public class DatabaseConnectionTests
         Assert.Equal("user", parsed.Username);
     }
 
+    [Theory]
+    [InlineData("postgresql://postgres:pass@db.mpromkefxwanjqbzvown.supabase.co:5432/postgres", true)]
+    [InlineData("Host=db.mpromkefxwanjqbzvown.supabase.co;Port=5432;Database=postgres", true)]
+    [InlineData("postgresql://postgres.ref:pass@aws-0-eu-west-1.pooler.supabase.com:6543/postgres", false)]
+    [InlineData("Host=aws-0-eu-west-1.pooler.supabase.com;Port=5432;Database=postgres", false)]
+    [InlineData("", false)]
+    public void IsDirectSupabaseConnection_DetectsIpv6OnlyDirectHost(string connectionString, bool expected)
+    {
+        Assert.Equal(expected, DatabaseConnection.IsDirectSupabaseConnection(connectionString));
+    }
+
     [Fact]
     public void ToNpgsqlConnectionString_NonUri_ReturnsAsIs()
     {

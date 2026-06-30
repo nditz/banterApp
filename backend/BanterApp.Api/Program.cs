@@ -94,6 +94,18 @@ builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection("Su
 builder.Services.AddHttpClient<SupabaseAuthService>();
 
 var connectionString = DatabaseConnection.Resolve(builder.Configuration);
+
+if (!builder.Environment.IsDevelopment() &&
+    DatabaseConnection.IsDirectSupabaseConnection(connectionString))
+{
+    throw new InvalidOperationException(
+        "The database connection targets Supabase's DIRECT endpoint (db.<ref>.supabase.co), " +
+        "which is IPv6-only and unreachable from IPv4-only hosts like Render. " +
+        "Use the Supabase connection pooler instead: host 'aws-0-<region>.pooler.supabase.com', " +
+        "username 'postgres.<ref>', port 6543 (transaction) or 5432 (session). " +
+        "Copy it from Supabase Dashboard -> Connect -> Connection pooling, and update DATABASE_URL.");
+}
+
 if (!string.IsNullOrWhiteSpace(connectionString))
 {
     builder.Services.AddDbContext<AppDbContext>(options =>
