@@ -50,3 +50,8 @@ docs/GITHUB-DEPLOY-SETTINGS-PRIVATE.md
 # Test / coverage
 coverage/
 TestResults/
+.vercel
+.env*
+!.env.example
+!**/.env.template
+!**/.env.local.template

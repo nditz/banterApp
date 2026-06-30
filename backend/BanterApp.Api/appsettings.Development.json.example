@@ -1,4 +1,7 @@
 {
+  "Cors": {
+    "AllowedOrigins": [ "http://localhost:3000" ]
+  },
   "ConnectionStrings": {
     "DefaultConnection": "postgresql://postgres.PROJECT_REF:[URL-ENCODED-PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:5432/postgres"
   },

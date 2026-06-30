@@ -18,7 +18,7 @@ function resolveApiUrl(): string {
     return "/api-backend";
   }
 
-  return "http://localhost:5000";
+  return process.env.API_PROXY_URL ?? "http://localhost:5000";
 }
 
 const API_URL = resolveApiUrl();

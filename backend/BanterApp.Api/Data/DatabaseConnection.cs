@@ -31,6 +31,10 @@ public static class DatabaseConnection
 
     private static IEnumerable<string?> GetCandidates(IConfiguration configuration)
     {
+        // DATABASE_URL is read through IConfiguration so the default environment-variable
+        // source (and host overrides like Render) are honored, while tests can still
+        // neutralize it via in-memory configuration.
+        yield return configuration["DATABASE_URL"];
         yield return configuration.GetConnectionString(DefaultConnectionName);
         yield return configuration["Database:DirectUrl"];
         yield return configuration["Database:TransactionUrl"];

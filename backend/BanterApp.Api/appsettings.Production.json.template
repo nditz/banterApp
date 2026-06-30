@@ -1,0 +1,47 @@
+{
+  "_comment": "TEMPLATE ONLY — do not commit appsettings.Production.json with real secrets. Production values are injected via Render environment variables.",
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Warning",
+      "Hangfire": "Information"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "${DATABASE_URL}"
+  },
+  "Database": {
+    "DirectUrl": "",
+    "TransactionUrl": ""
+  },
+  "Supabase": {
+    "Url": "${Supabase__Url}",
+    "AnonKey": "${Supabase__AnonKey}",
+    "JwtSecret": "${Supabase__JwtSecret}",
+    "ServiceRoleKey": "${Supabase__ServiceRoleKey}"
+  },
+  "Security": {
+    "SessionSecret": "${Security__SessionSecret}",
+    "TurnstileSecretKey": "${Security__TurnstileSecretKey}",
+    "BotProtectionEnabled": true,
+    "AllowSearchBots": true
+  },
+  "Cors": {
+    "AllowedOrigins": []
+  },
+  "Admin": {
+    "AllowedEmails": [],
+    "AllowedUserIds": [],
+    "ExposeErrorDetail": false
+  },
+  "Legal": {
+    "PrivacyPolicyUrl": "https://balltakes.com/privacy",
+    "TermsUrl": "https://balltakes.com/terms",
+    "DisclaimerText": "${Legal__DisclaimerText}"
+  },
+  "Operations": {
+    "BackupsConfigured": true
+  }
+}
