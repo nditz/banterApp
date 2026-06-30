@@ -21,9 +21,13 @@ public static class DatabaseConnection
                 continue;
             }
 
-            return raw.StartsWith("postgres", StringComparison.OrdinalIgnoreCase)
-                ? ToNpgsqlConnectionString(raw.Trim())
-                : raw.Trim();
+            // Trim first so leading/trailing whitespace (common in copy-pasted env vars)
+            // doesn't defeat the postgres:// detection below.
+            var value = raw.Trim().Trim('"', '\'');
+
+            return value.StartsWith("postgres", StringComparison.OrdinalIgnoreCase)
+                ? ToNpgsqlConnectionString(value)
+                : value;
         }
 
         return null;
@@ -41,47 +45,98 @@ public static class DatabaseConnection
     }
 
     /// <summary>
-    /// Converts a postgres:// URI to an Npgsql ADO.NET connection string (required by EF design tools).
+    /// Converts a postgres:// URI to an Npgsql ADO.NET connection string.
+    /// <para>
+    /// Parsed manually instead of via <see cref="Uri"/> because real Supabase passwords
+    /// frequently contain characters (<c>@ / ? # : %</c>) that are not URL-encoded when
+    /// copied from the dashboard. <see cref="Uri"/> either throws or silently misparses
+    /// those, which previously caused Npgsql to receive the raw URI and fail with
+    /// "Format of the initialization string does not conform to specification".
+    /// </para>
     /// </summary>
     public static string ToNpgsqlConnectionString(string uri)
     {
         uri = uri.Trim().Trim('"', '\'');
 
-        if (!uri.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
-            !uri.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        var schemeIndex = uri.IndexOf("://", StringComparison.Ordinal);
+        var isPostgresUri =
+            uri.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+            uri.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase);
+
+        if (!isPostgresUri || schemeIndex < 0)
         {
+            // Already an ADO.NET key/value connection string (or unrecognized) — pass through.
             return uri;
         }
 
-        if (!Uri.TryCreate(uri, UriKind.Absolute, out var parsed))
+        var rest = uri[(schemeIndex + 3)..];
+
+        // Split off the query string (e.g. ?pgbouncer=true&sslmode=require).
+        string query = string.Empty;
+        var queryIndex = rest.IndexOf('?');
+        if (queryIndex >= 0)
         {
-            return uri;
+            query = rest[(queryIndex + 1)..];
+            rest = rest[..queryIndex];
+        }
+
+        // Separate userinfo from host. Use the LAST '@' so unencoded '@' in the
+        // password doesn't get mistaken for the userinfo/host boundary.
+        string userInfo = string.Empty;
+        var hostSection = rest;
+        var atIndex = rest.LastIndexOf('@');
+        if (atIndex >= 0)
+        {
+            userInfo = rest[..atIndex];
+            hostSection = rest[(atIndex + 1)..];
+        }
+
+        // hostSection = host[:port][/database]
+        string database = "postgres";
+        var slashIndex = hostSection.IndexOf('/');
+        if (slashIndex >= 0)
+        {
+            database = hostSection[(slashIndex + 1)..];
+            hostSection = hostSection[..slashIndex];
+        }
+
+        string host = hostSection;
+        var port = 5432;
+        var colonIndex = hostSection.LastIndexOf(':');
+        if (colonIndex >= 0)
+        {
+            host = hostSection[..colonIndex];
+            if (int.TryParse(hostSection[(colonIndex + 1)..], out var parsedPort) && parsedPort > 0)
+            {
+                port = parsedPort;
+            }
         }
 
         var builder = new NpgsqlConnectionStringBuilder
         {
-            Host = parsed.Host,
-            Port = parsed.Port > 0 ? parsed.Port : 5432,
-            Database = parsed.AbsolutePath.TrimStart('/').Split('?')[0],
+            Host = host,
+            Port = port,
+            Database = string.IsNullOrEmpty(database) ? "postgres" : database,
             SslMode = SslMode.Require
         };
 
-        if (!string.IsNullOrEmpty(parsed.UserInfo))
+        if (userInfo.Length > 0)
         {
-            var colon = parsed.UserInfo.IndexOf(':');
-            if (colon >= 0)
+            // First ':' separates username and password; passwords may contain ':'.
+            var credColon = userInfo.IndexOf(':');
+            if (credColon >= 0)
             {
-                builder.Username = Uri.UnescapeDataString(parsed.UserInfo[..colon]);
-                builder.Password = Uri.UnescapeDataString(parsed.UserInfo[(colon + 1)..]);
+                builder.Username = Uri.UnescapeDataString(userInfo[..credColon]);
+                builder.Password = Uri.UnescapeDataString(userInfo[(credColon + 1)..]);
             }
             else
             {
-                builder.Username = Uri.UnescapeDataString(parsed.UserInfo);
+                builder.Username = Uri.UnescapeDataString(userInfo);
             }
         }
 
         // Transaction pooler (port 6543) — avoid prepared statements that break with PgBouncer.
-        if (parsed.Port == 6543 || QueryFlag(parsed, "pgbouncer"))
+        if (port == 6543 || QueryFlag(query, "pgbouncer"))
         {
             builder.MaxAutoPrepare = 0;
             builder.NoResetOnClose = true;
@@ -90,14 +145,13 @@ public static class DatabaseConnection
         return builder.ConnectionString;
     }
 
-    private static bool QueryFlag(Uri parsed, string key)
+    private static bool QueryFlag(string query, string key)
     {
-        if (string.IsNullOrEmpty(parsed.Query))
+        if (string.IsNullOrEmpty(query))
         {
             return false;
         }
 
-        var query = parsed.Query.TrimStart('?');
         foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
             var kv = part.Split('=', 2);
