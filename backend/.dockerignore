@@ -1,0 +1,30 @@
+# Build artifacts
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# Test project (not needed for the API image)
+BanterApp.Api.Tests/
+
+# Local secrets / config (never copy into the image)
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/.env
+**/.env.*
+!**/.env.template
+
+# IDE / OS
+.vs/
+.vscode/
+.idea/
+*.user
+.DS_Store
+Thumbs.db
+
+# Docs / git
+Dockerfile
+.dockerignore
+.git/
+.gitignore
+*.md

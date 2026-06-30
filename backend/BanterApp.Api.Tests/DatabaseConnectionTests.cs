@@ -1,0 +1,85 @@
+using BanterApp.Api.Data;
+using Microsoft.Extensions.Configuration;
+using Npgsql;
+using Xunit;
+
+namespace BanterApp.Api.Tests;
+
+public class DatabaseConnectionTests
+{
+    private static IConfiguration BuildConfig(Dictionary<string, string?> values) =>
+        new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+
+    [Fact]
+    public void Resolve_PrefersDatabaseUrlConfigKey()
+    {
+        var config = BuildConfig(new Dictionary<string, string?>
+        {
+            ["DATABASE_URL"] = "postgresql://user:pass@db.example.com:5432/postgres",
+            ["ConnectionStrings:DefaultConnection"] = "postgresql://other:other@other.example.com:5432/postgres",
+        });
+
+        var resolved = DatabaseConnection.Resolve(config);
+
+        Assert.NotNull(resolved);
+        var parsed = new NpgsqlConnectionStringBuilder(resolved);
+        Assert.Equal("db.example.com", parsed.Host);
+        Assert.Equal("user", parsed.Username);
+    }
+
+    [Fact]
+    public void Resolve_FallsBackToDefaultConnection()
+    {
+        var config = BuildConfig(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:DefaultConnection"] = "postgresql://fallback:secret@fallback.example.com:5432/postgres",
+        });
+
+        var resolved = DatabaseConnection.Resolve(config);
+
+        Assert.NotNull(resolved);
+        var parsed = new NpgsqlConnectionStringBuilder(resolved);
+        Assert.Equal("fallback.example.com", parsed.Host);
+        Assert.Equal("fallback", parsed.Username);
+    }
+
+    [Fact]
+    public void ToNpgsqlConnectionString_ConvertsSupabaseUri()
+    {
+        const string uri =
+            "postgresql://postgres.projectref:p%40ss%2Fword@aws-0-eu-west-1.pooler.supabase.com:5432/postgres";
+
+        var result = DatabaseConnection.ToNpgsqlConnectionString(uri);
+
+        var parsed = new NpgsqlConnectionStringBuilder(result);
+        Assert.Equal("aws-0-eu-west-1.pooler.supabase.com", parsed.Host);
+        Assert.Equal(5432, parsed.Port);
+        Assert.Equal("postgres", parsed.Database);
+        Assert.Equal("postgres.projectref", parsed.Username);
+        Assert.Equal("p@ss/word", parsed.Password);
+        Assert.Equal(SslMode.Require, parsed.SslMode);
+    }
+
+    [Fact]
+    public void ToNpgsqlConnectionString_TransactionPooler_DisablesAutoPrepare()
+    {
+        const string uri =
+            "postgresql://postgres.projectref:secret@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true";
+
+        var result = DatabaseConnection.ToNpgsqlConnectionString(uri);
+
+        var parsed = new NpgsqlConnectionStringBuilder(result);
+        Assert.Equal(0, parsed.MaxAutoPrepare);
+        Assert.True(parsed.NoResetOnClose);
+    }
+
+    [Fact]
+    public void ToNpgsqlConnectionString_NonUri_ReturnsAsIs()
+    {
+        const string ado = "Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=secret";
+
+        var result = DatabaseConnection.ToNpgsqlConnectionString(ado);
+
+        Assert.Equal(ado, result);
+    }
+}

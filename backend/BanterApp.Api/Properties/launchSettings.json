@@ -10,6 +10,17 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    },
+    "ProductionLocal": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:8080",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Production",
+        "PORT": "8080",
+        "ALLOWED_ORIGINS": "https://balltakes.com,https://www.balltakes.com"
+      }
     }
   }
 }

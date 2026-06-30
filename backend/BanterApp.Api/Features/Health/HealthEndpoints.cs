@@ -9,6 +9,10 @@ public static class HealthEndpoints
 {
     public static void MapHealthEndpoints(this WebApplication app)
     {
+        app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
+            .AllowAnonymous()
+            .ExcludeFromDescription();
+
         app.MapGet("/api/health", async (
             AppDbContext db,
             IOptions<SportsDataOptions> sportsOptions,

@@ -28,12 +28,23 @@ using Hangfire;
 using Hangfire.InMemory;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+builder.WebHost.UseUrls($"http://+:{port}");
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddScoped<IUserContext, UserContext>();
 builder.Services.AddScoped<IErrorTrackingService, ErrorTrackingService>();
@@ -236,8 +247,9 @@ static string ResolveRateLimitPartition(HttpContext context, string policy)
     return $"{policy}:ip:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
 }
 
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? ["http://localhost:3000"];
+var allowedOrigins = CorsConfiguration.ResolveAllowedOrigins(
+    builder.Configuration,
+    builder.Environment.IsDevelopment());
 
 builder.Services.AddCors(options =>
 {
@@ -291,6 +303,8 @@ var startupValidator = app.Services.GetRequiredService<ProductionStartupValidato
 await startupValidator.ValidateAsync();
 
 await DatabaseSeeder.SeedAsync(app.Services);
+
+app.UseForwardedHeaders();
 
 if (app.Environment.IsProduction())
 {
