@@ -74,6 +74,60 @@ public class DatabaseConnectionTests
     }
 
     [Fact]
+    public void ToNpgsqlConnectionString_HandlesUnencodedSpecialCharsInPassword()
+    {
+        // Real-world case: password copied straight from the Supabase dashboard
+        // containing unencoded special characters. Uri.TryCreate cannot handle this.
+        const string uri =
+            "postgresql://postgres.projectref:p@ss/w0rd!@aws-0-eu-west-1.pooler.supabase.com:5432/postgres";
+
+        var result = DatabaseConnection.ToNpgsqlConnectionString(uri);
+
+        var parsed = new NpgsqlConnectionStringBuilder(result);
+        Assert.Equal("aws-0-eu-west-1.pooler.supabase.com", parsed.Host);
+        Assert.Equal(5432, parsed.Port);
+        Assert.Equal("postgres", parsed.Database);
+        Assert.Equal("postgres.projectref", parsed.Username);
+        Assert.Equal("p@ss/w0rd!", parsed.Password);
+        Assert.Equal(SslMode.Require, parsed.SslMode);
+    }
+
+    [Fact]
+    public void ToNpgsqlConnectionString_HandlesSpaceInPassword()
+    {
+        // A space is illegal in a URI, so Uri.TryCreate cannot parse this at all.
+        const string uri =
+            "postgresql://postgres.SomeRef:some passwad@aws-0-eu-west-1.pooler.supabase.com:6543/postgres";
+
+        var result = DatabaseConnection.ToNpgsqlConnectionString(uri);
+
+        var parsed = new NpgsqlConnectionStringBuilder(result);
+        Assert.Equal("aws-0-eu-west-1.pooler.supabase.com", parsed.Host);
+        Assert.Equal(6543, parsed.Port);
+        Assert.Equal("postgres.SomeRef", parsed.Username);
+        Assert.Equal("some passwad", parsed.Password);
+        Assert.Equal(SslMode.Require, parsed.SslMode);
+        // Port 6543 = transaction pooler → prepared statements disabled.
+        Assert.Equal(0, parsed.MaxAutoPrepare);
+    }
+
+    [Fact]
+    public void Resolve_TrimsWhitespaceBeforeDetectingUri()
+    {
+        var config = BuildConfig(new Dictionary<string, string?>
+        {
+            ["DATABASE_URL"] = "\n  postgresql://user:pass@db.example.com:5432/postgres  \n",
+        });
+
+        var resolved = DatabaseConnection.Resolve(config);
+
+        Assert.NotNull(resolved);
+        var parsed = new NpgsqlConnectionStringBuilder(resolved);
+        Assert.Equal("db.example.com", parsed.Host);
+        Assert.Equal("user", parsed.Username);
+    }
+
+    [Fact]
     public void ToNpgsqlConnectionString_NonUri_ReturnsAsIs()
     {
         const string ado = "Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=secret";
