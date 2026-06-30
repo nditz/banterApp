@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { KeyRound, LogIn, Menu, X } from "lucide-react";
+import { KeyRound, LogIn, Menu, Shield, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { TermsEntertainmentNotice } from "@/components/legal/TermsOfUseContent";
@@ -123,6 +123,21 @@ export function AppShell({ children }: AppShellProps) {
                 {link.label}
               </Link>
             ))}
+            {session?.isPlatformAdmin && (
+              <Link
+                href="/admin"
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors",
+                  isAdminRoute
+                    ? "bg-electric/15 text-electric"
+                    : "text-amber-300/90 hover:bg-white/10 hover:text-amber-200"
+                )}
+                aria-current={isAdminRoute ? "page" : undefined}
+              >
+                <Shield className="size-3.5" aria-hidden />
+                Admin
+              </Link>
+            )}
           </nav>
 
           <div className="flex items-center gap-2">
@@ -207,6 +222,22 @@ export function AppShell({ children }: AppShellProps) {
                   {link.label}
                 </Link>
               ))}
+              {session?.isPlatformAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setMobileMenuPath(null)}
+                  className={cn(
+                    "flex min-h-11 items-center gap-2 rounded-md px-3 py-2.5 text-xs font-bold uppercase tracking-wider",
+                    isAdminRoute
+                      ? "bg-electric/15 text-electric"
+                      : "text-amber-300/90 hover:bg-white/10"
+                  )}
+                  aria-current={isAdminRoute ? "page" : undefined}
+                >
+                  <Shield className="size-4" aria-hidden />
+                  Admin
+                </Link>
+              )}
               {!session?.authenticated && (
                 <div className="mt-2 border-t border-white/10 pt-2">
                   {restoreOpen ? (
