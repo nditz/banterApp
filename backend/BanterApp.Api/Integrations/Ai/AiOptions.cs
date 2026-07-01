@@ -22,6 +22,13 @@ public sealed class AiOptions
 
     public double Temperature { get; set; } = 0.85;
 
+    /// <summary>
+    /// Reasoning effort for reasoning models (o-series, gpt-5): minimal | low | medium | high.
+    /// Reasoning models ignore <see cref="Temperature"/>, so this replaces it for those models.
+    /// Ignored by non-reasoning models (gpt-4o, gpt-4o-mini, etc.).
+    /// </summary>
+    public string ReasoningEffort { get; set; } = "medium";
+
     public bool Enabled { get; set; } = true;
 
     /// <summary>System prompt for news/match reaction posts in the rolling feed.</summary>

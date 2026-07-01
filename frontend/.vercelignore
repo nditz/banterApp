@@ -1,0 +1,35 @@
+# Vercel build artifacts
+.next/
+out/
+build/
+
+# Dependencies (Vercel installs fresh)
+node_modules/
+
+# Tests & coverage (not needed for production build)
+e2e/
+playwright-report/
+test-results/
+coverage/
+playwright.config.ts
+
+# Local env files (env vars come from the Vercel dashboard)
+.env
+.env.local
+.env*.local
+.env.local.template
+.env.local.example
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Generated Prisma client (regenerated on build)
+src/generated/prisma
+
+# Editor / OS junk
+.DS_Store
+*.pem
+*.log
+
+# Repo docs (not part of the deployed app)
+README.md

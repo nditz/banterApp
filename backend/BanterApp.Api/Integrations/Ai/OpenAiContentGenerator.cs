@@ -315,20 +315,41 @@ public sealed class OpenAiContentGenerator : IContentGenerator
         int? maxTokens = null)
     {
         var baseUrl = ResolveBaseUrl();
+        var effectiveModel = model ?? _options.Model;
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/chat/completions");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
-        request.Content = JsonContent.Create(new
+
+        var payload = new Dictionary<string, object?>
         {
-            model = model ?? _options.Model,
-            messages = new object[]
+            ["model"] = effectiveModel,
+            ["messages"] = new object[]
             {
                 new { role = "system", content = systemPrompt },
                 new { role = "user", content = userPrompt }
             },
-            max_tokens = maxTokens ?? _options.MaxTokens,
-            temperature = temperature ?? _options.Temperature,
-            response_format = responseFormatJson ? new { type = "json_object" } : null
-        });
+            // Newer models (o-series, gpt-5) require max_completion_tokens and reject max_tokens.
+            ["max_completion_tokens"] = maxTokens ?? _options.MaxTokens
+        };
+
+        if (responseFormatJson)
+        {
+            payload["response_format"] = new { type = "json_object" };
+        }
+
+        // Reasoning models reject a custom temperature (400) and use reasoning_effort instead.
+        if (IsReasoningModel(effectiveModel))
+        {
+            if (!string.IsNullOrWhiteSpace(_options.ReasoningEffort))
+            {
+                payload["reasoning_effort"] = _options.ReasoningEffort.Trim().ToLowerInvariant();
+            }
+        }
+        else
+        {
+            payload["temperature"] = temperature ?? _options.Temperature;
+        }
+
+        request.Content = JsonContent.Create(payload);
 
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode)
@@ -350,6 +371,20 @@ public sealed class OpenAiContentGenerator : IContentGenerator
             .GetString();
 
         return string.IsNullOrWhiteSpace(content) ? string.Empty : content.Trim();
+    }
+
+    private static bool IsReasoningModel(string? model)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            return false;
+        }
+
+        var normalized = model.Trim().ToLowerInvariant();
+        return normalized.StartsWith("o1", StringComparison.Ordinal)
+            || normalized.StartsWith("o3", StringComparison.Ordinal)
+            || normalized.StartsWith("o4", StringComparison.Ordinal)
+            || normalized.StartsWith("gpt-5", StringComparison.Ordinal);
     }
 
     private async Task<string?> GenerateImageAsync(string prompt, CancellationToken cancellationToken)

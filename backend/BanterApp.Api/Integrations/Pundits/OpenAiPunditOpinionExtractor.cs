@@ -172,18 +172,34 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
 
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/chat/completions");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
-        request.Content = JsonContent.Create(new
+
+        var payload = new Dictionary<string, object?>
         {
-            model = _options.Model,
-            messages = new object[]
+            ["model"] = _options.Model,
+            ["messages"] = new object[]
             {
                 new { role = "system", content = systemPrompt },
                 new { role = "user", content = userPrompt }
             },
-            max_tokens = _options.PunditExtractionMaxTokens,
-            temperature = _options.PunditExtractionTemperature,
-            response_format = new { type = "json_object" }
-        });
+            // Newer models (o-series, gpt-5) require max_completion_tokens and reject max_tokens.
+            ["max_completion_tokens"] = _options.PunditExtractionMaxTokens,
+            ["response_format"] = new { type = "json_object" }
+        };
+
+        // Reasoning models reject a custom temperature (400) and use reasoning_effort instead.
+        if (IsReasoningModel(_options.Model))
+        {
+            if (!string.IsNullOrWhiteSpace(_options.ReasoningEffort))
+            {
+                payload["reasoning_effort"] = _options.ReasoningEffort.Trim().ToLowerInvariant();
+            }
+        }
+        else
+        {
+            payload["temperature"] = _options.PunditExtractionTemperature;
+        }
+
+        request.Content = JsonContent.Create(payload);
 
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode)
@@ -204,6 +220,20 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
             .GetProperty("content")
             .GetString()
             ?.Trim() ?? string.Empty;
+    }
+
+    private static bool IsReasoningModel(string? model)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            return false;
+        }
+
+        var normalized = model.Trim().ToLowerInvariant();
+        return normalized.StartsWith("o1", StringComparison.Ordinal)
+            || normalized.StartsWith("o3", StringComparison.Ordinal)
+            || normalized.StartsWith("o4", StringComparison.Ordinal)
+            || normalized.StartsWith("gpt-5", StringComparison.Ordinal);
     }
 
     private static string? SanitizeField(string? value) =>
