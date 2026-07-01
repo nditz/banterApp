@@ -46,6 +46,7 @@ docs/DATA-SOURCES-INTERNAL.md
 
 # Internal — GitHub / Vercel / Supabase deploy settings (secrets checklist)
 docs/GITHUB-DEPLOY-SETTINGS-PRIVATE.md
+docs/RENDER-ENV-PRIVATE.md
 
 # Test / coverage
 coverage/
