@@ -98,10 +98,11 @@ public sealed class AiReactionJob
             var headline = FeedBanterFormat.Strip(item.Title);
             var summary = FeedBanterFormat.Strip(item.Summary ?? item.Title);
 
-            var reaction = await _ai.GenerateNewsReactionAsync(
+            var card = await _ai.GenerateFeedBanterCardAsync(
                 headline,
                 summary,
                 item.Category,
+                "BanterBot",
                 cancellationToken);
 
             string? imageUrl;
@@ -111,16 +112,14 @@ public sealed class AiReactionJob
             {
                 var visual = await _ai.SuggestFeedVisualAsync(
                     headline,
-                    reaction,
+                    card.Body,
                     item.Category,
                     cancellationToken);
 
-                // ChatGPT picks the reaction (mood + GIF search phrase); we fetch a live, stable
-                // GIF from the provider (Tenor) and fall back to the local sticker repository.
-                // We never persist ephemeral DALL-E URLs — they expire after ~1h.
+                var mood = visual.Mood ?? card.Mood ?? "news";
                 var media = await _reactionMedia.ResolveAsync(
                     new[] { visual.GifQuery },
-                    visual.Mood ?? "news",
+                    mood,
                     item.Id.GetHashCode(),
                     cancellationToken);
                 imageUrl = media.Url;
@@ -130,22 +129,25 @@ public sealed class AiReactionJob
             {
                 _logger.LogWarning(ex, "AI visual generation failed for feed item {ItemId}.", item.Id);
                 var media = await _reactionMedia.ResolveAsync(
-                    null,
-                    "news",
+                    new[] { card.Mood },
+                    card.Mood ?? "news",
                     item.Id.GetHashCode(),
                     cancellationToken);
                 imageUrl = media.Url;
                 mediaType = media.Type;
             }
 
-            var reactionTitle = PickReactionTitle(headline, item.Category);
+            var reactionTitle = string.IsNullOrWhiteSpace(card.Title)
+                ? PickReactionTitle(headline, item.Category)
+                : card.Title;
+            var reactionBody = ComposeReactionBody(card.Body, card.JokeLine);
 
             _db.NewsFeedItems.Add(new NewsFeedItem
             {
                 Id = $"ai-{Guid.NewGuid():N}",
                 Source = "BanterBot",
                 Title = FeedBanterFormat.Mark(reactionTitle),
-                Summary = FeedBanterFormat.Mark(reaction),
+                Summary = FeedBanterFormat.Mark(reactionBody),
                 Url = item.Url,
                 Author = "BanterBot",
                 Category = "ai_reaction",
@@ -172,6 +174,18 @@ public sealed class AiReactionJob
         }
 
         return template;
+    }
+
+    private static string ComposeReactionBody(string body, string? jokeLine)
+    {
+        var parts = new List<string> { body.Trim() };
+
+        if (!string.IsNullOrWhiteSpace(jokeLine))
+        {
+            parts.Add($"😂 {jokeLine.Trim()}");
+        }
+
+        return string.Join("\n\n", parts);
     }
 
     private static string Truncate(string value, int max)

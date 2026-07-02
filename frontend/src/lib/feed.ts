@@ -36,7 +36,7 @@ type ApiFeedItem = {
 };
 
 function isGifUrl(url: string): boolean {
-  return /\.gif($|[?#])/i.test(url);
+  return /\.gif($|[?#])/i.test(url) || url.startsWith("/reactions/");
 }
 
 function mapReactions(

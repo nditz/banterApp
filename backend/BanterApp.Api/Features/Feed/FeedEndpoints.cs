@@ -213,15 +213,17 @@ public static class FeedEndpoints
         var isBanterized = FeedBanterFormat.IsBanterized(n.Summary) || FeedBanterFormat.IsBanterized(n.Title);
         var title = FeedBanterFormat.Strip(n.Title);
         var summary = FeedBanterFormat.Strip(n.Summary ?? n.Title);
-        var media = FeedMediaMapper.FromNewsItem(n);
         var type = MapCategoryToType(n.Category, isBanterized);
+        var media = FeedMediaMapper.FromNewsItem(n)
+            ?? ResolveFallbackMedia(n, type, title, sid);
+        var imageUrl = string.IsNullOrWhiteSpace(n.ImageUrl) ? media?.Url : n.ImageUrl;
 
         return new(
             sid,
             type,
             title,
             summary,
-            n.ImageUrl,
+            imageUrl,
             n.Source,
             n.Url,
             n.PublishedAt,
@@ -229,7 +231,32 @@ public static class FeedEndpoints
             GetReactions(sid),
             media,
             n.Author,
-            isBanterized ? "ai_summary" : "news");
+            isBanterized || string.Equals(n.Category, "ai_reaction", StringComparison.OrdinalIgnoreCase)
+                ? "ai_summary"
+                : "news");
+    }
+
+    private static FeedMediaResponse? ResolveFallbackMedia(
+        Data.Entities.NewsFeedItem item,
+        string type,
+        string title,
+        string seed)
+    {
+        if (type != "banter" && !string.Equals(item.Category, "ai_reaction", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var mood = item.Category?.Trim().ToLowerInvariant() switch
+        {
+            "ai_reaction" => "debate",
+            "pundit_quote" => "pundit",
+            "match_live" => "hype",
+            "match_result" => "celebrate",
+            _ => "news",
+        };
+
+        return FeedMediaMapper.FromGifMood(mood, title, seed.GetHashCode());
     }
 
     private static FeedItemResponse MapFromDto(NewsArticleDto a, int? likes = null)

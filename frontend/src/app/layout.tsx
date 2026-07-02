@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { Barlow, Barlow_Condensed, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/layout/AppShell";
 import { ClientErrorReporter } from "@/components/ClientErrorReporter";
@@ -71,15 +70,16 @@ export default function RootLayout({
       className={`${barlow.variable} ${barlowCondensed.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <head>
         {ADSENSE_ENABLED ? (
-          <Script
-            id="google-adsense"
+          <script
+            async
             src={ADSENSE_SCRIPT_SRC}
-            strategy="afterInteractive"
             crossOrigin="anonymous"
           />
         ) : null}
+      </head>
+      <body className="min-h-full flex flex-col">
         <OrganizationJsonLd />
         <WebsiteJsonLd />
         <QueryProvider>
