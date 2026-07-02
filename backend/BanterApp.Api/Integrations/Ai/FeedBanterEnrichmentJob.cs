@@ -164,6 +164,10 @@ public sealed class FeedBanterEnrichmentJob
         {
             parts.Add(string.Join("\n", output.MemeReactions));
         }
+        else if (!string.IsNullOrWhiteSpace(output.Headline))
+        {
+            parts.Add($"POV: {output.Headline.Trim()} 💀");
+        }
 
         if (output.FanReactions.Count > 0)
         {

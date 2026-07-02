@@ -111,6 +111,18 @@ export function AppShell({ children }: AppShellProps) {
     }
   };
 
+  const handleLogoClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (pathname !== "/") {
+      return;
+    }
+
+    event.preventDefault();
+    if (typeof window !== "undefined" && window.location.hash) {
+      router.push("/");
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <div className="stadium-bg flex min-h-screen flex-col">
       <header
@@ -133,7 +145,7 @@ export function AppShell({ children }: AppShellProps) {
               {mobileMenuOpen ? <X /> : <Menu />}
             </Button>
 
-            <Link href="/" className="group flex shrink-0 items-center">
+            <Link href="/" onClick={handleLogoClick} className="group flex shrink-0 items-center">
               <Image
                 src={BRAND.logoHeader}
                 alt={`${BRAND.name} — ${BRAND.tagline}`}
@@ -398,7 +410,7 @@ export function AppShell({ children }: AppShellProps) {
       {!isAuthRoute && (
         <footer className="site-footer relative z-[1] mt-auto border-t border-logo-green/40 py-6 text-white/65">
           <div className="mx-auto max-w-[1400px] space-y-3 px-4 text-center text-xs sm:px-6">
-            <Link href="/" className="mx-auto inline-flex justify-center">
+            <Link href="/" onClick={handleLogoClick} className="mx-auto inline-flex justify-center">
               <Image
                 src={BRAND.logoFooter}
                 alt={BRAND.name}

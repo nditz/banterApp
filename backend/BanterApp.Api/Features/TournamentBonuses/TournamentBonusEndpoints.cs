@@ -64,24 +64,7 @@ public static class TournamentBonusEndpoints
             .Take(200)
             .ToListAsync(ct);
 
-        // Map team codes to display names (directory first, fall back to match team names).
-        var matchTeamNames = await db.Matches
-            .AsNoTracking()
-            .Where(m => m.TeamACode != "" || m.TeamBCode != "")
-            .SelectMany(m => new[]
-            {
-                new { Code = m.TeamACode, Name = m.TeamA },
-                new { Code = m.TeamBCode, Name = m.TeamB }
-            })
-            .Where(t => t.Code != "" && t.Code != "TBD")
-            .Distinct()
-            .ToListAsync(ct);
-
-        var teamNameMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var t in matchTeamNames)
-        {
-            teamNameMap[t.Code] = t.Name;
-        }
+        var teamNameMap = await LoadTeamNameMapAsync(db, ct);
 
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var results = new List<TournamentBonusPlayerOption>();
@@ -142,18 +125,7 @@ public static class TournamentBonusEndpoints
         var awards = await db.TournamentAwardResults.ToListAsync(ct);
         var awardMap = awards.ToDictionary(a => a.Category);
 
-        var teams = await db.Matches
-            .AsNoTracking()
-            .SelectMany(m => new[]
-            {
-                new { Code = m.TeamACode, Name = m.TeamA },
-                new { Code = m.TeamBCode, Name = m.TeamB }
-            })
-            .Where(t => t.Code != string.Empty)
-            .Distinct()
-            .OrderBy(t => t.Name)
-            .Select(t => new TournamentBonusTeamOption(t.Code, t.Name))
-            .ToListAsync(ct);
+        var teams = await LoadTeamsAsync(db, ct);
 
         var players = await db.LineupPlayers
             .AsNoTracking()
@@ -292,6 +264,43 @@ public static class TournamentBonusEndpoints
             existing.PointsAwarded,
             existing.LockedAt,
             existing.CreatedAt));
+    }
+
+    private static async Task<Dictionary<string, string>> LoadTeamNameMapAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var rows = await db.Matches
+            .AsNoTracking()
+            .Select(m => new { m.TeamACode, m.TeamA, m.TeamBCode, m.TeamB })
+            .ToListAsync(ct);
+
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in rows)
+        {
+            if (!string.IsNullOrEmpty(row.TeamACode) && row.TeamACode != "TBD")
+            {
+                map[row.TeamACode] = row.TeamA;
+            }
+
+            if (!string.IsNullOrEmpty(row.TeamBCode) && row.TeamBCode != "TBD")
+            {
+                map[row.TeamBCode] = row.TeamB;
+            }
+        }
+
+        return map;
+    }
+
+    private static async Task<List<TournamentBonusTeamOption>> LoadTeamsAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var map = await LoadTeamNameMapAsync(db, ct);
+        return map
+            .Select(kv => new TournamentBonusTeamOption(kv.Key, kv.Value))
+            .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }
 
