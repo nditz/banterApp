@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { BRAND } from "@/lib/brand";
 
 export const metadata = {
-  title: "Privacy Policy — Banter",
+  title: "Privacy Policy",
+  description: `${BRAND.name} privacy policy — how we handle account, session and usage data. We do not sell personal data.`,
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {
@@ -9,7 +12,7 @@ export default function PrivacyPage() {
     <main className="mx-auto max-w-3xl px-4 py-10">
       <h1 className="text-2xl font-bold">Privacy Policy</h1>
       <p className="mt-4 text-sm text-muted-foreground">
-        Banter collects account information through Supabase Auth, anonymous session
+        Ball Takes collects account information through Supabase Auth, anonymous session
         identifiers for guest play, and usage data needed to run predictions, leagues, and
         the content feed. We do not sell personal data.
       </p>
@@ -21,8 +24,8 @@ export default function PrivacyPage() {
       </ul>
       <p className="mt-6 text-sm text-muted-foreground">
         For takedown requests or privacy questions, contact{" "}
-        <a href="mailto:privacy@banter.app" className="text-primary hover:underline">
-          privacy@banter.app
+        <a href="mailto:privacy@balltakes.com" className="text-primary hover:underline">
+          privacy@balltakes.com
         </a>
         .
       </p>

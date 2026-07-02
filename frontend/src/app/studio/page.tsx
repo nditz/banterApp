@@ -4,6 +4,7 @@ export const metadata = {
   title: "Content Studio",
   description:
     "Review your predictions, compare with your league and the pros, and generate your TV-style broadcast script.",
+  alternates: { canonical: "/studio" },
 };
 
 export default function Studio() {

@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import { BracketBoard } from "@/components/brackets/BracketBoard";
 import { PageWithSideAds } from "@/components/layout/PageWithSideAds";
+
+export const metadata: Metadata = {
+  title: "Tournament Bracket",
+  description:
+    "Predict the full 2026 World Cup path — 12 groups, Round of 32 through the Final. Pick group results to build the knockout tree and call the champion.",
+  alternates: { canonical: "/brackets" },
+};
 
 export default function BracketsPage() {
   return (

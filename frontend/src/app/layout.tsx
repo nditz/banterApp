@@ -3,7 +3,9 @@ import { Barlow, Barlow_Condensed, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/layout/AppShell";
 import { ClientErrorReporter } from "@/components/ClientErrorReporter";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { OrganizationJsonLd, WebsiteJsonLd } from "@/components/JsonLd";
 import { BRAND } from "@/lib/brand";
+import { BASE_METADATA } from "@/lib/seo.config";
 import "./globals.css";
 
 const barlow = Barlow({
@@ -24,13 +26,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(`https://${BRAND.domain}`),
-  title: {
-    default: BRAND.name,
-    template: `%s | ${BRAND.name}`,
-  },
-  description: BRAND.description,
-  applicationName: BRAND.name,
+  ...BASE_METADATA,
   manifest: "/brand/site.webmanifest",
   icons: {
     icon: [
@@ -49,12 +45,6 @@ export const metadata: Metadata = {
     capable: true,
     title: BRAND.name,
     statusBarStyle: "black-translucent",
-  },
-  openGraph: {
-    title: BRAND.name,
-    description: BRAND.description,
-    siteName: BRAND.name,
-    images: [{ url: BRAND.logoDefault }],
   },
 };
 
@@ -77,6 +67,8 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <OrganizationJsonLd />
+        <WebsiteJsonLd />
         <QueryProvider>
           <ClientErrorReporter />
           <AppShell>{children}</AppShell>

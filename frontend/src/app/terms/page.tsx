@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 export const metadata = {
   title: "Terms of Use",
   description: `${BRAND.name} terms of use — entertainment only, not gambling.`,
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {

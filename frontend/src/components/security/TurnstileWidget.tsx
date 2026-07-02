@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface TurnstileWidgetProps {
   onToken: (token: string | null) => void;
@@ -12,6 +12,7 @@ export function TurnstileWidget({ onToken, theme = "auto" }: TurnstileWidgetProp
   const widgetIdRef = useRef<string | null>(null);
   const onTokenRef = useRef(onToken);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const [errorCode, setErrorCode] = useState<string | null>(null);
 
   useEffect(() => {
     onTokenRef.current = onToken;
@@ -35,9 +36,15 @@ export function TurnstileWidget({ onToken, theme = "auto" }: TurnstileWidgetProp
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
         theme,
-        callback: (token) => onTokenRef.current(token),
+        callback: (token) => {
+          setErrorCode(null);
+          onTokenRef.current(token);
+        },
         "expired-callback": () => onTokenRef.current(null),
-        "error-callback": () => onTokenRef.current(null),
+        "error-callback": (code) => {
+          setErrorCode(code ?? "unknown");
+          onTokenRef.current(null);
+        },
       });
     };
 
@@ -70,5 +77,15 @@ export function TurnstileWidget({ onToken, theme = "auto" }: TurnstileWidgetProp
     );
   }
 
-  return <div ref={containerRef} className="min-h-[65px]" />;
+  return (
+    <div>
+      <div ref={containerRef} className="min-h-[65px]" />
+      {errorCode && (
+        <p className="mt-1 text-[11px] text-destructive" role="alert">
+          Verification could not load (error {errorCode}). Refresh and try again — if it
+          persists, this domain may not be authorized for the site key.
+        </p>
+      )}
+    </div>
+  );
 }
