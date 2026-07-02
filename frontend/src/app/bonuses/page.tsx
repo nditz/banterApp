@@ -1,9 +1,17 @@
+import type { Metadata } from "next";
 import { TournamentBonusBoard } from "@/components/bonuses/TournamentBonusBoard";
 import { PageWithSideAds } from "@/components/layout/PageWithSideAds";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { TOURNAMENT_BONUS_RULES } from "@/lib/scoring-rules";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = {
+  title: "Tournament Bonus Picks",
+  description:
+    "Five high-stakes, tournament-long predictions — Player of the Tournament, Golden Boot and more — with big point swings on Ball Takes.",
+  alternates: { canonical: "/bonuses" },
+};
 
 export default function BonusesPage() {
   return (

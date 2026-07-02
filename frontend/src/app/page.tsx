@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { BanterFeedPanel } from "@/components/home/BanterFeedPanel";
 import { HomeQuickNav } from "@/components/home/HomeQuickNav";
 import { HomeStatsBar } from "@/components/home/HomeStatsBar";
@@ -6,6 +7,15 @@ import { PredictionCenter } from "@/components/home/PredictionCenter";
 import { RankingsPanel } from "@/components/home/RankingsPanel";
 import { PageWithSideAds } from "@/components/layout/PageWithSideAds";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = {
+  title: {
+    absolute: "Ball Takes — Football Predictions, Banter & Aura Rankings",
+  },
+  description:
+    "Lock in football predictions, watch the banter feed, take on the pundits and climb the aura rankings. Create private leagues and prove you know ball — no signup required.",
+  alternates: { canonical: "/" },
+};
 
 const stickySideClass =
   "scroll-mt-14 lg:sticky lg:top-14 lg:z-10 lg:self-start xl:sticky xl:top-14";

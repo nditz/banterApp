@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   Card,
   CardContent,
@@ -9,6 +10,13 @@ import { CreateLeagueForm } from "@/components/leagues/CreateLeagueForm";
 import { JoinLeagueForm } from "@/components/leagues/JoinLeagueForm";
 import { LeaguesList } from "@/components/leagues/LeaguesList";
 import { SessionKeyNotice } from "@/components/session/SessionKeyNotice";
+
+export const metadata: Metadata = {
+  title: "Leagues",
+  description:
+    "Create private Ball Takes leagues for friends, family or the office — up to 50 players each. Share one invite link and unlock tournament bonus picks. No signup required.",
+  alternates: { canonical: "/leagues" },
+};
 
 export default function LeaguesPage() {
   return (

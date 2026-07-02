@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ConceptSlider } from "@/components/rules/ConceptSlider";
 import { buttonVariants } from "@/components/ui/button";
 import { SCORING_RULES, TOURNAMENT_BONUS_ELIGIBILITY, TOURNAMENT_BONUS_RULES } from "@/lib/scoring-rules";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = {
+  title: "Rules & How It Works",
+  description:
+    "How Ball Takes works: prediction types, points scoring, tournament bonus picks, content scripts and private leagues — everything you need to start playing.",
+  alternates: { canonical: "/rules" },
+};
 
 export default function RulesPage() {
   return (
