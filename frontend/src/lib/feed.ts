@@ -1,4 +1,10 @@
-import type { FeedItem, FeedMedia, FeedMediaType, PaginatedResponse } from "./types";
+import type {
+  FeedItem,
+  FeedMedia,
+  FeedMediaType,
+  FeedReactions,
+  PaginatedResponse,
+} from "./types";
 
 type ApiFeedItem = {
   id?: string;
@@ -21,7 +27,28 @@ type ApiFeedItem = {
   publishedAt?: string;
   likes?: number;
   viewCount?: number;
+  reactions?: {
+    agree?: number;
+    stale?: number;
+    disagree?: number;
+  };
+  contentLabel?: string;
 };
+
+function isGifUrl(url: string): boolean {
+  return /\.gif($|[?#])/i.test(url);
+}
+
+function mapReactions(
+  raw: ApiFeedItem["reactions"]
+): FeedReactions | undefined {
+  if (!raw) return undefined;
+  return {
+    agree: raw.agree ?? 0,
+    stale: raw.stale ?? 0,
+    disagree: raw.disagree ?? 0,
+  };
+}
 
 function mapFeedItem(raw: ApiFeedItem, index: number): FeedItem | null {
   const id = raw.id ?? `feed-${index}`;
@@ -48,7 +75,7 @@ function mapFeedItem(raw: ApiFeedItem, index: number): FeedItem | null {
 
   if (!media && raw.imageUrl) {
     media = {
-      type: "image",
+      type: isGifUrl(raw.imageUrl) ? "gif" : "image",
       url: raw.imageUrl,
       alt: title,
     };
@@ -66,6 +93,8 @@ function mapFeedItem(raw: ApiFeedItem, index: number): FeedItem | null {
     author: raw.author,
     publishedAt: raw.publishedAt ?? new Date().toISOString(),
     likes: raw.likes ?? raw.viewCount,
+    reactions: mapReactions(raw.reactions),
+    contentLabel: raw.contentLabel,
   };
 }
 

@@ -65,8 +65,9 @@ public static class SessionEndpoints
 
         await db.SaveChangesAsync(ct);
 
-        var countryCode = http.Request.Headers["X-Country-Code"].FirstOrDefault();
-        await SystemLeagueService.EnsureSystemLeaguesAsync(db, user, countryCode, ct);
+        // Do not derive a country league from the browser-locale header; only keep the
+        // Country league the user explicitly chose earlier (persisted on their record).
+        await SystemLeagueService.EnsureSystemLeaguesForSessionAsync(db, user, ct);
         await db.SaveChangesAsync(ct);
 
         return Results.Ok(new { synced = true, userId });
@@ -142,7 +143,9 @@ public static class SessionEndpoints
             return Results.BadRequest(new { error = "Human verification failed." });
         }
 
-        var detectedCountry = http.Request.Headers["X-Country-Code"].FirstOrDefault();
+        // The country league is opt-in: use the explicit choice from the terms screen only.
+        // A null/blank value means the user did not pick one -> Global league only.
+        var chosenCountry = SystemLeagueService.NormalizeCountryCodeOrNull(request.CountryCode);
 
         if (user.IsAuthenticated)
         {
@@ -166,7 +169,7 @@ public static class SessionEndpoints
             await db.SaveChangesAsync(ct);
             var csrf = CsrfMiddleware.IssueToken(http);
 
-            await SystemLeagueService.EnsureSystemLeaguesAsync(db, user, detectedCountry, ct);
+            await SystemLeagueService.EnsureSystemLeaguesAsync(db, user, chosenCountry, ct);
             await db.SaveChangesAsync(ct);
 
             return Results.Ok(new SessionResponse(
@@ -213,7 +216,7 @@ public static class SessionEndpoints
         http.Items["AnonymousUser"] = anonymous;
         AppendAnonymousCookies(http, anonymous);
 
-        await SystemLeagueService.EnsureSystemLeaguesAsync(db, user, detectedCountry, ct);
+        await SystemLeagueService.EnsureSystemLeaguesAsync(db, user, chosenCountry, ct);
         await db.SaveChangesAsync(ct);
 
         var recoveryToken = tokens.CreateRecoveryToken(anonymous.Id);
@@ -313,7 +316,7 @@ public static class SessionEndpoints
         Convert.ToHexString(Guid.NewGuid().ToByteArray())[..12].ToUpperInvariant();
 }
 
-public record SessionConsentRequest(bool AcceptedTerms, string? TurnstileToken, string? DeviceFingerprint = null);
+public record SessionConsentRequest(bool AcceptedTerms, string? TurnstileToken, string? DeviceFingerprint = null, string? CountryCode = null);
 
 public record SessionRecoverRequest(string RecoveryToken, string? TurnstileToken, string? DeviceFingerprint = null);
 

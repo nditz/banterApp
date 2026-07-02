@@ -1,5 +1,7 @@
-using BanterApp.Api.Integrations.SportsData.Dtos;
+using BanterApp.Api.Features.Ai;
+using BanterApp.Api.Features.Pundits;
 using BanterApp.Api.Integrations.FootballBanter;
+using BanterApp.Api.Integrations.SportsData.Dtos;
 
 namespace BanterApp.Api.Integrations.Ai;
 
@@ -21,7 +23,8 @@ public enum VideoScriptDuration
 {
     Fifteen = 15,
     Thirty = 30,
-    Sixty = 60
+    Sixty = 60,
+    Ninety = 90
 }
 
 public interface IContentGenerator
@@ -56,6 +59,15 @@ public interface IContentGenerator
         VideoScriptFormat format,
         VideoScriptDuration duration,
         string context,
+        string? userId = null,
+        bool isAnonymous = false,
+        CancellationToken cancellationToken = default);
+
+    Task<string> GeneratePunditScriptAsync(
+        MatchScriptContext context,
+        PunditPersonaSeed persona,
+        string phase,
+        VideoScriptDuration duration,
         string? userId = null,
         bool isAnonymous = false,
         CancellationToken cancellationToken = default);

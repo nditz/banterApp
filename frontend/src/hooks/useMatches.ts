@@ -24,6 +24,27 @@ export function useMatches() {
   });
 }
 
+async function fetchMatchResults(): Promise<Match[]> {
+  try {
+    return await apiFetch<Match[]>("/api/matches/results");
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return mockMatches.filter(
+        (m) => m.homeScore != null && m.awayScore != null
+      );
+    }
+    throw error;
+  }
+}
+
+export function useMatchResults() {
+  return useQuery({
+    queryKey: ["matches", "results"],
+    queryFn: fetchMatchResults,
+    staleTime: 60_000,
+  });
+}
+
 export function useMatch(matchId: string) {
   return useQuery({
     queryKey: ["matches", matchId],

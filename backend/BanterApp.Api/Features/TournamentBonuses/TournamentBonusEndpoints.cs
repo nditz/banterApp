@@ -14,11 +14,104 @@ public static class TournamentBonusEndpoints
         var group = app.MapGroup("/api/tournament-bonuses").WithTags("Tournament Bonuses");
 
         group.MapGet("/", GetTournamentBonuses);
+        group.MapGet("/players", SearchPlayers);
         group.MapPut("/pick", SaveTournamentBonusPick)
             .RequireRateLimiting("write")
             .WithValidation<SaveTournamentBonusPickRequest>();
 
         return app;
+    }
+
+    private static async Task<IResult> SearchPlayers(
+        AppDbContext db,
+        IUserContext user,
+        PlayerDirectory directory,
+        HttpContext http,
+        string? query,
+        string? teamCode,
+        int? limit,
+        CancellationToken ct)
+    {
+        var guard = await SessionGuard.RequireActiveSessionAsync(user, http, db, ct);
+        if (guard is not null)
+        {
+            return guard;
+        }
+
+        var take = Math.Clamp(limit ?? 25, 1, 50);
+        var normalizedTeam = string.IsNullOrWhiteSpace(teamCode)
+            ? null
+            : teamCode.Trim().ToUpperInvariant();
+        var trimmedQuery = query?.Trim() ?? string.Empty;
+
+        // Live lineup names (real synced squads) merged with the curated directory so that
+        // both known stars and freshly-synced players are searchable.
+        var lineupQuery = db.LineupPlayers.AsNoTracking().AsQueryable();
+        if (normalizedTeam is not null)
+        {
+            lineupQuery = lineupQuery.Where(p => p.TeamCode == normalizedTeam);
+        }
+
+        if (trimmedQuery.Length > 0)
+        {
+            var loweredQuery = trimmedQuery.ToLower();
+            lineupQuery = lineupQuery.Where(p => p.PlayerName.ToLower().Contains(loweredQuery));
+        }
+
+        var lineupPlayers = await lineupQuery
+            .Select(p => new { p.PlayerName, p.TeamCode })
+            .Distinct()
+            .Take(200)
+            .ToListAsync(ct);
+
+        // Map team codes to display names (directory first, fall back to match team names).
+        var matchTeamNames = await db.Matches
+            .AsNoTracking()
+            .Where(m => m.TeamACode != "" || m.TeamBCode != "")
+            .SelectMany(m => new[]
+            {
+                new { Code = m.TeamACode, Name = m.TeamA },
+                new { Code = m.TeamBCode, Name = m.TeamB }
+            })
+            .Where(t => t.Code != "" && t.Code != "TBD")
+            .Distinct()
+            .ToListAsync(ct);
+
+        var teamNameMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var t in matchTeamNames)
+        {
+            teamNameMap[t.Code] = t.Name;
+        }
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var results = new List<TournamentBonusPlayerOption>();
+
+        foreach (var player in directory.Search(trimmedQuery, normalizedTeam, take))
+        {
+            var teamName = teamNameMap.GetValueOrDefault(player.TeamCode) ?? player.TeamName;
+            var key = $"{TournamentBonusScoringService.NormalizePlayerName(player.PlayerName)}|{player.TeamCode}";
+            if (seen.Add(key))
+            {
+                results.Add(new TournamentBonusPlayerOption(player.PlayerName, player.TeamCode, teamName));
+            }
+        }
+
+        foreach (var player in lineupPlayers)
+        {
+            var key = $"{TournamentBonusScoringService.NormalizePlayerName(player.PlayerName)}|{player.TeamCode}";
+            if (seen.Add(key))
+            {
+                var teamName = teamNameMap.GetValueOrDefault(player.TeamCode)
+                    ?? directory.GetTeamName(player.TeamCode)
+                    ?? player.TeamCode;
+                results.Add(new TournamentBonusPlayerOption(player.PlayerName, player.TeamCode, teamName));
+            }
+        }
+
+        // Directory (relevance-ranked) already leads; live-only players follow. Cap the merged set.
+        var ordered = results.Take(take).ToList();
+
+        return Results.Ok(new TournamentBonusPlayerSearchResponse(ordered));
     }
 
     private static async Task<IResult> GetTournamentBonuses(
@@ -226,6 +319,11 @@ public sealed record TournamentBonusCategoryInfo(
     TournamentBonusAwardResponse? OfficialResult);
 
 public sealed record TournamentBonusTeamOption(string Code, string Name);
+
+public sealed record TournamentBonusPlayerOption(string Name, string TeamCode, string TeamName);
+
+public sealed record TournamentBonusPlayerSearchResponse(
+    IReadOnlyList<TournamentBonusPlayerOption> Players);
 
 public sealed record TournamentBonusStatusResponse(
     bool IsEligible,

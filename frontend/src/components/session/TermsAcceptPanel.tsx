@@ -17,6 +17,8 @@ import { useAcceptTerms, useRecoverSession } from "@/hooks/useSession";
 import { getApiErrorMessage } from "@/lib/api";
 import { BRAND } from "@/lib/brand";
 
+import { COUNTRIES, setCountryCode } from "@/lib/country";
+
 import { getStoredRecoveryToken } from "@/lib/session";
 
 import { Button } from "@/components/ui/button";
@@ -47,6 +49,8 @@ export function TermsAcceptPanel({ variant = "inline", className }: TermsAcceptP
 
   const [agreed, setAgreed] = useState(false);
 
+  const [country, setCountry] = useState("");
+
   const [showRecover, setShowRecover] = useState(false);
 
   const [recoveryInput, setRecoveryInput] = useState(getStoredRecoveryToken() ?? "");
@@ -63,7 +67,11 @@ export function TermsAcceptPanel({ variant = "inline", className }: TermsAcceptP
 
     try {
 
-      await acceptTerms.mutateAsync(turnstileToken);
+      const chosen = country.trim() || null;
+
+      setCountryCode(chosen);
+
+      await acceptTerms.mutateAsync({ turnstileToken, countryCode: chosen });
 
     } catch (err) {
 
@@ -274,6 +282,50 @@ export function TermsAcceptPanel({ variant = "inline", className }: TermsAcceptP
         </span>
 
       </label>
+
+
+
+      <div className="mt-3">
+
+        <label htmlFor="country-select" className="text-xs font-medium text-foreground">
+
+          Country (optional)
+
+        </label>
+
+        <select
+
+          id="country-select"
+
+          value={country}
+
+          onChange={(e) => setCountry(e.target.value)}
+
+          className="mt-1 h-9 w-full rounded-md border border-border bg-card px-2 text-sm text-foreground"
+
+        >
+
+          <option value="">No country — Global league only</option>
+
+          {COUNTRIES.map((c) => (
+
+            <option key={c.code} value={c.code}>
+
+              {c.name}
+
+            </option>
+
+          ))}
+
+        </select>
+
+        <p className="mt-1 text-[11px] text-muted-foreground">
+
+          Pick your country to join its league too. Leave blank to just play the Global league.
+
+        </p>
+
+      </div>
 
 
 

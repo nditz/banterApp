@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Barlow, Barlow_Condensed, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/layout/AppShell";
 import { ClientErrorReporter } from "@/components/ClientErrorReporter";
@@ -6,6 +7,7 @@ import { QueryProvider } from "@/components/providers/QueryProvider";
 import { OrganizationJsonLd, WebsiteJsonLd } from "@/components/JsonLd";
 import { BRAND } from "@/lib/brand";
 import { BASE_METADATA } from "@/lib/seo.config";
+import { ADSENSE_CLIENT, ADSENSE_ENABLED, ADSENSE_SCRIPT_SRC } from "@/lib/ads";
 import "./globals.css";
 
 const barlow = Barlow({
@@ -46,6 +48,9 @@ export const metadata: Metadata = {
     title: BRAND.name,
     statusBarStyle: "black-translucent",
   },
+  ...(ADSENSE_ENABLED
+    ? { other: { "google-adsense-account": ADSENSE_CLIENT } }
+    : {}),
 };
 
 export const viewport: Viewport = {
@@ -67,6 +72,14 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        {ADSENSE_ENABLED ? (
+          <Script
+            id="google-adsense"
+            src={ADSENSE_SCRIPT_SRC}
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+          />
+        ) : null}
         <OrganizationJsonLd />
         <WebsiteJsonLd />
         <QueryProvider>

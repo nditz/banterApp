@@ -57,7 +57,7 @@ export const mockFeedItems: FeedItem[] = [
     body: "You predicted Morocco to beat Spain. 92% of users disagreed. You were right.",
     media: {
       type: "gif",
-      url: "https://media.giphy.com/media/26gsjCZpPolPr3sBy/giphy.gif",
+      url: "/reactions/receipts-found.svg",
       alt: "Celebration reaction",
     },
     publishedAt: new Date(Date.now() - 3600000).toISOString(),
@@ -70,7 +70,7 @@ export const mockFeedItems: FeedItem[] = [
     body: "Your friend's 3-0 prediction aged like milk. Final score: 0-1.",
     media: {
       type: "gif",
-      url: "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
+      url: "/reactions/brave-but-wrong.svg",
       alt: "Reaction GIF - prediction failed",
     },
     publishedAt: new Date(Date.now() - 7200000).toISOString(),
@@ -108,7 +108,7 @@ export const mockFeedItems: FeedItem[] = [
     body: "Your prediction accuracy is currently being investigated by scientists.",
     media: {
       type: "gif",
-      url: "https://media.giphy.com/media/ISOckXU5oKAE/giphy.gif",
+      url: "/reactions/prediction-fraud.svg",
       alt: "Skeptical reaction",
     },
     publishedAt: new Date(Date.now() - 21600000).toISOString(),

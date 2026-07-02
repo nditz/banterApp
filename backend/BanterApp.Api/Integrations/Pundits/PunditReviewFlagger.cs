@@ -23,15 +23,20 @@ public sealed class PunditReviewFlagger
             return true;
         }
 
+        // Always review when we can't attribute the take to a named pundit.
         if (string.IsNullOrWhiteSpace(punditName) ||
             string.Equals(punditName, "Unknown", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
+        // Paraphrases: only auto-publish when allowed AND confidence is high enough.
         if (!opinion.IsDirectQuote)
         {
-            return true;
+            if (!_options.AllowParaphrase || opinion.Confidence < _options.AutoApproveConfidence)
+            {
+                return true;
+            }
         }
 
         if (sourceTextLength < _options.MinSourceTextLength)
@@ -49,7 +54,9 @@ public sealed class PunditReviewFlagger
             return true;
         }
 
-        if (string.Equals(opinion.PredictionType, "general_opinion", StringComparison.OrdinalIgnoreCase))
+        // "general_opinion" takes are optionally gated behind review.
+        if (_options.FlagGeneralOpinion &&
+            string.Equals(opinion.PredictionType, "general_opinion", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }

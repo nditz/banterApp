@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { ADSENSE_CLIENT, ADSENSE_ENABLED, resolveAdSlotId } from "@/lib/ads";
 
 type AdPlacement = "sidebar" | "feed" | "inline" | "skyscraper";
 
@@ -20,9 +21,19 @@ const placementLabels: Record<AdPlacement, string> = {
   skyscraper: "Skyscraper Ad",
 };
 
+declare global {
+  interface Window {
+    adsbygoogle?: unknown[];
+  }
+}
+
 export function AdSlot({ placement, className, slotId, fill = false }: AdSlotProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
+  const pushedRef = useRef(false);
+
+  const adUnitId = resolveAdSlotId(slotId);
+  const isLiveAd = ADSENSE_ENABLED && Boolean(adUnitId);
 
   useEffect(() => {
     const element = ref.current;
@@ -42,11 +53,22 @@ export function AdSlot({ placement, className, slotId, fill = false }: AdSlotPro
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!visible || !isLiveAd || pushedRef.current) return;
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+      pushedRef.current = true;
+    } catch {
+      // AdSense not ready (e.g. blocked or offline) — ignore.
+    }
+  }, [visible, isLiveAd]);
+
   return (
     <div
       ref={ref}
       className={cn(
-        "flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/40 text-center text-xs text-muted-foreground",
+        "flex items-center justify-center rounded-lg text-center text-xs text-muted-foreground",
+        !isLiveAd && "border border-dashed border-border bg-muted/40",
         !fill && "min-h-[90px]",
         placement === "sidebar" && !fill && "min-h-[250px]",
         placement === "skyscraper" && !fill && "min-h-[600px]",
@@ -60,7 +82,16 @@ export function AdSlot({ placement, className, slotId, fill = false }: AdSlotPro
       data-ad-slot={slotId ?? `banter-${placement}`}
       data-ad-loaded={visible ? "true" : "false"}
     >
-      {visible ? (
+      {isLiveAd && visible ? (
+        <ins
+          className="adsbygoogle"
+          style={{ display: "block", width: "100%", height: "100%" }}
+          data-ad-client={ADSENSE_CLIENT}
+          data-ad-slot={adUnitId}
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        />
+      ) : visible ? (
         <div className="px-4 py-2">
           <p className="font-medium text-muted-foreground/80">AdSense Placeholder</p>
           <p className="mt-1 text-[10px] uppercase tracking-wide">

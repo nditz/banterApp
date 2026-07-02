@@ -1,6 +1,7 @@
 using BanterApp.Api.Data;
 using BanterApp.Api.Features.Feed;
 using BanterApp.Api.Integrations.FootballBanter;
+using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Services;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,7 @@ public sealed class FeedBanterEnrichmentJob
 
     private readonly AppDbContext _db;
     private readonly IFootballBanterEngine _banterEngine;
+    private readonly ReactionMediaResolver _reactionMedia;
     private readonly AiOptions _aiOptions;
     private readonly BackgroundJobsOptions _jobOptions;
     private readonly IApplicationErrorLogger _errorLogger;
@@ -32,6 +34,7 @@ public sealed class FeedBanterEnrichmentJob
     public FeedBanterEnrichmentJob(
         AppDbContext db,
         IFootballBanterEngine banterEngine,
+        ReactionMediaResolver reactionMedia,
         IOptions<AiOptions> aiOptions,
         IOptions<BackgroundJobsOptions> jobOptions,
         IApplicationErrorLogger errorLogger,
@@ -39,6 +42,7 @@ public sealed class FeedBanterEnrichmentJob
     {
         _db = db;
         _banterEngine = banterEngine;
+        _reactionMedia = reactionMedia;
         _aiOptions = aiOptions.Value;
         _jobOptions = jobOptions.Value;
         _errorLogger = errorLogger;
@@ -130,10 +134,17 @@ public sealed class FeedBanterEnrichmentJob
             var body = BuildFeedBody(output);
             item.Title = FeedBanterFormat.Mark(output.Headline);
             item.Summary = FeedBanterFormat.Mark(body);
-            item.ImageUrl = FeedGifCatalog.ResolveGifUrl(
-                FootballBanterGifMoodResolver.Resolve(output.GifSuggestions, item.Category),
+
+            var mood = FootballBanterGifMoodResolver.Resolve(
+                output.GifSuggestions,
                 ResolveFallbackMood(item.Category));
-            item.MediaType = "gif";
+            var media = await _reactionMedia.ResolveAsync(
+                output.GifSuggestions,
+                mood,
+                item.Id.GetHashCode(),
+                cancellationToken);
+            item.ImageUrl = media.Url;
+            item.MediaType = media.Type;
             processed++;
         }
 

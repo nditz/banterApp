@@ -1,37 +1,108 @@
 namespace BanterApp.Api.Features.Feed;
 
-/// <summary>Curated football-reaction GIFs keyed by ChatGPT mood tags.</summary>
+/// <summary>
+/// Curated football-reaction stickers keyed by ChatGPT mood tags. Each mood maps to a
+/// pool of assets so cards with the same mood no longer all share one image.
+/// Uses bundled local stickers (served by the frontend from <c>/reactions</c>) instead of
+/// external Giphy links, which return 404 once the upstream media IDs are retired.
+/// </summary>
 public static class FeedGifCatalog
 {
-    private static readonly Dictionary<string, string> MoodToUrl = new(StringComparer.OrdinalIgnoreCase)
+    // Local reaction stickers (frontend /public/reactions), reused across mood pools for variety.
+    private const string Celebrate = "/reactions/receipts-found.svg";
+    private const string Hype = "/reactions/locked-in.svg";
+    private const string Debate = "/reactions/against-grain.svg";
+    private const string Shock = "/reactions/chaos-pick.svg";
+    private const string Facepalm = "/reactions/prediction-fraud.svg";
+    private const string Roast = "/reactions/brave-but-wrong.svg";
+    private const string Trophy = "/reactions/script-writer.svg";
+    private const string News = "/reactions/smart-choice.svg";
+    private const string Pundit = "/reactions/playing-safe.svg";
+
+    private const string FallbackMood = "news";
+
+    private static readonly Dictionary<string, string[]> MoodToUrls = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["celebrate"] = "https://media.giphy.com/media/26gsjCZpPolPr3sBy/giphy.gif",
-        ["win"] = "https://media.giphy.com/media/26gsjCZpPolPr3sBy/giphy.gif",
-        ["hype"] = "https://media.giphy.com/media/l0HlBO7eyXzSZkJri/giphy.gif",
-        ["debate"] = "https://media.giphy.com/media/3o7TKSjRrfIPjeiVy/giphy.gif",
-        ["shock"] = "https://media.giphy.com/media/3o6Zt481isNVkbQIhr/giphy.gif",
-        ["chaos"] = "https://media.giphy.com/media/3o6Zt481isNVkbQIhr/giphy.gif",
-        ["facepalm"] = "https://media.giphy.com/media/ISOckXU5oKAE/giphy.gif",
-        ["miss"] = "https://media.giphy.com/media/ISOckXU5oKAE/giphy.gif",
-        ["roast"] = "https://media.giphy.com/media/3o6Zt8rCfNXzYvNj2E/giphy.gif",
-        ["trophy"] = "https://media.giphy.com/media/3o6Zt6MLCHB0UiZ48I/giphy.gif",
-        ["news"] = "https://media.giphy.com/media/26BRuo6sGiljlMz4s/giphy.gif",
-        ["pundit"] = "https://media.giphy.com/media/3o7aD2saQq3B5iyTFS/giphy.gif",
-        ["cooked"] = "https://media.giphy.com/media/l0HlBO7eyXzSZkJri/giphy.gif",
-        ["ratio"] = "https://media.giphy.com/media/3o6Zt8rCfNXzYvNj2E/giphy.gif",
-        ["delulu"] = "https://media.giphy.com/media/3o7TKSjRrfIPjeiVy/giphy.gif",
-        ["maincharacter"] = "https://media.giphy.com/media/l0HlBO7eyXzSZkJri/giphy.gif",
+        ["celebrate"] = new[] { Celebrate, Trophy, Hype },
+        ["win"] = new[] { Celebrate, Trophy },
+        ["hype"] = new[] { Hype, Celebrate, Shock },
+        ["debate"] = new[] { Debate, Pundit, Roast },
+        ["shock"] = new[] { Shock, Debate },
+        ["chaos"] = new[] { Shock, Roast, Hype },
+        ["facepalm"] = new[] { Facepalm, Roast },
+        ["miss"] = new[] { Facepalm, Roast },
+        ["roast"] = new[] { Roast, Facepalm, Debate },
+        ["trophy"] = new[] { Trophy, Celebrate },
+        ["news"] = new[] { News, Pundit, Debate },
+        ["pundit"] = new[] { Pundit, Debate, News, Roast },
+        ["cooked"] = new[] { Hype, Facepalm },
+        ["ratio"] = new[] { Roast, Debate },
+        ["delulu"] = new[] { Debate, Shock },
+        ["maincharacter"] = new[] { Hype, Celebrate },
     };
 
-    public static string ResolveGifUrl(string? mood, string fallbackMood = "news")
+    /// <summary>Picks a random URL from the mood pool (used at write time for variety).</summary>
+    public static string ResolveGifUrl(string? mood, string fallbackMood = FallbackMood) =>
+        Pick(GetPool(mood, fallbackMood), Random.Shared.Next());
+
+    /// <summary>Picks a stable URL from the mood pool for a given seed (same card -> same GIF).</summary>
+    public static string ResolveGifUrl(string? mood, int seed, string fallbackMood = FallbackMood) =>
+        Pick(GetPool(mood, fallbackMood), seed);
+
+    /// <summary>
+    /// Given a URL already used in the feed, returns a different URL from the same mood
+    /// pool that is not in <paramref name="usedUrls"/>. Falls back to the original URL.
+    /// </summary>
+    public static string ResolveAlternate(string currentUrl, ISet<string> usedUrls)
     {
-        if (!string.IsNullOrWhiteSpace(mood) && MoodToUrl.TryGetValue(mood.Trim(), out var url))
+        foreach (var pool in MoodToUrls.Values)
         {
-            return url;
+            if (Array.IndexOf(pool, currentUrl) < 0)
+            {
+                continue;
+            }
+
+            foreach (var candidate in pool)
+            {
+                if (!usedUrls.Contains(candidate))
+                {
+                    return candidate;
+                }
+            }
         }
 
-        return MoodToUrl.GetValueOrDefault(fallbackMood, MoodToUrl["news"]);
+        return currentUrl;
     }
 
-    public static IReadOnlyCollection<string> ValidMoods => MoodToUrl.Keys;
+    private static string[] GetPool(string? mood, string fallbackMood)
+    {
+        if (!string.IsNullOrWhiteSpace(mood) &&
+            MoodToUrls.TryGetValue(mood.Trim(), out var urls) &&
+            urls.Length > 0)
+        {
+            return urls;
+        }
+
+        if (!string.IsNullOrWhiteSpace(fallbackMood) &&
+            MoodToUrls.TryGetValue(fallbackMood.Trim(), out var fallback) &&
+            fallback.Length > 0)
+        {
+            return fallback;
+        }
+
+        return MoodToUrls[FallbackMood];
+    }
+
+    private static string Pick(string[] pool, int seed)
+    {
+        if (pool.Length == 1)
+        {
+            return pool[0];
+        }
+
+        var index = (int)((uint)seed % (uint)pool.Length);
+        return pool[index];
+    }
+
+    public static IReadOnlyCollection<string> ValidMoods => MoodToUrls.Keys;
 }

@@ -201,7 +201,8 @@ public static class LeagueEndpoints
         var hasSession = user.IsAuthenticated || user.IsAnonymous;
         if (hasSession)
         {
-            await SystemLeagueService.EnsureSystemLeaguesAsync(db, user, normalizedCountry, ct);
+            // Enroll in Global always; keep a Country league only if the user chose one at consent.
+            await SystemLeagueService.EnsureSystemLeaguesForSessionAsync(db, user, ct);
         }
 
         await db.SaveChangesAsync(ct);

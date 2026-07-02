@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { KeyRound, LogIn, Menu, Shield, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { ChevronDown, KeyRound, LogIn, LogOut, Menu, Shield, User, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { TermsEntertainmentNotice } from "@/components/legal/TermsOfUseContent";
 import { SessionKeyRestore } from "@/components/session/SessionKeyRestore";
@@ -17,8 +18,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useSession } from "@/hooks/useSession";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { BRAND } from "@/lib/brand";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -37,17 +40,42 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [mobileMenuPath, setMobileMenuPath] = useState<string | null>(null);
   const [restoreOpenPath, setRestoreOpenPath] = useState<string | null>(null);
   const [restoreSheetPath, setRestoreSheetPath] = useState<string | null>(null);
+  const [accountOpenPath, setAccountOpenPath] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
   const mobileMenuOpen = mobileMenuPath === pathname;
   const restoreOpen = restoreOpenPath === pathname;
   const restoreSheetOpen = restoreSheetPath === pathname;
+  const accountOpen = accountOpenPath === pathname;
   const restoreRef = useRef<HTMLDivElement>(null);
+  const accountRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
+  const { email } = useSupabaseUser();
+  const isAuthenticated = session?.authenticated ?? false;
   const isAdminRoute = pathname.startsWith("/admin");
   const isAuthRoute = pathname.startsWith("/auth");
   const mobileMenuId = "app-mobile-menu";
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      const supabase = createClient();
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+      await queryClient.invalidateQueries({ queryKey: ["session"] });
+      setMobileMenuPath(null);
+      setAccountOpenPath(null);
+      router.push("/");
+      router.refresh();
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   useEffect(() => {
     if (!restoreOpen) return;
@@ -59,6 +87,17 @@ export function AppShell({ children }: AppShellProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [restoreOpen]);
+
+  useEffect(() => {
+    if (!accountOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(event.target as Node)) {
+        setAccountOpenPath(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [accountOpen]);
 
   if (isAdminRoute) {
     return <>{children}</>;
@@ -141,7 +180,7 @@ export function AppShell({ children }: AppShellProps) {
           </nav>
 
           <div className="flex items-center gap-2">
-            {!session?.authenticated && (
+            {!isAuthenticated && (
               <>
                 <Button
                   variant="ghost"
@@ -173,26 +212,88 @@ export function AppShell({ children }: AppShellProps) {
               </>
             )}
 
-            <Link
-              href="/auth/login"
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "sm" }),
-                "h-8 min-w-8 px-2 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 hover:text-white sm:px-3"
-              )}
-              aria-label="Log in"
-            >
-              <LogIn className="size-4 sm:hidden" aria-hidden />
-              <span className="hidden sm:inline">Log in</span>
-            </Link>
-            <Link
-              href="/auth/register"
-              className={cn(
-                buttonVariants({ size: "sm" }),
-                "btn-tournament h-8 px-3 text-xs sm:px-4"
-              )}
-            >
-              Join free
-            </Link>
+            {isAuthenticated ? (
+              <div className="relative" ref={accountRef}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setAccountOpenPath((current) =>
+                      current === pathname ? null : pathname
+                    )
+                  }
+                  className="h-8 gap-1.5 px-2 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 hover:text-white sm:px-3"
+                  aria-label="Account menu"
+                  aria-expanded={accountOpen}
+                  aria-haspopup="menu"
+                >
+                  <User className="size-4" aria-hidden />
+                  <span className="hidden max-w-[10rem] truncate normal-case tracking-normal sm:inline">
+                    {email ?? "Account"}
+                  </span>
+                  <ChevronDown className="hidden size-3.5 sm:inline" aria-hidden />
+                </Button>
+                {accountOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-full z-50 mt-1.5 w-[min(16rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg"
+                  >
+                    <div className="border-b border-border px-3 py-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Signed in as
+                      </p>
+                      <p className="mt-0.5 truncate text-sm font-medium">
+                        {email ?? "Your account"}
+                      </p>
+                    </div>
+                    {session?.isPlatformAdmin && (
+                      <Link
+                        href="/admin"
+                        role="menuitem"
+                        onClick={() => setAccountOpenPath(null)}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-sm font-medium text-amber-600 hover:bg-muted"
+                      >
+                        <Shield className="size-4" aria-hidden />
+                        Admin
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleLogout}
+                      disabled={loggingOut}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-sm font-medium hover:bg-muted disabled:opacity-60"
+                    >
+                      <LogOut className="size-4" aria-hidden />
+                      {loggingOut ? "Logging out..." : "Log out"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link
+                  href="/auth/login"
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "sm" }),
+                    "h-8 min-w-8 px-2 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 hover:text-white sm:px-3"
+                  )}
+                  aria-label="Log in"
+                >
+                  <LogIn className="size-4 sm:hidden" aria-hidden />
+                  <span className="hidden sm:inline">Log in</span>
+                </Link>
+                <Link
+                  href="/auth/register"
+                  className={cn(
+                    buttonVariants({ size: "sm" }),
+                    "btn-tournament h-8 px-3 text-xs sm:px-4"
+                  )}
+                >
+                  Join free
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
@@ -238,7 +339,7 @@ export function AppShell({ children }: AppShellProps) {
                   Admin
                 </Link>
               )}
-              {!session?.authenticated && (
+              {!isAuthenticated ? (
                 <div className="mt-2 border-t border-white/10 pt-2">
                   {restoreOpen ? (
                     <SessionKeyRestore
@@ -257,6 +358,23 @@ export function AppShell({ children }: AppShellProps) {
                       Restore session with key
                     </button>
                   )}
+                </div>
+              ) : (
+                <div className="mt-2 border-t border-white/10 pt-2">
+                  {email && (
+                    <p className="truncate px-3 pb-1.5 text-[11px] font-medium normal-case tracking-normal text-white/60">
+                      {email}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    className="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-white/75 hover:bg-white/10 disabled:opacity-60"
+                  >
+                    <LogOut className="size-4" aria-hidden />
+                    {loggingOut ? "Logging out..." : "Log out"}
+                  </button>
                 </div>
               )}
             </div>

@@ -1,18 +1,22 @@
 import type { FeedItemType, FeedMedia } from "@/lib/types";
 import type { ReactionKey } from "@/reactions/reactionContent";
 
-/** Reaction GIFs for banter feed items — used when API items lack media. */
+/**
+ * Reaction stickers for banter feed items — used when API items lack media.
+ * These are bundled local assets (served from `/public/reactions`) rather than external
+ * Giphy links, which 404 once the upstream media IDs rot.
+ */
 export const BANTER_REACTION_GIFS: Partial<Record<ReactionKey, string>> = {
-  smart_choice: "https://media.giphy.com/media/3o7TKSjRrfIPjeiVy/giphy.gif",
-  playing_safe: "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
-  against_grain: "https://media.giphy.com/media/26BRuo6sGiljlMz4s/giphy.gif",
-  chaos_pick: "https://media.giphy.com/media/3o6Zt481isNVkbQIhr/giphy.gif",
-  locked_in: "https://media.giphy.com/media/l0HlBO7eyXzSZkJri/giphy.gif",
-  delulu_vision: "https://media.giphy.com/media/3o7aD2saQq3B5iyTFS/giphy.gif",
-  receipts_found: "https://media.giphy.com/media/26gsjCZpPolPr3sBy/giphy.gif",
-  prediction_fraud: "https://media.giphy.com/media/ISOckXU5oKAE/giphy.gif",
-  brave_but_wrong: "https://media.giphy.com/media/3o6Zt8rCfNXzYvNj2E/giphy.gif",
-  script_writer: "https://media.giphy.com/media/3o6Zt6MLCHB0UiZ48I/giphy.gif",
+  smart_choice: "/reactions/smart-choice.svg",
+  playing_safe: "/reactions/playing-safe.svg",
+  against_grain: "/reactions/against-grain.svg",
+  chaos_pick: "/reactions/chaos-pick.svg",
+  locked_in: "/reactions/locked-in.svg",
+  delulu_vision: "/reactions/delulu-vision.svg",
+  receipts_found: "/reactions/receipts-found.svg",
+  prediction_fraud: "/reactions/prediction-fraud.svg",
+  brave_but_wrong: "/reactions/brave-but-wrong.svg",
+  script_writer: "/reactions/script-writer.svg",
 };
 
 /** Default media when feed items arrive without images. */
@@ -24,7 +28,7 @@ export const DEFAULT_FEED_MEDIA: Partial<Record<FeedItemType, FeedMedia>> = {
   },
   meme: {
     type: "gif",
-    url: "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
+    url: "/reactions/chaos-pick.svg",
     alt: "Meme reaction",
   },
   leaderboard: {
@@ -56,6 +60,17 @@ export function getBanterMediaForReaction(
   return { type: "image", url: assetUrl, alt: "Banter reaction" };
 }
 
+/** Local sticker used to replace any retired external Giphy URL. */
+const GIPHY_FALLBACK_STICKER = "/reactions/against-grain.svg";
+
+/**
+ * Neutralizes retired Giphy links (which 404) that may still live on persisted feed items,
+ * so the browser never requests a dead URL. Returns a local sticker in their place.
+ */
+export function sanitizeMediaUrl(url: string): string {
+  return /giphy\.com/i.test(url) ? GIPHY_FALLBACK_STICKER : url;
+}
+
 export function resolveFeedMedia(item: {
   type: FeedItemType;
   title: string;
@@ -63,11 +78,11 @@ export function resolveFeedMedia(item: {
   media?: FeedMedia;
 }): FeedMedia | undefined {
   if (item.media?.url) {
-    return item.media;
+    return { ...item.media, url: sanitizeMediaUrl(item.media.url) };
   }
 
   if (item.imageUrl) {
-    return { type: "image", url: item.imageUrl, alt: item.title };
+    return { type: "image", url: sanitizeMediaUrl(item.imageUrl), alt: item.title };
   }
 
   return DEFAULT_FEED_MEDIA[item.type];

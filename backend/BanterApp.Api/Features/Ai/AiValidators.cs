@@ -60,3 +60,23 @@ public sealed class BroadcastScriptRequestValidator : AbstractValidator<Broadcas
         });
     }
 }
+
+public sealed class PunditScriptRequestValidator : AbstractValidator<PunditScriptRequest>
+{
+    private static readonly HashSet<string> ValidStyleSlugs =
+        Pundits.PunditPersonas.Defaults.Select(p => p.StyleSlug).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    public PunditScriptRequestValidator()
+    {
+        RuleFor(x => x.MatchId).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Phase)
+            .NotEmpty()
+            .Must(p => p is "pre_match" or "post_match")
+            .WithMessage("Phase must be 'pre_match' or 'post_match'.");
+        RuleFor(x => x.StyleSlug)
+            .NotEmpty()
+            .Must(s => ValidStyleSlugs.Contains(s))
+            .WithMessage("StyleSlug must be a known pundit persona style.");
+        RuleFor(x => x.Duration).IsInEnum();
+    }
+}

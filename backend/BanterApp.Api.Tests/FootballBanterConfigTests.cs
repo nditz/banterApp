@@ -198,6 +198,16 @@ public class FootballBanterEngineTests
         public Task<string> GenerateVideoScriptAsync(Integrations.Ai.VideoScriptFormat format, Integrations.Ai.VideoScriptDuration duration, string context, string? userId = null, bool isAnonymous = false, CancellationToken cancellationToken = default) =>
             Task.FromResult(string.Empty);
 
+        public Task<string> GeneratePunditScriptAsync(
+            Features.Ai.MatchScriptContext context,
+            Features.Pundits.PunditPersonaSeed persona,
+            string phase,
+            Integrations.Ai.VideoScriptDuration duration,
+            string? userId = null,
+            bool isAnonymous = false,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(string.Empty);
+
         public Task<string> GenerateNewsReactionAsync(string headline, string summary, string? category = null, CancellationToken cancellationToken = default) =>
             Task.FromResult(string.Empty);
 

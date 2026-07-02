@@ -31,6 +31,9 @@ public static class AiEndpoints
         group.MapPost("/broadcast-script", GenerateBroadcastScript)
             .RequireRateLimiting(RateLimitPolicies.OpenAiGenerate)
             .WithValidation<BroadcastScriptRequest>();
+        group.MapPost("/pundit-script", GeneratePunditScript)
+            .RequireRateLimiting(RateLimitPolicies.OpenAiGenerate)
+            .WithValidation<PunditScriptRequest>();
 
         return app;
     }
@@ -207,6 +210,54 @@ public static class AiEndpoints
             $"broadcast:{request.Phase}:{request.Picks.Count} picks", content, ct);
 
         return Results.Ok(new AiGenerationResponse(content, "broadcast-script", remaining));
+    }
+
+    private static async Task<IResult> GeneratePunditScript(
+        PunditScriptRequest request,
+        AppDbContext db,
+        IUserContext user,
+        IContentGenerator generator,
+        IProviderUsageGuard usageGuard,
+        MatchScriptContextBuilder contextBuilder,
+        CancellationToken ct)
+    {
+        if (!await usageGuard.CanInvokeAsync("openai", ct: ct))
+        {
+            return Results.Problem("AI service temporarily unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        var (allowed, remaining, error) = await CheckAnonymousLimitAsync(db, user, ct);
+        if (!allowed)
+        {
+            return Results.Problem(error, statusCode: StatusCodes.Status429TooManyRequests);
+        }
+
+        var context = await contextBuilder.BuildAsync(request.MatchId, request.Phase, ct);
+        if (context is null)
+        {
+            return Results.NotFound(new { error = "Match not found." });
+        }
+
+        var persona = Pundits.PunditPersonas.FindByStyleSlug(request.StyleSlug);
+        if (persona is null)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["styleSlug"] = ["Unknown pundit persona style."]
+            });
+        }
+
+        var userKey = ResolveUserKey(user);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var content = await generator.GeneratePunditScriptAsync(
+            context, persona, request.Phase, request.Duration, userKey, isAnonymous: false, ct);
+        sw.Stop();
+
+        await usageGuard.RecordSuccessAsync("openai", latencyMs: (int)sw.ElapsedMilliseconds, ct: ct);
+        await RecordGenerationAsync(db, user, GeneratedContentType.VideoScript,
+            $"pundit:{request.Phase}:{request.MatchId}:{request.StyleSlug}", content, ct);
+
+        return Results.Ok(new AiGenerationResponse(content, "pundit_script", remaining));
     }
 
     private static async Task<(bool Allowed, int? Remaining, string? Error)> CheckAnonymousLimitAsync(

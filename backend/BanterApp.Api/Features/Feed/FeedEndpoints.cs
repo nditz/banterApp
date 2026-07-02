@@ -65,10 +65,9 @@ public static class FeedEndpoints
 
         var (feedMode, personal) = await PersonalizedFeedService.BuildAsync(db, user, 20, ct);
         var newsItems = await LoadNewsItemsAsync(db, news, 100, ct);
-        var merged = personal
+        var merged = DedupeAndVaryMedia(personal
             .Concat(newsItems)
-            .OrderByDescending(i => i.PublishedAt)
-            .ToList();
+            .OrderByDescending(i => i.PublishedAt));
 
         var pageItems = merged.Skip(skip).Take(size).ToList();
         http.Response.Headers.CacheControl = "public, max-age=60";
@@ -91,11 +90,10 @@ public static class FeedEndpoints
 
         var (feedMode, personal) = await PersonalizedFeedService.BuildAsync(db, user, 10, ct);
         var newsItems = await LoadNewsItemsAsync(db, news, 100, ct);
-        var merged = personal
+        var merged = DedupeAndVaryMedia(personal
             .Concat(newsItems)
             .OrderByDescending(i => i.Likes ?? 0)
-            .ThenByDescending(i => i.PublishedAt)
-            .ToList();
+            .ThenByDescending(i => i.PublishedAt));
 
         var pageItems = merged.Skip(skip).Take(size).ToList();
         http.Response.Headers.CacheControl = "public, max-age=60";
@@ -125,6 +123,56 @@ public static class FeedEndpoints
             .OrderByDescending(a => a.PublishedAt)
             .Select(a => MapFromDto(a))
             .ToList();
+    }
+
+    /// <summary>
+    /// Removes duplicate feed items (same Id can be added by both the personalized
+    /// builder and the persisted news list) and, for GIFs, swaps a repeated media URL
+    /// to an alternate from the same mood pool so the feed does not show the same GIF twice.
+    /// </summary>
+    private static List<FeedItemResponse> DedupeAndVaryMedia(IEnumerable<FeedItemResponse> items)
+    {
+        var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var usedMedia = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<FeedItemResponse>();
+
+        foreach (var item in items)
+        {
+            if (!seenIds.Add(item.Id))
+            {
+                continue;
+            }
+
+            var current = item;
+            var url = current.Media?.Url;
+
+            if (!string.IsNullOrWhiteSpace(url) &&
+                string.Equals(current.Media!.Type, "gif", StringComparison.OrdinalIgnoreCase) &&
+                usedMedia.Contains(url))
+            {
+                var alternate = FeedGifCatalog.ResolveAlternate(url, usedMedia);
+                if (!string.Equals(alternate, url, StringComparison.Ordinal))
+                {
+                    current = current with
+                    {
+                        Media = current.Media with { Url = alternate },
+                        ImageUrl = string.Equals(current.ImageUrl, url, StringComparison.Ordinal)
+                            ? alternate
+                            : current.ImageUrl,
+                    };
+                    url = alternate;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                usedMedia.Add(url);
+            }
+
+            result.Add(current);
+        }
+
+        return result;
     }
 
     private static PaginatedFeedResponse BuildPage(

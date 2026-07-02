@@ -31,6 +31,12 @@ public sealed record BroadcastScriptRequest(
     List<BroadcastPick> Picks,
     string? Style = null);
 
+public sealed record PunditScriptRequest(
+    string MatchId,
+    string Phase,
+    string StyleSlug,
+    VideoScriptDuration Duration = VideoScriptDuration.Sixty);
+
 public sealed record AiGenerationResponse(
     string Content,
     string Type,

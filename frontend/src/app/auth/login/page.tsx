@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [redirectTo] = useState(() => {
     if (typeof window === "undefined") return "/";
     const redirect = new URLSearchParams(window.location.search).get("redirect");
@@ -62,6 +64,9 @@ export default function LoginPage() {
     } catch {
       // Non-blocking — session cookies are set.
     }
+
+    // Refresh the cached session so the app immediately reflects the logged-in state.
+    await queryClient.invalidateQueries({ queryKey: ["session"] });
 
     router.push(redirectTo.startsWith("/") ? redirectTo : "/");
     router.refresh();

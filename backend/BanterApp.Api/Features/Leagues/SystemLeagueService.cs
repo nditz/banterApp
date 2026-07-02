@@ -41,6 +41,17 @@ public static class SystemLeagueService
         return code.Trim().ToUpperInvariant();
     }
 
+    /// <summary>Returns a normalized 2-letter code, or null when none/invalid (no GB default).</summary>
+    public static string? NormalizeCountryCodeOrNull(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code) || code.Trim().Length != 2)
+        {
+            return null;
+        }
+
+        return code.Trim().ToUpperInvariant();
+    }
+
     public static string CountryLeagueName(string countryCode) =>
         CountryNames.TryGetValue(countryCode, out var name)
             ? $"{name} Fans"
@@ -61,8 +72,9 @@ public static class SystemLeagueService
     }
 
     /// <summary>
-    /// Ensures global + country system leagues exist and the user is enrolled.
-    /// Persists browser-detected country on the user record.
+    /// Ensures the user is enrolled in the Global league, and — only when an explicit,
+    /// valid <paramref name="countryCode"/> is provided — also creates/joins that Country
+    /// league and persists the choice. A null/invalid code means Global only.
     /// </summary>
     public static async Task EnsureSystemLeaguesAsync(
         AppDbContext db,
@@ -75,16 +87,59 @@ public static class SystemLeagueService
             return;
         }
 
-        var normalizedCountry = NormalizeCountryCode(countryCode);
-        await PersistCountryCodeAsync(db, user, normalizedCountry, ct);
-
         var displayName = await ResolveDefaultDisplayNameAsync(db, user, ct);
 
         var global = await GetOrCreateGlobalLeagueAsync(db, ct);
         await EnsureMembershipAsync(db, global, user, displayName, ct);
 
+        var normalizedCountry = NormalizeCountryCodeOrNull(countryCode);
+        if (normalizedCountry is null)
+        {
+            return;
+        }
+
+        await PersistCountryCodeAsync(db, user, normalizedCountry, ct);
         var country = await GetOrCreateCountryLeagueAsync(db, normalizedCountry, ct);
         await EnsureMembershipAsync(db, country, user, displayName, ct);
+    }
+
+    /// <summary>
+    /// Enrollment for auto/refresh call sites (login sync, leagues list): joins Global and,
+    /// only if the user already chose a country previously, keeps their Country league.
+    /// Never derives a country league from a browser-locale header.
+    /// </summary>
+    public static async Task EnsureSystemLeaguesForSessionAsync(
+        AppDbContext db,
+        IUserContext user,
+        CancellationToken ct)
+    {
+        if (!user.IsAuthenticated && !user.IsAnonymous)
+        {
+            return;
+        }
+
+        var persisted = await GetPersistedCountryCodeAsync(db, user, ct);
+        await EnsureSystemLeaguesAsync(db, user, persisted, ct);
+    }
+
+    private static async Task<string?> GetPersistedCountryCodeAsync(
+        AppDbContext db,
+        IUserContext user,
+        CancellationToken ct)
+    {
+        if (user.IsAuthenticated && user.UserId.HasValue)
+        {
+            var registered = await db.Users.FindAsync([user.UserId.Value], ct);
+            return registered?.CountryCode;
+        }
+
+        if (user.AnonymousUserId.HasValue)
+        {
+            var anon = await db.AnonymousUsers.FindAsync([user.AnonymousUserId.Value], ct);
+            return anon?.CountryCode;
+        }
+
+        return null;
     }
 
     public static async Task<(int CustomUsed, int TotalUsed)> CountMembershipsAsync(

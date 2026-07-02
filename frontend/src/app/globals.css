@@ -918,6 +918,10 @@
     @apply border-l-[3px] border-l-pitch;
   }
 
+  .feed-accent-pundit {
+    @apply border-l-[3px] border-l-sky-400;
+  }
+
   .rank-gold {
     @apply bg-gold/12;
   }
