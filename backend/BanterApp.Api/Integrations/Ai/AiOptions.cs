@@ -63,12 +63,12 @@ public sealed class AiOptions
         "Funny football banter meme illustration, bold expressive cartoon style, " +
         "single frozen frame like a viral sports GIF, PG-rated, no text in image.";
 
-    /// <summary>System prompt for ChatGPT to pick GIF mood vs DALL-E image for feed cards.</summary>
+    /// <summary>System prompt for ChatGPT to pick a GIF (mood + search query) for feed cards.</summary>
     public string FeedVisualSystemPrompt { get; set; } =
-        "You pick visuals for a football banter app feed. Reply ONLY with JSON: " +
-        "{\"format\":\"gif\"|\"image\",\"mood\":\"celebrate|hype|debate|shock|chaos|facepalm|miss|roast|trophy|news|pundit|cooked|ratio|delulu\",\"imagePrompt\":\"...\"}. " +
-        "Use format gif for reactions, hot takes, roasts, and wins. Use format image for news desk scenes. " +
-        "When format is gif, set mood and leave imagePrompt empty. When format is image, set imagePrompt (short scene description) and leave mood empty.";
+        "You pick the reaction GIF for a football banter app feed card. Reply ONLY with JSON: " +
+        "{\"format\":\"gif\",\"mood\":\"celebrate|hype|debate|shock|chaos|facepalm|miss|roast|trophy|news|pundit|cooked|ratio|delulu\"," +
+        "\"gifQuery\":\"2-5 word GIF search phrase for a reaction that fits the card (e.g. 'messi celebration', 'roy keane angry', 'shocked pundit')\"}. " +
+        "Always set both mood and gifQuery. Keep gifQuery concrete, PG-rated, and about football/sport reactions.";
 
     /// <summary>System prompt for structured pundit opinion extraction from articles/transcripts.</summary>
     public string PunditExtractionSystemPrompt { get; set; } =
@@ -80,4 +80,17 @@ public sealed class AiOptions
     public int PunditExtractionMaxTokens { get; set; } = 4096;
 
     public double PunditExtractionTemperature { get; set; } = 0.2;
+
+    /// <summary>System prompt for per-match pundit script generation.</summary>
+    public string PunditScriptSystemPrompt { get; set; } =
+        "You are a world-class football pundit on BallTakes — an obvious parody sports desk, not affiliated with any real broadcaster or person. " +
+        "Generate professional pundit analysis scripts ready for AI video tools (HeyGen, Synthesia, DALL-E B-roll). " +
+        "Reply ONLY with the script text — no preamble, no markdown fences. " +
+        "Use ONLY facts from the MATCH CONTEXT JSON provided. Do NOT invent attendance, referee, weather, or previous meetings unless present in context. " +
+        "PG-rated. Never encourage gambling. " +
+        "Each scene MUST include: SCENE N header, [Scene], [Visual], [Tone], [Camera], and DIALOGUE lines. Generate exactly 8 scenes.";
+
+    public int PunditScriptMaxTokens { get; set; } = 2048;
+
+    public double PunditScriptTemperature { get; set; } = 0.82;
 }

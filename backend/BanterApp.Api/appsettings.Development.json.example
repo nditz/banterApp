@@ -45,6 +45,14 @@
       "World Cup group predictions"
     ]
   },
+  "ReactionGif": {
+    "Provider": "tenor",
+    "ApiKey": "",
+    "ClientKey": "banterapp",
+    "BaseUrl": "https://tenor.googleapis.com/v2",
+    "ContentFilter": "high",
+    "SearchLimit": 12
+  },
   "News": {
     "ApiKey": "",
     "RssFeedUrls": [

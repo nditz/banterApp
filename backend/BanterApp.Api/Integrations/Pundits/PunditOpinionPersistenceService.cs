@@ -2,6 +2,7 @@ using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Feed;
+using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.Pundits.Dtos;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,11 +12,16 @@ public sealed class PunditOpinionPersistenceService
 {
     private readonly AppDbContext _db;
     private readonly PunditReviewFlagger _reviewFlagger;
+    private readonly ReactionMediaResolver _reactionMedia;
 
-    public PunditOpinionPersistenceService(AppDbContext db, PunditReviewFlagger reviewFlagger)
+    public PunditOpinionPersistenceService(
+        AppDbContext db,
+        PunditReviewFlagger reviewFlagger,
+        ReactionMediaResolver reactionMedia)
     {
         _db = db;
         _reviewFlagger = reviewFlagger;
+        _reactionMedia = reactionMedia;
     }
 
     public async Task<int> PersistExtractionAsync(
@@ -126,7 +132,13 @@ public sealed class PunditOpinionPersistenceService
         }
 
         var feedItem = PunditOpinionFeedMapper.ToNewsFeedItem(opinion, pundit, item);
-        feedItem.ImageUrl = FeedGifCatalog.ResolveGifUrl("pundit");
+        var media = await _reactionMedia.ResolveAsync(
+            null,
+            "pundit",
+            feedItem.Id.GetHashCode(),
+            cancellationToken);
+        feedItem.ImageUrl = media.Url;
+        feedItem.MediaType = media.Type;
 
         var existing = await _db.NewsFeedItems.FindAsync([feedItem.Id], cancellationToken);
         if (existing is null)

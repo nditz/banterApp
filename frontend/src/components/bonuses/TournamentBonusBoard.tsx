@@ -16,6 +16,8 @@ import { TermsAcceptPanel } from "@/components/session/TermsAcceptPanel";
 import { useNeedsTerms } from "@/hooks/useNeedsTerms";
 import { TOURNAMENT_BONUS_ELIGIBILITY } from "@/lib/scoring-rules";
 import { cn } from "@/lib/utils";
+import { PlayerPickCombobox } from "@/components/bonuses/PlayerPickCombobox";
+import { TeamPickCombobox } from "@/components/bonuses/TeamPickCombobox";
 
 const difficultyTone: Record<string, string> = {
   Expert: "bg-flare/15 text-flare",
@@ -26,14 +28,12 @@ const difficultyTone: Record<string, string> = {
 function BonusCategoryCard({
   category,
   teams,
-  playerSuggestions,
   isLocked,
   canEdit,
   onSaved,
 }: {
   category: TournamentBonusCategoryInfo;
   teams: Array<{ code: string; name: string }>;
-  playerSuggestions: string[];
   isLocked: boolean;
   canEdit: boolean;
   onSaved: () => void;
@@ -72,6 +72,14 @@ function BonusCategoryCard({
   };
 
   const savedValue = category.pick?.pickValue;
+  const teamNameByCode = useMemo(
+    () => new Map(teams.map((t) => [t.code, t.name])),
+    [teams]
+  );
+  const savedDisplay =
+    savedValue && category.isTeamPick
+      ? teamNameByCode.get(savedValue) ?? savedValue
+      : savedValue;
   const hasOfficial = Boolean(category.officialResult);
   const isCorrect =
     hasOfficial &&
@@ -102,43 +110,26 @@ function BonusCategoryCard({
 
       <div className="mt-3 space-y-2">
         {category.isTeamPick ? (
-          <select
+          <TeamPickCombobox
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={setValue}
+            teams={teams}
             disabled={!canEdit || isLocked || savePick.isPending}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-            aria-label={`${category.label} team pick`}
-          >
-            <option value="">Select a team…</option>
-            {teams.map((team) => (
-              <option key={team.code} value={team.code}>
-                {team.name}
-              </option>
-            ))}
-          </select>
+            ariaLabel={`${category.label} team pick`}
+          />
         ) : (
-          <>
-            <input
-              type="text"
-              list={`players-${category.category}`}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              disabled={!canEdit || isLocked || savePick.isPending}
-              placeholder="Player name"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-              aria-label={`${category.label} player pick`}
-            />
-            <datalist id={`players-${category.category}`}>
-              {playerSuggestions.map((name) => (
-                <option key={name} value={name} />
-              ))}
-            </datalist>
-          </>
+          <PlayerPickCombobox
+            value={value}
+            onChange={setValue}
+            teams={teams}
+            disabled={!canEdit || isLocked || savePick.isPending}
+            ariaLabel={`${category.label} player pick`}
+          />
         )}
 
         {savedValue && (
           <p className="text-[11px] text-muted-foreground">
-            Saved: <span className="font-medium text-foreground">{savedValue}</span>
+            Saved: <span className="font-medium text-foreground">{savedDisplay}</span>
             {category.pick && category.pick.pointsAwarded > 0 && (
               <span className="ml-1 text-pitch">(+{category.pick.pointsAwarded} pts)</span>
             )}
@@ -247,7 +238,6 @@ export function TournamentBonusBoard({ embedded = false }: { embedded?: boolean 
                 key={category.category}
                 category={category}
                 teams={data.teams}
-                playerSuggestions={data.playerSuggestions}
                 isLocked={data.isLocked}
                 canEdit={data.canPick}
                 onSaved={() => {

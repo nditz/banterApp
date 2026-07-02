@@ -36,6 +36,7 @@ public static class ServiceCollectionExtensions
         services.Configure<YouTubeOptions>(configuration.GetSection(YouTubeOptions.SectionName));
         services.Configure<MediaIngestOptions>(configuration.GetSection(MediaIngestOptions.SectionName));
         services.Configure<PunditIngestOptions>(configuration.GetSection(PunditIngestOptions.SectionName));
+        services.Configure<ReactionGifOptions>(configuration.GetSection(ReactionGifOptions.SectionName));
 
         services.AddSingleton<IFootballBanterConfigProvider>(sp =>
         {
@@ -121,6 +122,20 @@ public static class ServiceCollectionExtensions
             services.TryAddSingleton<IContentGenerator, StubContentGenerator>();
             services.TryAddSingleton<IPunditOpinionExtractor, StubPunditOpinionExtractor>();
         }
+
+        // Reaction GIF provider: ChatGPT picks the reaction, Tenor supplies a live GIF.
+        // Falls back to the bundled local sticker repository when no API key is configured.
+        var reactionGifKey = configuration["ReactionGif:ApiKey"];
+        if (!string.IsNullOrWhiteSpace(reactionGifKey))
+        {
+            services.AddHttpClient<IReactionGifProvider, TenorGifProvider>();
+        }
+        else
+        {
+            services.TryAddSingleton<IReactionGifProvider, NullReactionGifProvider>();
+        }
+
+        services.AddScoped<ReactionMediaResolver>();
 
         services.AddScoped<PunditMediaItemService>();
         services.AddScoped<PunditReviewFlagger>();

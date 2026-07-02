@@ -13,6 +13,7 @@ public static class MatchEndpoints
         group.MapGet("/", GetAllMatches);
         group.MapGet("/upcoming", GetUpcomingMatches);
         group.MapGet("/results", GetMatchResults);
+        group.MapGet("/{matchId}", GetMatchById);
 
         return app;
     }
@@ -60,6 +61,42 @@ public static class MatchEndpoints
         }
 
         return Results.Ok(matches.Select(MapFromEntity));
+    }
+
+    private static async Task<IResult> GetMatchById(
+        string matchId,
+        AppDbContext db,
+        ISportsDataProvider sports,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(matchId))
+        {
+            return Results.BadRequest(new { error = "Match id is required." });
+        }
+
+        var entity = await db.Matches.FindAsync([matchId], ct);
+        if (entity is not null)
+        {
+            return Results.Ok(MapFromEntity(entity));
+        }
+
+        var upcoming = await sports.GetUpcomingFixturesAsync(ct);
+        var match = upcoming.FirstOrDefault(m =>
+            string.Equals(m.Id, matchId, StringComparison.OrdinalIgnoreCase));
+        if (match is not null)
+        {
+            return Results.Ok(MapFromDto(match));
+        }
+
+        var results = await sports.GetResultsAsync(ct);
+        match = results.FirstOrDefault(m =>
+            string.Equals(m.Id, matchId, StringComparison.OrdinalIgnoreCase));
+        if (match is not null)
+        {
+            return Results.Ok(MapFromDto(match));
+        }
+
+        return Results.NotFound(new { error = "Match not found." });
     }
 
     private static MatchResponse MapFromEntity(Data.Entities.Match m) =>

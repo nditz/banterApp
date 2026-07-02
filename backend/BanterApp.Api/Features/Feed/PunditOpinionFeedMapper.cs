@@ -31,7 +31,7 @@ public static class PunditOpinionFeedMapper
     public static FeedItemResponse ToFeedItem(PunditOpinion opinion, Pundit pundit, MediaItem item)
     {
         var publication = item.Publication ?? item.MediaSource?.Name ?? "Unknown outlet";
-        var media = FeedMediaMapper.FromGifMood("pundit", $"{pundit.Name} take");
+        var media = FeedMediaMapper.FromGifMood("pundit", $"{pundit.Name} take", opinion.Id.GetHashCode());
 
         return new FeedItemResponse(
             FeedItemId(opinion.Id),

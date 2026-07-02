@@ -52,7 +52,7 @@ const typeConfig = {
   pundit_quote: {
     icon: Megaphone,
     label: "Pundit take",
-    className: "feed-accent-news",
+    className: "feed-accent-pundit",
   },
 };
 
@@ -78,16 +78,21 @@ export function FeedItemCard({ item }: FeedItemProps) {
   const media = resolveFeedMedia(item);
   const sourceHref = safeExternalHref(item.sourceUrl);
 
+  // Distinguish a real (attributed) pundit quote from AI-generated banter.
   const contentLabelText =
     item.contentLabel === "direct_quote"
-      ? "Direct quote"
+      ? item.type === "pundit_quote"
+        ? "Pundit quote"
+        : "Direct quote"
       : item.contentLabel === "paraphrase"
-        ? "Paraphrase"
+        ? "Pundit (paraphrased)"
         : item.contentLabel === "ai_summary"
-          ? "AI summary"
+          ? "AI banter"
           : item.contentLabel === "inferred_prediction"
             ? "Inferred prediction"
-            : null;
+            : item.type === "banter"
+              ? "AI banter"
+              : null;
 
   const handleReact = (kind: ReactionKind) => {
     if (myReaction === kind) return; // no toggling off (keep it simple)

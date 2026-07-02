@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { FeedMedia as FeedMediaType } from "@/lib/types";
-import { isSafeExternalUrl } from "@/lib/safe-url";
+import { isSafeMediaUrl } from "@/lib/safe-url";
 import { cn } from "@/lib/utils";
 
 interface FeedMediaProps {
@@ -12,11 +12,15 @@ interface FeedMediaProps {
   className?: string;
 }
 
+/** Local, always-available image shown when a remote GIF/image URL fails (e.g. expired). */
+const FALLBACK_MEDIA_SRC = "/images/banter-feed-hero.png";
+
 export function FeedMedia({ media, className }: FeedMediaProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
+  const [failed, setFailed] = useState(false);
 
-  if (!isSafeExternalUrl(media.url) || (media.posterUrl && !isSafeExternalUrl(media.posterUrl))) {
+  if (!isSafeMediaUrl(media.url) || (media.posterUrl && !isSafeMediaUrl(media.posterUrl))) {
     return null;
   }
 
@@ -25,10 +29,13 @@ export function FeedMedia({ media, className }: FeedMediaProps) {
       <div className={cn("overflow-hidden rounded-md border border-border", className)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={media.url}
+          src={failed ? FALLBACK_MEDIA_SRC : media.url}
           alt={media.alt ?? "Feed media"}
           className="max-h-48 w-full object-contain sm:max-h-64 sm:object-cover"
           loading="lazy"
+          onError={() => {
+            if (!failed) setFailed(true);
+          }}
         />
       </div>
     );

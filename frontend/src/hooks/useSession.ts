@@ -33,11 +33,22 @@ export function useAcceptTerms() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (turnstileToken: string | null) => {
+    mutationFn: async ({
+      turnstileToken,
+      countryCode = null,
+    }: {
+      turnstileToken: string | null;
+      countryCode?: string | null;
+    }) => {
       const deviceFingerprint = await getDeviceFingerprint();
       return apiFetch<SessionState>("/api/auth/session/consent", {
         method: "POST",
-        body: JSON.stringify({ acceptedTerms: true, turnstileToken, deviceFingerprint }),
+        body: JSON.stringify({
+          acceptedTerms: true,
+          turnstileToken,
+          deviceFingerprint,
+          countryCode,
+        }),
       });
     },
     onSuccess: (data) => {

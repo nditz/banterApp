@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using BanterApp.Api.Features.Ai;
+using BanterApp.Api.Features.Pundits;
 using BanterApp.Api.Integrations.FootballBanter;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 using Microsoft.Extensions.Logging;
@@ -110,6 +112,30 @@ public sealed class OpenAiContentGenerator : IContentGenerator
         var systemPrompt =
             $"Write a {duration} second {format} video script with timestamps. Hook in first 3 seconds. CTA at end.";
         return await CompleteChatAsync(systemPrompt, context, cancellationToken);
+    }
+
+    public async Task<string> GeneratePunditScriptAsync(
+        MatchScriptContext context,
+        PunditPersonaSeed persona,
+        string phase,
+        VideoScriptDuration duration,
+        string? userId = null,
+        bool isAnonymous = false,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureCanGenerateAsync(userId, isAnonymous, cancellationToken);
+
+        var style = PunditStyleProfiles.Get(persona.StyleSlug);
+        var systemPrompt = PunditScriptPromptBuilder.BuildSystemPrompt(
+            _options.PunditScriptSystemPrompt, persona, style);
+        var userPrompt = PunditScriptPromptBuilder.BuildUserPrompt(context, persona, phase, duration);
+
+        return await CompleteChatAsync(
+            systemPrompt,
+            userPrompt,
+            cancellationToken,
+            temperature: _options.PunditScriptTemperature,
+            maxTokens: _options.PunditScriptMaxTokens);
     }
 
     public async Task<string> GenerateNewsReactionAsync(
@@ -276,10 +302,7 @@ public sealed class OpenAiContentGenerator : IContentGenerator
         var seed = $"{headline}|{reactionText}|{category}";
         var moods = new[] { "celebrate", "debate", "shock", "facepalm", "hype", "pundit" };
         var mood = moods[Math.Abs(seed.GetHashCode()) % moods.Length];
-        var useGif = Math.Abs(seed.GetHashCode()) % 3 != 0;
-        return useGif
-            ? new FeedVisualSuggestion("gif", mood, null)
-            : new FeedVisualSuggestion("image", null, $"Football banter scene: {headline}");
+        return new FeedVisualSuggestion("gif", mood, null);
     }
 
     private static FeedVisualSuggestion? ParseVisualSuggestion(string json)
@@ -291,13 +314,18 @@ public sealed class OpenAiContentGenerator : IContentGenerator
             var format = root.TryGetProperty("format", out var f) ? f.GetString() : "gif";
             var mood = root.TryGetProperty("mood", out var m) ? m.GetString() : null;
             var prompt = root.TryGetProperty("imagePrompt", out var p) ? p.GetString() : null;
+            var gifQuery = root.TryGetProperty("gifQuery", out var q) ? q.GetString() : null;
 
             if (string.IsNullOrWhiteSpace(format))
             {
                 return null;
             }
 
-            return new FeedVisualSuggestion(format.Trim().ToLowerInvariant(), mood, prompt);
+            return new FeedVisualSuggestion(
+                format.Trim().ToLowerInvariant(),
+                mood,
+                prompt,
+                string.IsNullOrWhiteSpace(gifQuery) ? null : gifQuery.Trim());
         }
         catch
         {

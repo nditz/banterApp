@@ -1,0 +1,273 @@
+{
+  "description": "Curated national-team player directory grouped by country (team code). Used to power tournament bonus pick search. Free-text picks are still allowed; this only powers autocomplete suggestions and is merged with any live lineup data.",
+  "teams": [
+    {
+      "code": "USA",
+      "name": "United States",
+      "players": [
+        "Christian Pulisic", "Weston McKennie", "Tyler Adams", "Gio Reyna", "Timothy Weah",
+        "Matt Turner", "Sergiño Dest", "Yunus Musah", "Folarin Balogun", "Antonee Robinson",
+        "Ricardo Pepi", "Brenden Aaronson", "Chris Richards", "Tim Ream", "Josh Sargent"
+      ]
+    },
+    {
+      "code": "CAN",
+      "name": "Canada",
+      "players": [
+        "Alphonso Davies", "Jonathan David", "Cyle Larin", "Stephen Eustáquio", "Tajon Buchanan",
+        "Jonathan Osorio", "Milan Borjan", "Ismaël Koné", "Richie Laryea", "Alistair Johnston",
+        "Junior Hoilett", "Derek Cornelius"
+      ]
+    },
+    {
+      "code": "MEX",
+      "name": "Mexico",
+      "players": [
+        "Hirving Lozano", "Raúl Jiménez", "Edson Álvarez", "Guillermo Ochoa", "Santiago Giménez",
+        "Héctor Herrera", "César Montes", "Luis Chávez", "Orbelín Pineda", "Jorge Sánchez",
+        "Uriel Antuna", "Julián Quiñones"
+      ]
+    },
+    {
+      "code": "JAM",
+      "name": "Jamaica",
+      "players": [
+        "Leon Bailey", "Michail Antonio", "Demarai Gray", "Bobby De Cordova-Reid", "Shamar Nicholson",
+        "Andre Blake", "Damion Lowe", "Ravel Morrison", "Dexter Lembikisa"
+      ]
+    },
+    {
+      "code": "ENG",
+      "name": "England",
+      "players": [
+        "Harry Kane", "Jude Bellingham", "Bukayo Saka", "Phil Foden", "Declan Rice",
+        "Jordan Pickford", "Marcus Rashford", "Cole Palmer", "John Stones", "Kyle Walker",
+        "Trent Alexander-Arnold", "Kobbie Mainoo", "Jarrod Bowen", "Ollie Watkins", "Anthony Gordon"
+      ]
+    },
+    {
+      "code": "FRA",
+      "name": "France",
+      "players": [
+        "Kylian Mbappé", "Antoine Griezmann", "Ousmane Dembélé", "Aurélien Tchouaméni", "Randal Kolo Muani",
+        "Mike Maignan", "William Saliba", "Theo Hernández", "Eduardo Camavinga", "Marcus Thuram",
+        "Jules Koundé", "Adrien Rabiot", "Bradley Barcola", "Ibrahima Konaté"
+      ]
+    },
+    {
+      "code": "GER",
+      "name": "Germany",
+      "players": [
+        "Jamal Musiala", "Florian Wirtz", "Kai Havertz", "Ilkay Gündogan", "Joshua Kimmich",
+        "Leroy Sané", "Serge Gnabry", "Antonio Rüdiger", "Niclas Füllkrug", "Marc-André ter Stegen",
+        "Aleksandar Pavlović", "David Raum", "Robert Andrich"
+      ]
+    },
+    {
+      "code": "ESP",
+      "name": "Spain",
+      "players": [
+        "Rodri", "Pedri", "Gavi", "Lamine Yamal", "Álvaro Morata",
+        "Nico Williams", "Dani Olmo", "Unai Simón", "Fabián Ruiz", "Mikel Merino",
+        "Ferran Torres", "Aymeric Laporte", "Martín Zubimendi"
+      ]
+    },
+    {
+      "code": "BRA",
+      "name": "Brazil",
+      "players": [
+        "Vinícius Júnior", "Rodrygo", "Neymar", "Raphinha", "Casemiro",
+        "Alisson", "Marquinhos", "Bruno Guimarães", "Éder Militão", "Gabriel Jesus",
+        "Endrick", "Lucas Paquetá", "Ederson", "Gabriel Martinelli"
+      ]
+    },
+    {
+      "code": "ARG",
+      "name": "Argentina",
+      "players": [
+        "Lionel Messi", "Julián Álvarez", "Lautaro Martínez", "Emiliano Martínez", "Rodrigo De Paul",
+        "Enzo Fernández", "Alexis Mac Allister", "Ángel Di María", "Cristian Romero", "Nicolás Otamendi",
+        "Nahuel Molina", "Giovani Lo Celso"
+      ]
+    },
+    {
+      "code": "URU",
+      "name": "Uruguay",
+      "players": [
+        "Federico Valverde", "Darwin Núñez", "Ronald Araújo", "Rodrigo Bentancur", "Facundo Pellistri",
+        "Sergio Rochet", "José María Giménez", "Nicolás de la Cruz", "Maximiliano Araújo", "Manuel Ugarte"
+      ]
+    },
+    {
+      "code": "COL",
+      "name": "Colombia",
+      "players": [
+        "James Rodríguez", "Luis Díaz", "Rafael Santos Borré", "Jhon Durán", "Davinson Sánchez",
+        "David Ospina", "Jefferson Lerma", "Richard Ríos", "Daniel Muñoz", "Jhon Arias"
+      ]
+    },
+    {
+      "code": "POR",
+      "name": "Portugal",
+      "players": [
+        "Cristiano Ronaldo", "Bruno Fernandes", "Bernardo Silva", "Rafael Leão", "Diogo Jota",
+        "Diogo Costa", "Rúben Dias", "João Félix", "João Cancelo", "Vitinha",
+        "Gonçalo Ramos", "Pedro Neto", "Nuno Mendes"
+      ]
+    },
+    {
+      "code": "NED",
+      "name": "Netherlands",
+      "players": [
+        "Virgil van Dijk", "Memphis Depay", "Frenkie de Jong", "Cody Gakpo", "Denzel Dumfries",
+        "Bart Verbruggen", "Nathan Aké", "Xavi Simons", "Tijjani Reijnders", "Donyell Malen",
+        "Jeremie Frimpong", "Wout Weghorst"
+      ]
+    },
+    {
+      "code": "BEL",
+      "name": "Belgium",
+      "players": [
+        "Kevin De Bruyne", "Romelu Lukaku", "Jérémy Doku", "Youri Tielemans", "Thibaut Courtois",
+        "Amadou Onana", "Leandro Trossard", "Dodi Lukebakio", "Wout Faes", "Charles De Ketelaere"
+      ]
+    },
+    {
+      "code": "CRO",
+      "name": "Croatia",
+      "players": [
+        "Luka Modrić", "Andrej Kramarić", "Mateo Kovačić", "Marcelo Brozović", "Dominik Livaković",
+        "Joško Gvardiol", "Ivan Perišić", "Mario Pašalić", "Luka Sučić", "Josip Šutalo"
+      ]
+    },
+    {
+      "code": "ITA",
+      "name": "Italy",
+      "players": [
+        "Gianluigi Donnarumma", "Nicolò Barella", "Federico Chiesa", "Lorenzo Pellegrini", "Giacomo Raspadori",
+        "Alessandro Bastoni", "Davide Frattesi", "Mateo Retegui", "Gianluca Scamacca", "Riccardo Calafiori",
+        "Federico Dimarco"
+      ]
+    },
+    {
+      "code": "SUI",
+      "name": "Switzerland",
+      "players": [
+        "Granit Xhaka", "Xherdan Shaqiri", "Breel Embolo", "Manuel Akanji", "Yann Sommer",
+        "Remo Freuler", "Ruben Vargas", "Dan Ndoye", "Fabian Rieder", "Zeki Amdouni"
+      ]
+    },
+    {
+      "code": "SRB",
+      "name": "Serbia",
+      "players": [
+        "Dušan Vlahović", "Aleksandar Mitrović", "Sergej Milinković-Savić", "Dušan Tadić", "Filip Kostić",
+        "Predrag Rajković", "Nikola Milenković", "Lazar Samardžić", "Filip Mladenović"
+      ]
+    },
+    {
+      "code": "POL",
+      "name": "Poland",
+      "players": [
+        "Robert Lewandowski", "Piotr Zieliński", "Wojciech Szczęsny", "Nicola Zalewski", "Sebastian Szymański",
+        "Jakub Kiwior", "Karol Świderski", "Matty Cash", "Jan Bednarek"
+      ]
+    },
+    {
+      "code": "MAR",
+      "name": "Morocco",
+      "players": [
+        "Achraf Hakimi", "Hakim Ziyech", "Youssef En-Nesyri", "Sofyan Amrabat", "Yassine Bounou",
+        "Noussair Mazraoui", "Azzedine Ounahi", "Brahim Díaz", "Romain Saïss", "Bilal El Khannouss"
+      ]
+    },
+    {
+      "code": "SEN",
+      "name": "Senegal",
+      "players": [
+        "Sadio Mané", "Kalidou Koulibaly", "Édouard Mendy", "Ismaïla Sarr", "Idrissa Gueye",
+        "Nicolas Jackson", "Boulaye Dia", "Pape Matar Sarr", "Lamine Camara"
+      ]
+    },
+    {
+      "code": "GHA",
+      "name": "Ghana",
+      "players": [
+        "Thomas Partey", "Mohammed Kudus", "Iñaki Williams", "Jordan Ayew", "Antoine Semenyo",
+        "Alexander Djiku", "Lawrence Ati-Zigi", "Kamaldeen Sulemana", "Mohammed Salisu"
+      ]
+    },
+    {
+      "code": "CMR",
+      "name": "Cameroon",
+      "players": [
+        "André-Frank Zambo Anguissa", "Vincent Aboubakar", "Bryan Mbeumo", "Karl Toko Ekambi", "André Onana",
+        "Eric Maxim Choupo-Moting", "Jean-Charles Castelletto", "Frank Anguissa", "Georges-Kévin Nkoudou"
+      ]
+    },
+    {
+      "code": "JPN",
+      "name": "Japan",
+      "players": [
+        "Takefusa Kubo", "Kaoru Mitoma", "Daichi Kamada", "Wataru Endo", "Ritsu Doan",
+        "Ao Tanaka", "Takehiro Tomiyasu", "Zion Suzuki", "Junya Ito", "Ayase Ueda"
+      ]
+    },
+    {
+      "code": "KOR",
+      "name": "South Korea",
+      "players": [
+        "Son Heung-min", "Lee Kang-in", "Kim Min-jae", "Hwang Hee-chan", "Hwang In-beom",
+        "Cho Gue-sung", "Jo Hyeon-woo", "Seol Young-woo", "Oh Hyeon-gyu"
+      ]
+    },
+    {
+      "code": "AUS",
+      "name": "Australia",
+      "players": [
+        "Mathew Ryan", "Jackson Irvine", "Craig Goodwin", "Mitchell Duke", "Harry Souttar",
+        "Riley McGree", "Martin Boyle", "Connor Metcalfe", "Kusini Yengi"
+      ]
+    },
+    {
+      "code": "IRN",
+      "name": "Iran",
+      "players": [
+        "Mehdi Taremi", "Sardar Azmoun", "Alireza Jahanbakhsh", "Alireza Beiranvand", "Saman Ghoddos",
+        "Ramin Rezaeian", "Mehdi Ghayedi", "Saeid Ezatolahi"
+      ]
+    },
+    {
+      "code": "ECU",
+      "name": "Ecuador",
+      "players": [
+        "Moisés Caicedo", "Enner Valencia", "Pervis Estupiñán", "Piero Hincapié", "Kendry Páez",
+        "Hernán Galíndez", "Gonzalo Plata", "Ángelo Preciado", "Willian Pacho"
+      ]
+    },
+    {
+      "code": "PER",
+      "name": "Peru",
+      "players": [
+        "Paolo Guerrero", "Gianluca Lapadula", "Yoshimar Yotún", "Pedro Gallese", "Luis Advíncula",
+        "André Carrillo", "Renato Tapia", "Christian Cueva", "Edison Flores"
+      ]
+    },
+    {
+      "code": "CHI",
+      "name": "Chile",
+      "players": [
+        "Alexis Sánchez", "Arturo Vidal", "Ben Brereton Díaz", "Claudio Bravo", "Eduardo Vargas",
+        "Erick Pulgar", "Charles Aránguiz", "Guillermo Maripán", "Darío Osorio"
+      ]
+    },
+    {
+      "code": "PAR",
+      "name": "Paraguay",
+      "players": [
+        "Miguel Almirón", "Antonio Sanabria", "Ángel Romero", "Julio Enciso", "Gustavo Gómez",
+        "Omar Alderete", "Diego Gómez", "Damián Bobadilla", "Ronaldo Martínez"
+      ]
+    }
+  ]
+}

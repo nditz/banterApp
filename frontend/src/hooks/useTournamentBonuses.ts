@@ -62,6 +62,43 @@ export function useTournamentBonuses() {
   });
 }
 
+export interface TournamentBonusPlayerOption {
+  name: string;
+  teamCode: string;
+  teamName: string;
+}
+
+interface PlayerSearchResponse {
+  players: TournamentBonusPlayerOption[];
+}
+
+export function usePlayerSearch(
+  query: string,
+  teamCode: string | null,
+  enabled: boolean
+) {
+  return useQuery({
+    queryKey: ["tournament-bonus-players", query.trim().toLowerCase(), teamCode ?? ""],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      const trimmed = query.trim();
+      if (trimmed) {
+        params.set("query", trimmed);
+      }
+      if (teamCode) {
+        params.set("teamCode", teamCode);
+      }
+      const qs = params.toString();
+      return apiFetch<PlayerSearchResponse>(
+        `/api/tournament-bonuses/players${qs ? `?${qs}` : ""}`
+      );
+    },
+    enabled,
+    staleTime: 60_000,
+    placeholderData: (previous) => previous,
+  });
+}
+
 export function useSaveTournamentBonusPick() {
   const queryClient = useQueryClient();
 

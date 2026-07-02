@@ -1,4 +1,5 @@
 import { FeedMedia } from "@/components/feed/FeedMedia";
+import { sanitizeMediaUrl } from "@/lib/feed-media";
 import type { FeedMedia as FeedMediaType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -15,15 +16,15 @@ export function BanterLine({
   media?: FeedMediaType;
   className?: string;
 }) {
-  const resolvedMedia =
-    media ??
-    (imageUrl
+  const resolvedMedia = media
+    ? { ...media, url: sanitizeMediaUrl(media.url) }
+    : imageUrl
       ? {
           type: imageUrl.endsWith(".gif") ? ("gif" as const) : ("image" as const),
-          url: imageUrl,
+          url: sanitizeMediaUrl(imageUrl),
           alt: "Banter reaction",
         }
-      : undefined);
+      : undefined;
 
   return (
     <div className={cn("banter-line overflow-hidden text-foreground", className)}>

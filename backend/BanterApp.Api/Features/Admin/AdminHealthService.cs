@@ -58,6 +58,25 @@ public sealed class AdminHealthService(
         var providerErrorsLast24h = await db.OperationalErrors.CountAsync(
             e => e.Source == "provider" && e.LastSeenAt >= since24h, ct);
 
+        // Pundit pipeline diagnostics: which extractor is live, where source items are
+        // stuck, and how many extracted opinions actually reach the public feed.
+        var aiProvider = configuration["Ai:Provider"]?.Trim().ToLowerInvariant() ?? "stub";
+        var usingOpenAiExtractor = (aiProvider is "openai" or "chatgpt")
+            && !string.IsNullOrWhiteSpace(aiOptions.Value.ApiKey);
+
+        var mediaByStatus = await db.MediaItems
+            .GroupBy(m => m.ProcessingStatus)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+        int MediaCount(string status) => mediaByStatus
+            .FirstOrDefault(x => string.Equals(x.Status, status, StringComparison.OrdinalIgnoreCase))?.Count ?? 0;
+
+        var opinionsTotal = await db.PunditOpinions.CountAsync(ct);
+        var opinionsNeedingReview = await db.PunditOpinions.CountAsync(o => o.NeedsHumanReview, ct);
+        var opinionsRejected = await db.PunditOpinions.CountAsync(o => o.ReviewStatus == "rejected", ct);
+        var opinionsVisibleInFeed = await db.PunditOpinions.CountAsync(
+            o => o.Pundit.Kind == PunditKind.Source && !o.NeedsHumanReview && o.ReviewStatus != "rejected", ct);
+
         return new
         {
             database = new { connected = dbConnected, provider = isPostgres ? "postgresql" : "inmemory" },
@@ -80,6 +99,26 @@ public sealed class AdminHealthService(
                 circuitOpen = youtubeSummary.CircuitOpen
             },
             rss = new { reachable = rssProbe },
+            punditPipeline = new
+            {
+                aiProvider = usingOpenAiExtractor ? "openai" : "stub",
+                usingOpenAiExtractor,
+                mediaItems = new
+                {
+                    pending = MediaCount("pending"),
+                    enriched = MediaCount("enriched"),
+                    extracted = MediaCount("extracted"),
+                    failed = MediaCount("failed"),
+                    skipped = MediaCount("skipped")
+                },
+                opinions = new
+                {
+                    total = opinionsTotal,
+                    needingReview = opinionsNeedingReview,
+                    rejected = opinionsRejected,
+                    visibleInFeed = opinionsVisibleInFeed
+                }
+            },
             storage = new { status = "ok" },
             lastSuccessfulCronRun = lastSuccessfulRun,
             environmentName = env.EnvironmentName,

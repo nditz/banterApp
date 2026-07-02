@@ -2,6 +2,7 @@ using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Feed;
 using BanterApp.Api.Integrations;
+using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Services;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +29,7 @@ public sealed class AiReactionJob
 
     private readonly AppDbContext _db;
     private readonly IContentGenerator _ai;
+    private readonly ReactionMediaResolver _reactionMedia;
     private readonly AiOptions _aiOptions;
     private readonly BackgroundJobsOptions _jobOptions;
     private readonly IApplicationErrorLogger _errorLogger;
@@ -36,6 +38,7 @@ public sealed class AiReactionJob
     public AiReactionJob(
         AppDbContext db,
         IContentGenerator ai,
+        ReactionMediaResolver reactionMedia,
         IOptions<AiOptions> aiOptions,
         IOptions<BackgroundJobsOptions> jobOptions,
         IApplicationErrorLogger errorLogger,
@@ -43,6 +46,7 @@ public sealed class AiReactionJob
     {
         _db = db;
         _ai = ai;
+        _reactionMedia = reactionMedia;
         _aiOptions = aiOptions.Value;
         _jobOptions = jobOptions.Value;
         _errorLogger = errorLogger;
@@ -100,8 +104,8 @@ public sealed class AiReactionJob
                 item.Category,
                 cancellationToken);
 
-            string? imageUrl = null;
-            string? mediaType = null;
+            string? imageUrl;
+            string? mediaType;
 
             try
             {
@@ -111,46 +115,27 @@ public sealed class AiReactionJob
                     item.Category,
                     cancellationToken);
 
-                if (visual.IsGif)
-                {
-                    imageUrl = FeedGifCatalog.ResolveGifUrl(visual.Mood, "news");
-                    mediaType = "gif";
-                }
-                else if (visual.IsImage)
-                {
-                    var prompt = string.IsNullOrWhiteSpace(visual.ImagePrompt)
-                        ? $"{item.Title}. {reaction}"
-                        : visual.ImagePrompt;
-
-                    imageUrl = await _ai.GenerateReactionImageUrlAsync(
-                        headline,
-                        prompt,
-                        item.Category,
-                        cancellationToken);
-
-                    if (string.IsNullOrWhiteSpace(imageUrl) && _aiOptions.EnableImageGeneration)
-                    {
-                        imageUrl = await _ai.GenerateReactionImageUrlAsync(
-                            headline,
-                            reaction,
-                            item.Category,
-                            cancellationToken);
-                    }
-
-                    mediaType = string.IsNullOrWhiteSpace(imageUrl) ? null : "image";
-                }
-
-                if (string.IsNullOrWhiteSpace(imageUrl))
-                {
-                    imageUrl = FeedGifCatalog.ResolveGifUrl(visual.Mood ?? "news");
-                    mediaType = "gif";
-                }
+                // ChatGPT picks the reaction (mood + GIF search phrase); we fetch a live, stable
+                // GIF from the provider (Tenor) and fall back to the local sticker repository.
+                // We never persist ephemeral DALL-E URLs — they expire after ~1h.
+                var media = await _reactionMedia.ResolveAsync(
+                    new[] { visual.GifQuery },
+                    visual.Mood ?? "news",
+                    item.Id.GetHashCode(),
+                    cancellationToken);
+                imageUrl = media.Url;
+                mediaType = media.Type;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "AI visual generation failed for feed item {ItemId}.", item.Id);
-                imageUrl = FeedGifCatalog.ResolveGifUrl("news");
-                mediaType = "gif";
+                var media = await _reactionMedia.ResolveAsync(
+                    null,
+                    "news",
+                    item.Id.GetHashCode(),
+                    cancellationToken);
+                imageUrl = media.Url;
+                mediaType = media.Type;
             }
 
             var reactionTitle = PickReactionTitle(headline, item.Category);

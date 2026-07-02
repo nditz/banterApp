@@ -11,6 +11,7 @@ import {
 import { MatchComparisonCard } from "@/components/studio/MatchComparisonCard";
 import { StudioSummaryBar } from "@/components/studio/StudioSummaryBar";
 import { CumulativeScriptExport } from "@/components/content/CumulativeScriptExport";
+import { PunditScriptGenerator } from "@/components/content/PunditScriptGenerator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStudio } from "@/hooks/useStudio";
 import { cn } from "@/lib/utils";
@@ -41,7 +42,7 @@ const tabs: { id: Tab; label: string; icon: React.ReactNode; description: string
     id: "script",
     label: "Script",
     icon: <Sparkles className="size-3.5" />,
-    description: "Generate a TV-journalist style broadcast script from your predictions",
+    description: "Generate pundit match analysis scripts and prediction recap exports",
   },
 ];
 
@@ -158,35 +159,46 @@ function ScriptTab() {
             <Mic2 className="size-4 text-gold" aria-hidden />
           </span>
           <div>
-            <p className="text-sm font-semibold">TV Broadcast Script</p>
+            <p className="text-sm font-semibold">Pundit Match Analysis</p>
             <p className="text-[11px] text-muted-foreground">
-              Converts your predictions into a camera-ready pundit script — ready to clip, post, and share.
+              Pick a match and persona — get an 8-scene video-ready script with visual cues for HeyGen, Synthesia, or DALL-E.
+            </p>
+          </div>
+        </div>
+        <PunditScriptGenerator />
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4">
+        <p className="text-xs font-semibold">How to use with AI video tools</p>
+        <ol className="mt-2 space-y-1.5 text-[11px] text-muted-foreground">
+          <li className="flex gap-2">
+            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">1</span>
+            Copy each <strong>DIALOGUE</strong> block into HeyGen or Synthesia as your avatar script.
+          </li>
+          <li className="flex gap-2">
+            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">2</span>
+            Use the <strong>[Visual]</strong> lines as B-roll prompts in DALL-E or your video editor.
+          </li>
+          <li className="flex gap-2">
+            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">3</span>
+            Match <strong>[Tone]</strong> and <strong>[Camera]</strong> hints to your avatar settings and transitions.
+          </li>
+        </ol>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-full bg-muted">
+            <FileText className="size-4 text-muted-foreground" aria-hidden />
+          </span>
+          <div>
+            <p className="text-sm font-semibold">Prediction Recap Export</p>
+            <p className="text-[11px] text-muted-foreground">
+              Cumulative script from your prediction picks — pre-match picks or post-match praise/burn cuts.
             </p>
           </div>
         </div>
         <CumulativeScriptExport minimal={false} />
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-4">
-        <p className="text-xs font-semibold">How to use your script</p>
-        <ol className="mt-2 space-y-1.5 text-[11px] text-muted-foreground">
-          <li className="flex gap-2">
-            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">1</span>
-            Make your predictions on the home page before kickoff.
-          </li>
-          <li className="flex gap-2">
-            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">2</span>
-            Come back here and generate your <strong>pre-match</strong> script — record yourself reading it.
-          </li>
-          <li className="flex gap-2">
-            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">3</span>
-            After the final whistle, generate your <strong>post-match</strong> script to reveal which calls landed.
-          </li>
-          <li className="flex gap-2">
-            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">4</span>
-            Copy, download, or paste into TikTok / YouTube Shorts / Instagram captions.
-          </li>
-        </ol>
       </div>
     </div>
   );

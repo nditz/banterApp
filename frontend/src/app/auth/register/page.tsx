@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -21,10 +22,12 @@ import { cn } from "@/lib/utils";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmationSent, setConfirmationSent] = useState(false);
   const [recoveryCode] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     getOrCreateAnonymousUser();
@@ -43,11 +46,12 @@ export default function RegisterPage() {
       return;
     }
 
-    const { error: authError } = await supabase.auth.signUp({
+    const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { display_name: email },
+        emailRedirectTo: getOAuthRedirectUrl("/"),
       },
     });
 
@@ -57,11 +61,21 @@ export default function RegisterPage() {
       return;
     }
 
+    // When email confirmation is required, Supabase returns no session. The user
+    // must click the link in their email before a session exists — so we show a
+    // "check your inbox" state instead of pretending they're logged in.
+    if (!data.session) {
+      setConfirmationSent(true);
+      return;
+    }
+
     try {
       await apiFetch("/api/auth/session/sync", { method: "POST" });
     } catch {
       // Non-blocking — session cookies are set.
     }
+
+    await queryClient.invalidateQueries({ queryKey: ["session"] });
 
     router.push("/");
     router.refresh();
@@ -97,6 +111,31 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {confirmationSent ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm">
+                <p className="font-medium">Confirm your email</p>
+                <p className="mt-1 text-muted-foreground">
+                  We sent a confirmation link to{" "}
+                  <span className="font-medium text-foreground">{email}</span>. Click the
+                  link to activate your account, then log in.
+                </p>
+              </div>
+              <Link
+                href="/auth/login"
+                className={cn(buttonVariants({ size: "sm" }), "w-full")}
+              >
+                Go to log in
+              </Link>
+              <Link
+                href="/"
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full")}
+              >
+                Continue as guest
+              </Link>
+            </div>
+          ) : (
+          <>
           {recoveryCode && (
             <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm">
               <p className="font-medium">Guest recovery key</p>
@@ -175,6 +214,8 @@ export default function RegisterPage() {
           >
             Continue as guest
           </Link>
+          </>
+          )}
         </CardContent>
       </Card>
     </div>

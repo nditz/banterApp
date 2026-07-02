@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using BanterApp.Api.Features.Ai;
+using BanterApp.Api.Features.Pundits;
 using BanterApp.Api.Integrations.FootballBanter;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 
@@ -207,6 +209,19 @@ public sealed class StubContentGenerator : IContentGenerator
 
         var template = PickTemplate(templates, context);
         return template.Replace("{context}", context, StringComparison.Ordinal);
+    }
+
+    public async Task<string> GeneratePunditScriptAsync(
+        MatchScriptContext context,
+        PunditPersonaSeed persona,
+        string phase,
+        VideoScriptDuration duration,
+        string? userId = null,
+        bool isAnonymous = false,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureCanGenerateAsync(userId, isAnonymous, cancellationToken);
+        return PunditScriptComposer.Compose(context, persona, phase, duration);
     }
 
     private async Task EnsureCanGenerateAsync(
