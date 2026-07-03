@@ -36,9 +36,11 @@ export function useAcceptTerms() {
     mutationFn: async ({
       turnstileToken,
       countryCode = null,
+      username = null,
     }: {
       turnstileToken: string | null;
       countryCode?: string | null;
+      username?: string | null;
     }) => {
       const deviceFingerprint = await getDeviceFingerprint();
       return apiFetch<SessionState>("/api/auth/session/consent", {
@@ -48,6 +50,7 @@ export function useAcceptTerms() {
           turnstileToken,
           deviceFingerprint,
           countryCode,
+          username,
         }),
       });
     },
@@ -59,6 +62,7 @@ export function useAcceptTerms() {
       queryClient.setQueryData(["session"], applySessionState(data));
       queryClient.invalidateQueries({ queryKey: ["brackets"] });
       queryClient.invalidateQueries({ queryKey: ["predictions"] });
+      queryClient.invalidateQueries({ queryKey: ["leagues"] });
     },
   });
 }
@@ -88,6 +92,43 @@ export function useRecoverSession() {
       queryClient.setQueryData(["session"], applySessionState(data));
       queryClient.invalidateQueries({ queryKey: ["brackets"] });
       queryClient.invalidateQueries({ queryKey: ["predictions"] });
+      queryClient.invalidateQueries({ queryKey: ["leagues"] });
+    },
+  });
+}
+
+export function useSuggestUsername(enabled = true) {
+  return useQuery({
+    queryKey: ["username-suggest"],
+    queryFn: () => apiFetch<{ username: string }>("/api/auth/session/username/suggest"),
+    enabled,
+    staleTime: 0,
+    retry: 1,
+  });
+}
+
+export function useSetUsername() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      username,
+      turnstileToken,
+    }: {
+      username: string;
+      turnstileToken: string | null;
+    }) =>
+      apiFetch<{ username: string }>("/api/auth/session/username", {
+        method: "POST",
+        body: JSON.stringify({ username, turnstileToken }),
+      }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["session"], (prev: SessionState | undefined) =>
+        prev ? { ...prev, username: data.username } : prev
+      );
+      queryClient.invalidateQueries({ queryKey: ["session"] });
+      queryClient.invalidateQueries({ queryKey: ["leagues"] });
+      queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
     },
   });
 }

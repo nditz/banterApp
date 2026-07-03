@@ -1,30 +1,42 @@
 namespace BanterApp.Api.Integrations.Media;
 
 /// <summary>
-/// Configuration for the live reaction-GIF provider (Tenor). When no API key is present the
-/// provider is disabled and the feed falls back to the bundled local reaction stickers.
+/// Configuration for the live reaction-GIF provider (Giphy by default). When no API key is present
+/// the provider is disabled and the feed falls back to bundled local reaction stickers.
 /// </summary>
 public sealed class ReactionGifOptions
 {
     public const string SectionName = "ReactionGif";
 
-    /// <summary>tenor | none</summary>
-    public string Provider { get; set; } = "tenor";
+    /// <summary>giphy | tenor | none</summary>
+    public string Provider { get; set; } = "giphy";
 
     public string? ApiKey { get; set; }
 
-    /// <summary>Tenor requires a stable, app-specific client key for anonymous integrations.</summary>
-    public string ClientKey { get; set; } = "banterapp";
+    /// <summary>Giphy API root (v1).</summary>
+    public string GiphyBaseUrl { get; set; } = "https://api.giphy.com/v1";
 
-    public string BaseUrl { get; set; } = "https://tenor.googleapis.com/v2";
-
-    /// <summary>Tenor content safety: high | medium | low | off.</summary>
-    public string ContentFilter { get; set; } = "high";
+    /// <summary>Giphy content rating: g | pg | pg-13 | r.</summary>
+    public string ContentRating { get; set; } = "pg";
 
     /// <summary>Candidates fetched per query; one is chosen deterministically per feed card.</summary>
     public int SearchLimit { get; set; } = 12;
 
-    public bool Enabled =>
+    // Legacy Tenor settings (optional fallback provider).
+    public string ClientKey { get; set; } = "banterapp";
+
+    public string TenorBaseUrl { get; set; } = "https://tenor.googleapis.com/v2";
+
+    /// <summary>Tenor content safety: high | medium | low | off.</summary>
+    public string ContentFilter { get; set; } = "high";
+
+    public bool IsGiphyEnabled =>
+        !string.IsNullOrWhiteSpace(ApiKey) &&
+        string.Equals(Provider, "giphy", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsTenorEnabled =>
         !string.IsNullOrWhiteSpace(ApiKey) &&
         string.Equals(Provider, "tenor", StringComparison.OrdinalIgnoreCase);
+
+    public bool Enabled => IsGiphyEnabled || IsTenorEnabled;
 }

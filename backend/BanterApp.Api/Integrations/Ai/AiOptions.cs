@@ -65,10 +65,12 @@ public sealed class AiOptions
 
     /// <summary>System prompt for ChatGPT to pick a GIF (mood + search query) for feed cards.</summary>
     public string FeedVisualSystemPrompt { get; set; } =
-        "You pick the reaction GIF for a football banter app feed card. Reply ONLY with JSON: " +
+        "You pick the animated reaction GIF for a football banter app feed card. Reply ONLY with JSON: " +
         "{\"format\":\"gif\",\"mood\":\"celebrate|hype|debate|shock|chaos|facepalm|miss|roast|trophy|news|pundit|cooked|ratio|delulu\"," +
-        "\"gifQuery\":\"2-5 word GIF search phrase for a reaction that fits the card (e.g. 'messi celebration', 'roy keane angry', 'shocked pundit')\"}. " +
-        "Always set both mood and gifQuery. Keep gifQuery concrete, PG-rated, and about football/sport reactions.";
+        "\"gifQuery\":\"4-8 word Giphy search phrase for an animated sports reaction GIF — NOT an emoji or mood word alone. " +
+        "Examples: 'ronaldo siuu celebration stadium', 'football fan shocked disbelief', 'roy keane angry pundit desk', 'messi goal celebration gif'. " +
+        "Include emotion + football/sport context. PG-rated.\"}. " +
+        "Always set format to gif, mood, and a concrete gifQuery.";
 
     /// <summary>System prompt for structured pundit opinion extraction from articles/transcripts.</summary>
     public string PunditExtractionSystemPrompt { get; set; } =

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using BanterApp.Api.Common;
-using BanterApp.Api.Data;using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Data;
+using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Admin;
 using BanterApp.Api.Features.Leagues;
 using BanterApp.Api.Middleware;
@@ -16,6 +17,11 @@ public static class SessionEndpoints
         var group = app.MapGroup("/api/auth/session").WithTags("Auth");
 
         group.MapGet("/", GetSession);
+        group.MapGet("/username/suggest", SuggestUsername)
+            .RequireRateLimiting(RateLimitPolicies.PublicSearch);
+        group.MapPost("/username", SetUsername)
+            .RequireRateLimiting(RateLimitPolicies.AuthSession)
+            .WithValidation<SetUsernameRequest>();
         group.MapPost("/consent", AcceptTerms)
             .RequireRateLimiting(RateLimitPolicies.AuthSession)
             .WithValidation<SessionConsentRequest>();
@@ -92,6 +98,7 @@ public static class SessionEndpoints
                 Anonymous: false,
                 TermsAccepted: registered?.TermsAcceptedAt is not null,
                 RecoveryToken: null,
+                Username: null,
                 UserId: user.UserId,
                 AnonymousUserId: null,
                 CsrfToken: csrf,
@@ -110,6 +117,7 @@ public static class SessionEndpoints
                 Anonymous: true,
                 TermsAccepted: anonymous?.TermsAcceptedAt is not null,
                 RecoveryToken: recoveryToken,
+                Username: anonymous?.Username,
                 UserId: null,
                 AnonymousUserId: user.AnonymousUserId,
                 CsrfToken: csrf,
@@ -121,10 +129,56 @@ public static class SessionEndpoints
             Anonymous: false,
             TermsAccepted: false,
             RecoveryToken: null,
+            Username: null,
             UserId: null,
             AnonymousUserId: null,
             CsrfToken: csrf,
             IsPlatformAdmin: false));
+    }
+
+    private static async Task<IResult> SuggestUsername(
+        UsernameService usernames,
+        CancellationToken ct)
+    {
+        var suggestion = await usernames.SuggestUsernameAsync(ct);
+        return Results.Ok(new UsernameSuggestionResponse(suggestion));
+    }
+
+    private static async Task<IResult> SetUsername(
+        SetUsernameRequest request,
+        UsernameService usernames,
+        IUserContext user,
+        TurnstileService turnstile,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        if (!user.IsAnonymous || user.AnonymousUserId is null)
+        {
+            return Results.BadRequest(new { error = "Usernames are only available for guest sessions." });
+        }
+
+        var ip = http.Connection.RemoteIpAddress?.ToString();
+        if (!await turnstile.VerifyAsync(request.TurnstileToken, ip, ct))
+        {
+            return Results.BadRequest(new { error = "Human verification failed." });
+        }
+
+        var (success, error, username) = await usernames.ApplyUsernameAsync(
+            user.AnonymousUserId.Value,
+            request.Username,
+            ct);
+
+        if (!success)
+        {
+            return Results.BadRequest(new { error });
+        }
+
+        if (http.Items["AnonymousUser"] is AnonymousUser anonymous)
+        {
+            anonymous.Username = username;
+        }
+
+        return Results.Ok(new SetUsernameResponse(username!));
     }
 
     private static async Task<IResult> AcceptTerms(
@@ -177,6 +231,7 @@ public static class SessionEndpoints
                 Anonymous: false,
                 TermsAccepted: true,
                 RecoveryToken: null,
+                Username: null,
                 UserId: user.UserId,
                 AnonymousUserId: null,
                 CsrfToken: csrf,
@@ -207,6 +262,23 @@ public static class SessionEndpoints
 
         await db.SaveChangesAsync(ct);
 
+        if (!string.IsNullOrWhiteSpace(request.Username))
+        {
+            var usernameService = http.RequestServices.GetRequiredService<UsernameService>();
+            var (success, error, username) = await usernameService.ApplyUsernameAsync(
+                anonymous.Id,
+                request.Username,
+                ct);
+            if (!success)
+            {
+                return Results.BadRequest(new { error });
+            }
+
+            anonymous.Username = username;
+        }
+
+        await db.SaveChangesAsync(ct);
+
         if (user is UserContext mutable)
         {
             mutable.AnonymousUserId = anonymous.Id;
@@ -227,6 +299,7 @@ public static class SessionEndpoints
             Anonymous: true,
             TermsAccepted: true,
             RecoveryToken: recoveryToken,
+            Username: anonymous.Username,
             UserId: null,
             AnonymousUserId: anonymous.Id,
             CsrfToken: csrfToken,
@@ -292,6 +365,7 @@ public static class SessionEndpoints
             Anonymous: true,
             TermsAccepted: true,
             RecoveryToken: request.RecoveryToken.Trim(),
+            Username: anonymous.Username,
             UserId: null,
             AnonymousUserId: anonymous.Id,
             CsrfToken: csrf,
@@ -316,16 +390,28 @@ public static class SessionEndpoints
         Convert.ToHexString(Guid.NewGuid().ToByteArray())[..12].ToUpperInvariant();
 }
 
-public record SessionConsentRequest(bool AcceptedTerms, string? TurnstileToken, string? DeviceFingerprint = null, string? CountryCode = null);
+public record SessionConsentRequest(
+    bool AcceptedTerms,
+    string? TurnstileToken,
+    string? DeviceFingerprint = null,
+    string? CountryCode = null,
+    string? Username = null);
 
 public record SessionRecoverRequest(string RecoveryToken, string? TurnstileToken, string? DeviceFingerprint = null);
+
+public record SetUsernameRequest(string Username, string? TurnstileToken);
 
 public record SessionResponse(
     bool Authenticated,
     bool Anonymous,
     bool TermsAccepted,
     string? RecoveryToken,
+    string? Username,
     Guid? UserId,
     Guid? AnonymousUserId,
     string? CsrfToken,
     bool IsPlatformAdmin);
+
+public record UsernameSuggestionResponse(string Username);
+
+public record SetUsernameResponse(string Username);

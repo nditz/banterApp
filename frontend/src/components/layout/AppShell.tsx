@@ -28,6 +28,7 @@ const navLinks = [
   { href: "/", label: "Home" },
   { href: "/brackets", label: "Knockout bracket" },
   { href: "/bonuses", label: "Bonuses" },
+  { href: "/predictions", label: "Predictions" },
   { href: "/studio", label: "Studio" },
   { href: "/rules", label: "Rules" },
   { href: "/leagues", label: "Leagues" },

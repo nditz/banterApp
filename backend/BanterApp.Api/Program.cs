@@ -13,6 +13,8 @@ using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Features.Predictions;
 using BanterApp.Api.Features.Brackets;
 using BanterApp.Api.Features.TournamentBonuses;
+using BanterApp.Api.Features.Football;
+using BanterApp.Api.Features.UserPredictions;
 using BanterApp.Api.Features.Studio;
 using BanterApp.Api.Features.Errors;
 using BanterApp.Api.Features.Health;
@@ -71,7 +73,12 @@ builder.Services.AddScoped<IAdminAuditService, AdminAuditService>();
 builder.Services.AddScoped<AdminOverviewService>();
 builder.Services.AddScoped<AdminHealthService>();
 builder.Services.AddScoped<AdminReviewService>();
-builder.Services.AddScoped<IngestionErrorAggregator>();
+builder.Services.AddScoped<FootballDataAdminService>();
+builder.Services.AddScoped<UserPredictionLockService>();
+builder.Services.AddScoped<UserPredictionValidator>();
+builder.Services.AddScoped<UserPredictionAggregateService>();
+builder.Services.AddScoped<BanterContextEnricher>();
+builder.Services.AddScoped<UsernameService>();
 builder.Services.AddScoped<IAuthorizationHandler, AdminAuthorizationHandler>();
 builder.Services.AddHttpClient();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
@@ -115,8 +122,10 @@ if (!string.IsNullOrWhiteSpace(connectionString))
 }
 else
 {
+    var inMemoryName = builder.Configuration["Database:InMemoryName"];
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseInMemoryDatabase("BanterApp"));
+        options.UseInMemoryDatabase(
+            string.IsNullOrWhiteSpace(inMemoryName) ? "BanterApp" : inMemoryName));
 }
 
 var jwtSecret = builder.Configuration["Supabase:JwtSecret"];
@@ -360,6 +369,8 @@ app.MapMatchEndpoints();
 app.MapPredictionEndpoints();
 app.MapBracketEndpoints();
 app.MapTournamentBonusEndpoints();
+app.MapFootballReferenceEndpoints();
+app.MapUserPredictionEndpoints();
 app.MapLeagueEndpoints();
 app.MapLeaderboardEndpoints();
 app.MapFeedEndpoints();

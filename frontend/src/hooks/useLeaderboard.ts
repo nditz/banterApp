@@ -10,7 +10,8 @@ import {
   mockSystemLeagues,
   mockPunditLeaderboard,
 } from "@/lib/mock-data";
-import { detectCountryCode } from "@/lib/country";
+import { detectCountryCode, getStoredCountryCode } from "@/lib/country";
+import { useSession } from "@/hooks/useSession";
 import type {
   LeaderboardEntry,
   LeaderboardView,
@@ -136,15 +137,20 @@ function normalizeMyLeaguesPayload(response: unknown): MyLeaguesPayload {
 }
 
 export function useMyLeagues() {
-  const countryCode = typeof window !== "undefined" ? detectCountryCode() : "GB";
+  const { data: session } = useSession();
+  const storedCountry = typeof window !== "undefined" ? getStoredCountryCode() : null;
+  const previewCountry =
+    typeof window !== "undefined" ? detectCountryCode() : "GB";
+  const queryCountry = session?.termsAccepted ? storedCountry ?? previewCountry : previewCountry;
 
   return useQuery({
-    queryKey: ["leagues", countryCode],
+    queryKey: ["leagues", session?.termsAccepted ? "member" : "guest", queryCountry],
     queryFn: async () => {
       try {
-        const response = await apiFetch<unknown>(
-          `/api/leagues?countryCode=${encodeURIComponent(countryCode)}`
-        );
+        const path = session?.termsAccepted
+          ? "/api/leagues"
+          : `/api/leagues?countryCode=${encodeURIComponent(queryCountry)}`;
+        const response = await apiFetch<unknown>(path);
         const payload = normalizeMyLeaguesPayload(response);
         if (payload.leagues.length > 0) {
           return payload;
@@ -158,6 +164,7 @@ export function useMyLeagues() {
       }
     },
     staleTime: 60_000,
+    enabled: session !== undefined,
   });
 }
 

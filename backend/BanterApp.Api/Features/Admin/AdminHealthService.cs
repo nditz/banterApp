@@ -24,6 +24,7 @@ public sealed class AdminHealthService(
     IOptions<LegalOptions> legalOptions,
     IOptions<PunditIngestOptions> punditIngestOptions,
     IOptions<NewsOptions> newsOptions,
+    IOptions<ReactionGifOptions> reactionGifOptions,
     IFootballBanterConfigProvider footballBanterConfig,
     ISafeHttpClient safeHttpClient,
     IRateLimitMetrics rateLimitMetrics,
@@ -98,6 +99,12 @@ public sealed class AdminHealthService(
                 failuresToday = youtubeSummary.FailuresToday,
                 circuitOpen = youtubeSummary.CircuitOpen
             },
+            reactionGifs = new
+            {
+                configured = reactionGifOptions.Value.Enabled,
+                provider = reactionGifOptions.Value.Provider,
+                usingLiveGifs = reactionGifOptions.Value.Enabled
+            },
             rss = new { reachable = rssProbe },
             punditPipeline = new
             {
@@ -161,6 +168,7 @@ public sealed class AdminHealthService(
             items = new[]
             {
                 Check("OPENAI_API_KEY configured", !string.IsNullOrWhiteSpace(aiOptions.Value.ApiKey)),
+                Check("GIPHY / ReactionGif API key configured", reactionGifOptions.Value.Enabled),
                 Check("YOUTUBE_API_KEY configured", !string.IsNullOrWhiteSpace(youtubeOptions.Value.ApiKey)),
                 Check("Database connected", dbConnected),
                 Check("Queue connected", true),

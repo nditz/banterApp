@@ -93,8 +93,11 @@ public static class SystemLeagueService
         await EnsureMembershipAsync(db, global, user, displayName, ct);
 
         var normalizedCountry = NormalizeCountryCodeOrNull(countryCode);
+        await RemoveOtherCountryLeagueMembershipsAsync(db, user, normalizedCountry, ct);
+
         if (normalizedCountry is null)
         {
+            await PersistCountryCodeAsync(db, user, null, ct);
             return;
         }
 
@@ -122,7 +125,7 @@ public static class SystemLeagueService
         await EnsureSystemLeaguesAsync(db, user, persisted, ct);
     }
 
-    private static async Task<string?> GetPersistedCountryCodeAsync(
+    public static async Task<string?> GetPersistedCountryCodeAsync(
         AppDbContext db,
         IUserContext user,
         CancellationToken ct)
@@ -164,7 +167,7 @@ public static class SystemLeagueService
     private static async Task PersistCountryCodeAsync(
         AppDbContext db,
         IUserContext user,
-        string countryCode,
+        string? countryCode,
         CancellationToken ct)
     {
         if (user.IsAuthenticated && user.UserId.HasValue)
@@ -183,6 +186,34 @@ public static class SystemLeagueService
                 anon.CountryCode = countryCode;
             }
         }
+    }
+
+    /// <summary>
+    /// Drops country-system-league memberships that no longer match the user's chosen country.
+    /// </summary>
+    private static async Task RemoveOtherCountryLeagueMembershipsAsync(
+        AppDbContext db,
+        IUserContext user,
+        string? keepCountryCode,
+        CancellationToken ct)
+    {
+        var stale = await (
+            from member in db.LeagueMembers
+            join league in db.Leagues on member.LeagueId equals league.Id
+            where league.Kind == LeagueKind.Country
+                  && (user.IsAuthenticated
+                      ? member.UserId == user.UserId
+                      : member.AnonymousUserId == user.AnonymousUserId)
+                  && (keepCountryCode == null
+                      || league.CountryCode != keepCountryCode)
+            select member).ToListAsync(ct);
+
+        if (stale.Count == 0)
+        {
+            return;
+        }
+
+        db.LeagueMembers.RemoveRange(stale);
     }
 
     private static async Task<string> ResolveDefaultDisplayNameAsync(

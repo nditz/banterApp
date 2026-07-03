@@ -4,6 +4,7 @@ using BanterApp.Api.Integrations;
 using BanterApp.Api.Integrations.Ai;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.News;
+using BanterApp.Api.Integrations.FootballReference.Jobs;
 using BanterApp.Api.Integrations.Pundits;
 using BanterApp.Api.Integrations.SportsData;
 using Hangfire;
@@ -346,6 +347,12 @@ public sealed class JobRegistryService(
         nameof(StandingsSyncJob) => StandingsSyncJob.JobId,
         nameof(NewsIngestJob) => NewsIngestJob.JobId,
         nameof(AiReactionJob) => AiReactionJob.JobId,
+        nameof(FootballCountriesSyncJob) => FootballCountriesSyncJob.JobId,
+        nameof(FootballPlayersSyncJob) => FootballPlayersSyncJob.JobId,
+        nameof(FootballPlayerStatsSyncJob) => FootballPlayerStatsSyncJob.JobId,
+        nameof(FootballTopScorersSyncJob) => FootballTopScorersSyncJob.JobId,
+        nameof(FootballTopAssistsSyncJob) => FootballTopAssistsSyncJob.JobId,
+        nameof(FootballReferenceFullSyncJob) => FootballReferenceFullSyncJob.JobId,
         nameof(StubMaintenanceJobs) => "failed-items-retry",
         _ => typeName
     };

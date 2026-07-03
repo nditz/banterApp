@@ -2,6 +2,7 @@ using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace BanterApp.Api.Features.Leagues;
 
@@ -24,6 +25,13 @@ public static class LeagueDisplayNameResolver
 
         if (user.AnonymousUserId.HasValue)
         {
+            var anonymous = await db.AnonymousUsers.AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == user.AnonymousUserId.Value, ct);
+            if (!string.IsNullOrWhiteSpace(anonymous?.Username))
+            {
+                return Truncate(anonymous.Username.Trim());
+            }
+
             return BuildGuestName(user.AnonymousUserId.Value);
         }
 

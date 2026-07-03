@@ -21,4 +21,7 @@ public sealed class FootballBanterSourceInput
     public double? Confidence { get; set; }
 
     public FootballBanterStatementType? StatementType { get; set; }
+
+    /// <summary>Synced football reference data and user prediction aggregates (JSON).</summary>
+    public string? ReferenceContextJson { get; set; }
 }

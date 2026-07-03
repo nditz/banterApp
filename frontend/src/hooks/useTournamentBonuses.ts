@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { dedupeTeamsByCode } from "@/lib/dedupe-teams";
 import { getTurnstileToken } from "@/lib/turnstile-token";
 
 export type TournamentBonusCategoryId =
@@ -57,7 +58,10 @@ export interface TournamentBonusStatus {
 export function useTournamentBonuses() {
   return useQuery({
     queryKey: ["tournament-bonuses"],
-    queryFn: () => apiFetch<TournamentBonusStatus>("/api/tournament-bonuses"),
+    queryFn: async () => {
+      const status = await apiFetch<TournamentBonusStatus>("/api/tournament-bonuses");
+      return { ...status, teams: dedupeTeamsByCode(status.teams) };
+    },
     retry: 1,
   });
 }

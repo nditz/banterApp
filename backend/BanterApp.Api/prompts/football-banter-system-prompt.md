@@ -70,14 +70,14 @@ Write:
 
 ## GIF suggestions
 
-Only output search terms, not GIF files.
+Output 2-4 Giphy-style search phrases (not emoji, not mood labels alone). These are used to fetch animated reaction GIFs.
 
 Examples:
-- "Jose Mourinho smiling"
-- "Roy Keane angry"
-- "Thierry Henry reaction"
-- "Pep Guardiola laughing"
-- "Mbappe laughing"
+- "Jose Mourinho smug smile celebration"
+- "Roy Keane angry pundit desk"
+- "Thierry Henry disbelief reaction"
+- "football crowd eruption goal"
+- "Mbappe laughing interview"
 
 ## Human review
 

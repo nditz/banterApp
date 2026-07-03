@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using BanterApp.Api.Common;
+using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.Ai;
 using BanterApp.Api.Integrations.Pundits.Dtos;
 using Microsoft.Extensions.Logging;
@@ -13,15 +14,18 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
 {
     private readonly HttpClient _httpClient;
     private readonly AiOptions _options;
+    private readonly MatchResolutionService _matchResolution;
     private readonly ILogger<OpenAiPunditOpinionExtractor> _logger;
 
     public OpenAiPunditOpinionExtractor(
         HttpClient httpClient,
         IOptions<AiOptions> options,
+        MatchResolutionService matchResolution,
         ILogger<OpenAiPunditOpinionExtractor> logger)
     {
         _httpClient = httpClient;
         _options = options.Value;
+        _matchResolution = matchResolution;
         _logger = logger;
     }
 
@@ -41,6 +45,7 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
         }
 
         var truncatedText = TruncateForModel(sourceText, 12000);
+        var fixtureCatalog = await _matchResolution.BuildFixtureCatalogJsonAsync(cancellationToken: cancellationToken);
         var userPrompt =
             PromptGuard.UntrustedSourceInstruction + "\n\n" +
             "Extract pundit opinions and predictions from this source.\n\n" +
@@ -50,10 +55,13 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
             $"source_title: {sourceTitle}\n" +
             $"published_at: {publishedAt:O}\n" +
             $"author: {author ?? "unknown"}\n\n" +
+            "Use fixture_catalog ids when a take refers to a specific match.\n" +
             "Return JSON with keys: source_type, source_name, source_url, source_title, published_at, " +
-            "pundits (array of {name, role, opinions:[{topic, team, player, match, opinion, prediction, " +
+            "pundits (array of {name, role, opinions:[{topic, team, player, match, match_id, opinion, prediction, " +
             "prediction_type, confidence, evidence_quote, quote_context, is_direct_quote, needs_human_review}]}), " +
             "missing_information (array), summary.\n\n" +
+            "FIXTURE CATALOG:\n" +
+            fixtureCatalog + "\n\n" +
             "SOURCE TEXT:\n" +
             PromptGuard.WrapUntrustedSource(truncatedText);
 
@@ -103,6 +111,7 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
                                     Team: GetString(opEl, "team"),
                                     Player: GetString(opEl, "player"),
                                     Match: GetString(opEl, "match"),
+                                    MatchId: GetString(opEl, "match_id"),
                                     Opinion: SanitizeField(GetString(opEl, "opinion")) ?? string.Empty,
                                     Prediction: SanitizeField(GetString(opEl, "prediction")),
                                     PredictionType: GetString(opEl, "prediction_type") ?? "unknown",

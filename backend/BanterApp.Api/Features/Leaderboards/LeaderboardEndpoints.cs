@@ -46,7 +46,7 @@ public static class LeaderboardEndpoints
             .Select(a => new
             {
                 Id = (Guid?)a.Id,
-                DisplayName = string.Empty,
+                DisplayName = a.Username ?? string.Empty,
                 TotalPoints = a.Predictions.Sum(p => p.PointsAwarded),
                 PredictionsCount = a.Predictions.Count,
                 IsAnonymous = true

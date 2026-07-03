@@ -1,6 +1,10 @@
+using BanterApp.Api.Features.Feed;
+using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.Ai;
 using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.FootballBanter;
+using BanterApp.Api.Integrations.FootballReference;
+using BanterApp.Api.Integrations.FootballReference.Jobs;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.News;
 using BanterApp.Api.Integrations.Pundits;
@@ -33,9 +37,13 @@ public static class ServiceCollectionExtensions
         services.Configure<OpenFootballOptions>(configuration.GetSection(OpenFootballOptions.SectionName));
         services.Configure<FootballDataOptions>(
             configuration.GetSection(FootballDataOptions.SectionName));
+        services.Configure<FootballReferenceDataOptions>(
+            configuration.GetSection(FootballReferenceDataOptions.SectionName));
         services.Configure<YouTubeOptions>(configuration.GetSection(YouTubeOptions.SectionName));
         services.Configure<MediaIngestOptions>(configuration.GetSection(MediaIngestOptions.SectionName));
         services.Configure<PunditIngestOptions>(configuration.GetSection(PunditIngestOptions.SectionName));
+        services.Configure<ProcessingOptions>(configuration.GetSection(ProcessingOptions.SectionName));
+        services.Configure<SourceWeightsOptions>(configuration.GetSection(SourceWeightsOptions.SectionName));
         services.Configure<ReactionGifOptions>(configuration.GetSection(ReactionGifOptions.SectionName));
 
         services.AddSingleton<IFootballBanterConfigProvider>(sp =>
@@ -87,6 +95,20 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<ISportsDataFallbackProvider, FootballDataProvider>();
         services.AddHttpClient<ISportsDataFallbackProvider, OpenFootballProvider>();
 
+        services.AddHttpClient<ApiFootballHttpClient>();
+        services.AddScoped<ApiSportsReferenceProvider>();
+        services.AddHttpClient<SportmonksReferenceProvider>();
+        services.AddScoped<GoogleReferenceProviderStub>();
+        services.AddScoped<NoOpReferenceProvider>();
+        services.AddScoped<FootballReferenceDataProviderFactory>();
+        services.AddScoped<ReferenceDataUpsertService>();
+        services.AddScoped<FootballCountriesSyncJob>();
+        services.AddScoped<FootballPlayersSyncJob>();
+        services.AddScoped<FootballPlayerStatsSyncJob>();
+        services.AddScoped<FootballTopScorersSyncJob>();
+        services.AddScoped<FootballTopAssistsSyncJob>();
+        services.AddScoped<FootballReferenceFullSyncJob>();
+
         var newsApiKey = configuration["News:ApiKey"];
         var rssFeeds = configuration.GetSection("News:RssFeedUrls").Get<string[]>() ?? [];
         if (!string.IsNullOrWhiteSpace(newsApiKey) || rssFeeds.Length > 0)
@@ -123,10 +145,16 @@ public static class ServiceCollectionExtensions
             services.TryAddSingleton<IPunditOpinionExtractor, StubPunditOpinionExtractor>();
         }
 
-        // Reaction GIF provider: ChatGPT picks the reaction, Tenor supplies a live GIF.
+        // Reaction GIF provider: AI picks the reaction phrase, Giphy (or legacy Tenor) supplies a live GIF.
         // Falls back to the bundled local sticker repository when no API key is configured.
-        var reactionGifKey = configuration["ReactionGif:ApiKey"];
-        if (!string.IsNullOrWhiteSpace(reactionGifKey))
+        var reactionOpts = configuration.GetSection(ReactionGifOptions.SectionName).Get<ReactionGifOptions>()
+            ?? new ReactionGifOptions();
+
+        if (reactionOpts.IsGiphyEnabled)
+        {
+            services.AddHttpClient<IReactionGifProvider, GiphyGifProvider>();
+        }
+        else if (reactionOpts.IsTenorEnabled)
         {
             services.AddHttpClient<IReactionGifProvider, TenorGifProvider>();
         }
@@ -136,6 +164,9 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddScoped<ReactionMediaResolver>();
+        services.AddScoped<FeedReactionMediaService>();
+        services.AddScoped<MatchResolutionService>();
+        services.AddScoped<FeedRelevanceScorer>();
 
         services.AddScoped<PunditMediaItemService>();
         services.AddScoped<PunditReviewFlagger>();

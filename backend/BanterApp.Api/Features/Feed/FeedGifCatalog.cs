@@ -49,6 +49,11 @@ public static class FeedGifCatalog
     public static string ResolveGifUrl(string? mood, int seed, string fallbackMood = FallbackMood) =>
         Pick(GetPool(mood, fallbackMood), seed);
 
+    /// <summary>True when the URL is a bundled local sticker (not a live Giphy GIF).</summary>
+    public static bool IsBundledSticker(string? url) =>
+        !string.IsNullOrWhiteSpace(url) &&
+        url.StartsWith("/reactions/", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>
     /// Given a URL already used in the feed, returns a different URL from the same mood
     /// pool that is not in <paramref name="usedUrls"/>. Falls back to the original URL.

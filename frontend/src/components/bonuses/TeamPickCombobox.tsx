@@ -66,7 +66,7 @@ export function TeamPickCombobox({
               <CommandGroup>
                 {teams.map((team) => (
                   <CommandItem
-                    key={team.code}
+                    key={`${team.code}-${team.name}`}
                     value={`${team.name} ${team.code}`}
                     onSelect={() => {
                       onChange(team.code);

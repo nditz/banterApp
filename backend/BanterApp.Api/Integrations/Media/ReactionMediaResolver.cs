@@ -6,7 +6,7 @@ public sealed record ReactionMedia(string Type, string Url);
 
 /// <summary>
 /// Resolves the visual for a feed reaction. Prefers a live GIF from the reaction-GIF provider
-/// (Tenor) using AI-suggested search phrases, and falls back to the bundled local reaction
+/// (Giphy) using AI-suggested search phrases, and falls back to the bundled local reaction
 /// sticker repository (<see cref="FeedGifCatalog"/>) when the provider is disabled or has no match.
 /// </summary>
 public sealed class ReactionMediaResolver
@@ -89,11 +89,13 @@ public sealed class ReactionMediaResolver
 
         var trimmed = value.Trim();
         // Bias generic phrases toward football/soccer reaction GIFs.
-        if (trimmed.Length < 30 &&
+        if (trimmed.Length < 40 &&
             !trimmed.Contains("football", StringComparison.OrdinalIgnoreCase) &&
-            !trimmed.Contains("soccer", StringComparison.OrdinalIgnoreCase))
+            !trimmed.Contains("soccer", StringComparison.OrdinalIgnoreCase) &&
+            !trimmed.Contains("goal", StringComparison.OrdinalIgnoreCase) &&
+            !trimmed.Contains("celebration", StringComparison.OrdinalIgnoreCase))
         {
-            return $"{trimmed} soccer";
+            return $"{trimmed} football reaction";
         }
 
         return trimmed;

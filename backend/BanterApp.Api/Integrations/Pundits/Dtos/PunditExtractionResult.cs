@@ -7,6 +7,7 @@ public sealed record PunditExtractionOpinionDto(
     string? Team,
     string? Player,
     string? Match,
+    string? MatchId,
     string Opinion,
     string? Prediction,
     string PredictionType,

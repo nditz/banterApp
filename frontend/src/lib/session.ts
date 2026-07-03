@@ -31,6 +31,7 @@ export interface SessionState {
   anonymous: boolean;
   termsAccepted: boolean;
   recoveryToken: string | null;
+  username: string | null;
   userId: string | null;
   anonymousUserId: string | null;
   csrfToken?: string | null;

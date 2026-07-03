@@ -1,5 +1,6 @@
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Feed;
 using BanterApp.Api.Integrations.SportsData;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
@@ -65,7 +66,8 @@ public sealed class NewsIngestJob
                 var title = $"Upcoming: {match.HomeTeam.Name} vs {match.AwayTeam.Name}";
                 var summary =
                     $"Kickoff {match.KickoffUtc:ddd d MMM HH:mm} UTC · {match.Group} · {match.Venue}";
-                var (a, u) = await UpsertMatchItemAsync(id, title, summary, "match_fixture", match.KickoffUtc, cancellationToken);
+                var (a, u) = await UpsertMatchItemAsync(
+                    id, match.Id, title, summary, "match_fixture", match.KickoffUtc, cancellationToken);
                 added += a;
                 updated += u;
             }
@@ -83,7 +85,8 @@ public sealed class NewsIngestJob
                     : "FT";
                 var title = $"Full time: {match.HomeTeam.Name} {score} {match.AwayTeam.Name}";
                 var summary = $"{match.Group} · {match.Stage} · {match.Venue}";
-                var (a, u) = await UpsertMatchItemAsync(id, title, summary, "match_result", match.KickoffUtc, cancellationToken);
+                var (a, u) = await UpsertMatchItemAsync(
+                    id, match.Id, title, summary, "match_result", match.KickoffUtc, cancellationToken);
                 added += a;
                 updated += u;
             }
@@ -101,7 +104,8 @@ public sealed class NewsIngestJob
                     : "LIVE";
                 var title = $"LIVE: {match.HomeTeam.Name} {score} {match.AwayTeam.Name}";
                 var summary = $"In play · {match.Group} · {match.Status}";
-                var (a, u) = await UpsertMatchItemAsync(id, title, summary, "match_live", DateTimeOffset.UtcNow, cancellationToken);
+                var (a, u) = await UpsertMatchItemAsync(
+                    id, match.Id, title, summary, "match_live", DateTimeOffset.UtcNow, cancellationToken);
                 added += a;
                 updated += u;
             }
@@ -161,12 +165,14 @@ public sealed class NewsIngestJob
 
     private async Task<(int Added, int Updated)> UpsertMatchItemAsync(
         string id,
+        string matchId,
         string title,
         string summary,
         string category,
         DateTimeOffset publishedAt,
         CancellationToken ct)
     {
+        var punditSummary = await MatchFeedContextBuilder.BuildPunditContextAsync(_db, matchId, cancellationToken: ct);
         var existing = await _db.NewsFeedItems.FindAsync([id], ct);
         if (existing is null)
         {
@@ -178,17 +184,25 @@ public sealed class NewsIngestJob
                 Summary = summary,
                 Url = string.Empty,
                 Category = category,
+                MatchId = matchId,
+                PredictionSummary = punditSummary,
                 PublishedAt = publishedAt,
                 ViewCount = 0
             });
             return (1, 0);
         }
 
-        if (existing.Title != title || existing.Summary != summary)
+        var changed = existing.Title != title ||
+                      existing.Summary != summary ||
+                      existing.MatchId != matchId ||
+                      existing.PredictionSummary != punditSummary;
+        if (changed)
         {
             existing.Title = title;
             existing.Summary = summary;
             existing.PublishedAt = publishedAt;
+            existing.MatchId = matchId;
+            existing.PredictionSummary = punditSummary;
             return (0, 1);
         }
 

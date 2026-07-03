@@ -46,11 +46,11 @@
     ]
   },
   "ReactionGif": {
-    "Provider": "tenor",
+    "Provider": "giphy",
     "ApiKey": "",
-    "ClientKey": "banterapp",
-    "BaseUrl": "https://tenor.googleapis.com/v2",
-    "ContentFilter": "high",
+    "_comment": "Get a free key at https://developers.giphy.com — without it feed cards show bundled /reactions stickers instead of animated GIFs.",
+    "GiphyBaseUrl": "https://api.giphy.com/v1",
+    "ContentRating": "pg",
     "SearchLimit": 12
   },
   "News": {
@@ -142,14 +142,48 @@
         "RssUrl": "https://www.theguardian.com/football/series/footballweekly/podcast.xml",
         "SiteUrl": "https://www.theguardian.com/football/series/footballweekly",
         "StyleSlug": "silky-studio",
-        "ExtractPredictions": true
+        "ExtractPredictions": true,
+        "SourceWeight": 1.2
       },
       {
         "Name": "The Rest Is Football",
         "RssUrl": "https://feeds.acast.com/public/shows/the-rest-is-football",
         "SiteUrl": "https://www.goalhangerpodcasts.com/the-rest-is-football",
         "StyleSlug": "ex-pro-couch",
-        "ExtractPredictions": true
+        "ExtractPredictions": true,
+        "SourceWeight": 1.2
+      },
+      {
+        "Name": "Sky Sports Football Podcast",
+        "RssUrl": "https://rss.acast.com/skysportsfootball",
+        "SiteUrl": "https://www.skysports.com/podcasts",
+        "StyleSlug": "studio-panel",
+        "ExtractPredictions": true,
+        "SourceWeight": 1.2
+      },
+      {
+        "Name": "The Athletic Football Podcast",
+        "RssUrl": "https://feeds.simplecast.com/BvLcK4nV",
+        "SiteUrl": "https://theathletic.com/podcast/the-athletic-football-podcast/",
+        "StyleSlug": "analytical-modern",
+        "ExtractPredictions": true,
+        "SourceWeight": 1.2
+      },
+      {
+        "Name": "BBC 5 Live Football Daily",
+        "RssUrl": "https://podcasts.files.bbci.co.uk/p02nrv1w.rss",
+        "SiteUrl": "https://www.bbc.co.uk/programmes/p02nrv1w",
+        "StyleSlug": "bbc-studio",
+        "ExtractPredictions": true,
+        "SourceWeight": 1.2
+      },
+      {
+        "Name": "The Football Ramble",
+        "RssUrl": "https://feeds.acast.com/public/shows/the-football-ramble",
+        "SiteUrl": "https://thefootballramble.com/",
+        "StyleSlug": "comedy-chat",
+        "ExtractPredictions": true,
+        "SourceWeight": 1.2
       }
     ],
     "WebsiteSources": [

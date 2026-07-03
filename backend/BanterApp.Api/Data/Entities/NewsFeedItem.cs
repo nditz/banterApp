@@ -11,6 +11,9 @@ public class NewsFeedItem
     public string? Category { get; set; }
     /// <summary>Links AI-generated reaction posts back to the source article or match item.</summary>
     public string? ParentItemId { get; set; }
+    public string? MatchId { get; set; }
+    public int? QualityScore { get; set; }
+    public string? PredictionSummary { get; set; }
     public string? ImageUrl { get; set; }
     /// <summary>image or gif — pairs with <see cref="ImageUrl"/>.</summary>
     public string? MediaType { get; set; }

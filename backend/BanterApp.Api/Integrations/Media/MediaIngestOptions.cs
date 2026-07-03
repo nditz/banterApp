@@ -1,3 +1,5 @@
+using BanterApp.Api.Integrations.Common;
+
 namespace BanterApp.Api.Integrations.Media;
 
 public sealed class MediaIngestOptions
@@ -36,6 +38,12 @@ public sealed class YouTubeChannelConfig
     public string? StyleSlug { get; set; }
 
     public bool ExtractPredictions { get; set; } = true;
+
+    public double SourceWeight { get; set; } = 1.0;
+
+    public string? UpdateFrequency { get; set; }
+
+    public ConfidenceScoringOptions? ConfidenceScoring { get; set; }
 }
 
 public sealed class PodcastSourceConfig
@@ -49,6 +57,12 @@ public sealed class PodcastSourceConfig
     public string? StyleSlug { get; set; }
 
     public bool ExtractPredictions { get; set; } = true;
+
+    public double SourceWeight { get; set; } = 1.2;
+
+    public string? UpdateFrequency { get; set; }
+
+    public ConfidenceScoringOptions? ConfidenceScoring { get; set; }
 }
 
 public sealed class WebsiteSourceConfig
@@ -60,4 +74,10 @@ public sealed class WebsiteSourceConfig
     public string? RobotsUrl { get; set; }
     public bool? CrawlAllowed { get; set; }
     public bool ExtractPredictions { get; set; } = true;
+
+    public double SourceWeight { get; set; } = 1.0;
+
+    public string? UpdateFrequency { get; set; }
+
+    public ConfidenceScoringOptions? ConfidenceScoring { get; set; }
 }

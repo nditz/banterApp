@@ -368,6 +368,18 @@ public sealed class StubContentGenerator : IContentGenerator
         CancellationToken cancellationToken = default) =>
         Task.FromResult(FootballBanterStubOutputBuilder.BuildJson(input));
 
+    public Task<string> GenerateUsernameSuggestionAsync(CancellationToken cancellationToken = default)
+    {
+        var seeds =
+            new[]
+            {
+                "Shadowfox", "Ironhelm", "MysticWolf", "Thunderblade", "NightOwl",
+                "StormRider", "SilverMage", "DragonHeart", "StarSeeker", "FrostGiant",
+                "EmberKnight", "RuneWalker", "CrystalBow", "MoonStriker", "GoldenShield"
+            };
+        return Task.FromResult(seeds[Random.Shared.Next(seeds.Length)]);
+    }
+
     private static string ResolveUserKey(string? userId, bool isAnonymous)
     {
         if (!isAnonymous)

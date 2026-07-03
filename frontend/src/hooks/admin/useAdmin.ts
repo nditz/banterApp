@@ -12,6 +12,10 @@ import type {
   OperationalErrorDetail,
   OperationalErrorItem,
   LaunchChecklistItem,
+  FootballDataOverview,
+  FootballCountryAdminItem,
+  FootballPlayerAdminItem,
+  FootballLeaderboardsAdminResponse,
 } from "@/lib/admin/types";
 
 const adminKey = ["admin"] as const;
@@ -218,5 +222,90 @@ export function useAdminReprocessItem() {
   return useMutation({
     mutationFn: (id: string) =>
       apiFetch(`/api/admin/source-items/${id}/reprocess`, { method: "POST" }),
+  });
+}
+
+export function useAdminFootballOverview() {
+  return useQuery({
+    queryKey: [...adminKey, "football-data", "overview"],
+    queryFn: () => apiFetch<FootballDataOverview>("/api/admin/football-data/overview"),
+  });
+}
+
+export function useAdminFootballCountries(search?: string) {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  const qs = params.toString();
+  return useQuery({
+    queryKey: [...adminKey, "football-data", "countries", search ?? ""],
+    queryFn: () =>
+      apiFetch<{ countries: FootballCountryAdminItem[] }>(
+        `/api/admin/football-data/countries${qs ? `?${qs}` : ""}`
+      ),
+  });
+}
+
+export function useAdminFootballPlayers(filters?: {
+  countryId?: string;
+  position?: string;
+  search?: string;
+}) {
+  const params = new URLSearchParams();
+  if (filters?.countryId) params.set("countryId", filters.countryId);
+  if (filters?.position) params.set("position", filters.position);
+  if (filters?.search) params.set("search", filters.search);
+  const qs = params.toString();
+  return useQuery({
+    queryKey: [...adminKey, "football-data", "players", filters ?? {}],
+    queryFn: () =>
+      apiFetch<{ players: FootballPlayerAdminItem[] }>(
+        `/api/admin/football-data/players${qs ? `?${qs}` : ""}`
+      ),
+  });
+}
+
+export function useAdminFootballLeaderboards(type?: string) {
+  const params = new URLSearchParams();
+  if (type) params.set("type", type);
+  const qs = params.toString();
+  return useQuery({
+    queryKey: [...adminKey, "football-data", "leaderboards", type ?? "top_scorers"],
+    queryFn: () =>
+      apiFetch<FootballLeaderboardsAdminResponse>(
+        `/api/admin/football-data/leaderboards${qs ? `?${qs}` : ""}`
+      ),
+  });
+}
+
+export function useAdminFootballSync() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (target: "countries" | "players" | "top-scorers" | "top-assists" | "all") =>
+      apiFetch(`/api/admin/football-data/sync/${target}`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...adminKey, "football-data"] });
+    },
+  });
+}
+
+export function useAdminFootballToggleActive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      entity,
+      id,
+      isActive,
+    }: {
+      entity: "countries" | "players";
+      id: string;
+      isActive: boolean;
+    }) =>
+      apiFetch(`/api/admin/football-data/${entity}/${id}/active`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...adminKey, "football-data"] });
+    },
   });
 }

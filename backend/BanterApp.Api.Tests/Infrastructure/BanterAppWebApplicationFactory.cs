@@ -1,11 +1,14 @@
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using BanterApp.Api.Data;
+using BanterApp.Api.Data.Entities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -57,21 +60,28 @@ internal sealed class TestAuthHandler(
 
 public sealed class BanterAppWebApplicationFactory : WebApplicationFactory<Program>
 {
+    private readonly string _databaseName = $"BanterTests-{Guid.NewGuid():N}";
+
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        var host = base.CreateHost(builder);
+        SeedTestUsers(host.Services);
+        return host;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Development");
-        builder.ConfigureAppConfiguration((_, config) =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["BackgroundJobs:Enabled"] = "false",
-                ["Admin:AllowedEmails:0"] = TestUsers.AdminEmail,
-                ["Admin:ExposeErrorDetail"] = "true",
-                ["ConnectionStrings:DefaultConnection"] = "",
-                ["Database:DirectUrl"] = "",
-                ["Database:TransactionUrl"] = "",
-            });
-        });
+        builder.UseEnvironment("Testing");
+        builder.UseSetting("DATABASE_URL", "");
+        builder.UseSetting("ConnectionStrings:DefaultConnection", "");
+        builder.UseSetting("Database:DirectUrl", "");
+        builder.UseSetting("Database:TransactionUrl", "");
+        builder.UseSetting("Database:InMemoryName", _databaseName);
+        builder.UseSetting("BackgroundJobs:Enabled", "false");
+        builder.UseSetting("Admin:AllowedEmails:0", TestUsers.AdminEmail);
+        builder.UseSetting("Admin:ExposeErrorDetail", "true");
+        builder.UseSetting("FootballReferenceData:CompetitionCode", "WC");
+        builder.UseSetting("FootballReferenceData:Season", "2026");
 
         builder.ConfigureServices(services =>
         {
@@ -103,6 +113,37 @@ public sealed class BanterAppWebApplicationFactory : WebApplicationFactory<Progr
 
     public HttpClient CreateNonAdminClient() =>
         CreateAuthenticatedClient("user@test.com", TestUsers.UserId);
+
+    private static void SeedTestUsers(IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        EnsureUser(db, TestUsers.AdminId, TestUsers.AdminEmail, "Test Admin", isPlatformAdmin: true);
+        EnsureUser(db, TestUsers.UserId, "user@test.com", "Test User");
+        db.SaveChanges();
+    }
+
+    private static void EnsureUser(
+        AppDbContext db,
+        Guid id,
+        string email,
+        string displayName,
+        bool isPlatformAdmin = false)
+    {
+        if (db.Users.Any(u => u.Id == id))
+        {
+            return;
+        }
+
+        db.Users.Add(new User
+        {
+            Id = id,
+            Email = email,
+            DisplayName = displayName,
+            IsPlatformAdmin = isPlatformAdmin
+        });
+    }
 }
 
 public static class CsrfTestHelper

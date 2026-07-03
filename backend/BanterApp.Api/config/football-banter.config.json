@@ -48,9 +48,59 @@
           "source_name": "The Guardian"
         },
         {
+          "name": "Guardian Football",
+          "url": "https://www.theguardian.com/football/rss",
+          "source_name": "The Guardian"
+        },
+        {
           "name": "Sky Sports Football",
           "url": "https://www.skysports.com/rss/12040",
           "source_name": "Sky Sports"
+        },
+        {
+          "name": "The Athletic Soccer",
+          "url": "https://theathletic.com/feed/soccer/",
+          "source_name": "The Athletic"
+        },
+        {
+          "name": "Football365",
+          "url": "https://www.football365.com/feed",
+          "source_name": "Football365"
+        },
+        {
+          "name": "Goal.com",
+          "url": "https://www.goal.com/rss/en/1",
+          "source_name": "Goal.com"
+        },
+        {
+          "name": "Football Weekly Podcast",
+          "url": "https://www.theguardian.com/football/series/footballweekly/podcast.xml",
+          "source_name": "The Guardian"
+        },
+        {
+          "name": "The Rest Is Football",
+          "url": "https://feeds.acast.com/public/shows/the-rest-is-football",
+          "source_name": "Goalhanger"
+        },
+        {
+          "name": "Sky Sports Football Podcast",
+          "url": "https://rss.acast.com/skysportsfootball",
+          "source_name": "Sky Sports"
+        },
+        {
+          "name": "The Athletic Football Podcast",
+          "url": "https://feeds.simplecast.com/BvLcK4nV",
+          "source_name": "The Athletic"
+        },
+        {
+          "name": "BBC 5 Live Football Daily",
+          "url": "https://podcasts.files.bbci.co.uk/p02nrv1w.rss",
+          "source_name": "BBC"
+        },
+        {
+          "name": "The Football Ramble",
+          "url": "https://feeds.acast.com/public/shows/the-football-ramble",
+          "source_name": "The Football Ramble"
         }
       ]
     }

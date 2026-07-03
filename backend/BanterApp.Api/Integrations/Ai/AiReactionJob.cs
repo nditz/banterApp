@@ -117,8 +117,13 @@ public sealed class AiReactionJob
                     cancellationToken);
 
                 var mood = visual.Mood ?? card.Mood ?? "news";
+                var textQueries = FeedReactionMediaService.BuildSearchQueries(
+                    headline,
+                    summary,
+                    "BanterBot",
+                    item.Category);
                 var media = await _reactionMedia.ResolveAsync(
-                    new[] { visual.GifQuery },
+                    new[] { visual.GifQuery }.Concat(textQueries),
                     mood,
                     item.Id.GetHashCode(),
                     cancellationToken);
@@ -128,8 +133,13 @@ public sealed class AiReactionJob
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "AI visual generation failed for feed item {ItemId}.", item.Id);
+                var textQueries = FeedReactionMediaService.BuildSearchQueries(
+                    headline,
+                    summary,
+                    "BanterBot",
+                    item.Category);
                 var media = await _reactionMedia.ResolveAsync(
-                    new[] { card.Mood },
+                    textQueries,
                     card.Mood ?? "news",
                     item.Id.GetHashCode(),
                     cancellationToken);

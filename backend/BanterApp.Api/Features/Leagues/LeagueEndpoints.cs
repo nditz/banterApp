@@ -189,7 +189,18 @@ public static class LeagueEndpoints
         TournamentBonusScoringService bonusScoring,
         CancellationToken ct)
     {
-        var resolvedCountry = countryCode;
+        var hasSession = user.IsAuthenticated || user.IsAnonymous;
+
+        // Session users belong to the country they chose at consent — never a browser-locale guess.
+        var resolvedCountry = hasSession
+            ? await SystemLeagueService.GetPersistedCountryCodeAsync(db, user, ct)
+            : null;
+
+        if (string.IsNullOrWhiteSpace(resolvedCountry))
+        {
+            resolvedCountry = countryCode;
+        }
+
         if (string.IsNullOrWhiteSpace(resolvedCountry))
         {
             resolvedCountry = http.Request.Headers["X-Country-Code"].FirstOrDefault();
@@ -198,7 +209,6 @@ public static class LeagueEndpoints
         var normalizedCountry = SystemLeagueService.NormalizeCountryCode(resolvedCountry);
         await SystemLeagueService.EnsureSystemLeagueRowsAsync(db, normalizedCountry, ct);
 
-        var hasSession = user.IsAuthenticated || user.IsAnonymous;
         if (hasSession)
         {
             // Enroll in Global always; keep a Country league only if the user chose one at consent.
@@ -225,7 +235,10 @@ public static class LeagueEndpoints
 
         if (memberships.Count == 0)
         {
-            var fallback = await BuildGuestSystemLeaguesAsync(db, normalizedCountry, ct);
+            var fallbackCountry = SystemLeagueService.NormalizeCountryCode(
+                await SystemLeagueService.GetPersistedCountryCodeAsync(db, user, ct)
+                ?? resolvedCountry);
+            var fallback = await BuildGuestSystemLeaguesAsync(db, fallbackCountry, ct);
             return Results.Ok(new MyLeaguesResponse(fallback, limits));
         }
 

@@ -56,6 +56,7 @@ public static class FeedEndpoints
         AppDbContext db,
         INewsProvider news,
         IUserContext user,
+        FeedReactionMediaService feedMedia,
         HttpContext http,
         CancellationToken ct)
     {
@@ -64,10 +65,11 @@ public static class FeedEndpoints
         var skip = (currentPage - 1) * size;
 
         var (feedMode, personal) = await PersonalizedFeedService.BuildAsync(db, user, 20, ct);
-        var newsItems = await LoadNewsItemsAsync(db, news, 100, ct);
+        var newsItems = await LoadNewsItemsAsync(db, news, feedMedia, 100, ct);
         var merged = DedupeAndVaryMedia(personal
             .Concat(newsItems)
-            .OrderByDescending(i => i.PublishedAt));
+            .OrderByDescending(i => i.QualityScore ?? 0)
+            .ThenByDescending(i => i.PublishedAt));
 
         var pageItems = merged.Skip(skip).Take(size).ToList();
         http.Response.Headers.CacheControl = "public, max-age=60";
@@ -81,6 +83,7 @@ public static class FeedEndpoints
         AppDbContext db,
         INewsProvider news,
         IUserContext user,
+        FeedReactionMediaService feedMedia,
         HttpContext http,
         CancellationToken ct)
     {
@@ -89,7 +92,7 @@ public static class FeedEndpoints
         var skip = (currentPage - 1) * size;
 
         var (feedMode, personal) = await PersonalizedFeedService.BuildAsync(db, user, 10, ct);
-        var newsItems = await LoadNewsItemsAsync(db, news, 100, ct);
+        var newsItems = await LoadNewsItemsAsync(db, news, feedMedia, 100, ct);
         var merged = DedupeAndVaryMedia(personal
             .Concat(newsItems)
             .OrderByDescending(i => i.Likes ?? 0)
@@ -103,17 +106,24 @@ public static class FeedEndpoints
     private static async Task<List<FeedItemResponse>> LoadNewsItemsAsync(
         AppDbContext db,
         INewsProvider news,
+        FeedReactionMediaService feedMedia,
         int maxItems,
         CancellationToken ct)
     {
         var items = await db.NewsFeedItems
-            .OrderByDescending(n => n.PublishedAt)
+            .OrderByDescending(n => n.QualityScore ?? 0)
+            .ThenByDescending(n => n.PublishedAt)
             .Take(maxItems)
             .ToListAsync(ct);
 
         if (items.Count > 0)
         {
-            var mapped = items.Select(MapFromEntity).ToList();
+            var mapped = new List<FeedItemResponse>(items.Count);
+            foreach (var item in items)
+            {
+                mapped.Add(await MapFromEntityAsync(item, feedMedia, ct));
+            }
+
             await AppendMissingPunditOpinionItemsAsync(db, mapped, maxItems, ct);
             return mapped;
         }
@@ -207,16 +217,19 @@ public static class FeedEndpoints
             _ => "news",
         };
 
-    private static FeedItemResponse MapFromEntity(Data.Entities.NewsFeedItem n)
+    private static async Task<FeedItemResponse> MapFromEntityAsync(
+        Data.Entities.NewsFeedItem n,
+        FeedReactionMediaService feedMedia,
+        CancellationToken ct)
     {
         var sid = n.Id.ToString();
         var isBanterized = FeedBanterFormat.IsBanterized(n.Summary) || FeedBanterFormat.IsBanterized(n.Title);
         var title = FeedBanterFormat.Strip(n.Title);
         var summary = FeedBanterFormat.Strip(n.Summary ?? n.Title);
         var type = MapCategoryToType(n.Category, isBanterized);
-        var media = FeedMediaMapper.FromNewsItem(n)
+        var media = await feedMedia.PresentAsync(n, title, ct)
             ?? ResolveFallbackMedia(n, type, title, sid);
-        var imageUrl = string.IsNullOrWhiteSpace(n.ImageUrl) ? media?.Url : n.ImageUrl;
+        var imageUrl = string.IsNullOrWhiteSpace(n.ImageUrl) ? media?.Url : media?.Url ?? n.ImageUrl;
 
         return new(
             sid,
@@ -233,7 +246,11 @@ public static class FeedEndpoints
             n.Author,
             isBanterized || string.Equals(n.Category, "ai_reaction", StringComparison.OrdinalIgnoreCase)
                 ? "ai_summary"
-                : "news");
+                : n.Category == PunditOpinionFeedMapper.FeedCategory ? "paraphrase" : "news",
+            n.MatchId,
+            n.PredictionSummary,
+            null,
+            n.QualityScore);
     }
 
     private static FeedMediaResponse? ResolveFallbackMedia(

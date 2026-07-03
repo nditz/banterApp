@@ -20,6 +20,39 @@ export const ADSENSE_ENABLED = ADSENSE_CLIENT.length > 0;
 /** Loader script URL used sitewide. */
 export const ADSENSE_SCRIPT_SRC = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`;
 
+/** CSP allowlists for AdSense + SODAR (used in next.config.ts). */
+export const ADSENSE_CSP_CONNECT = [
+  "https://*.adtrafficquality.google",
+  "https://ep1.adtrafficquality.google",
+  "https://ep2.adtrafficquality.google",
+  "https://googleads.g.doubleclick.net",
+  "https://tpc.googlesyndication.com",
+  "https://www.googleadservices.com",
+  "https://adservice.google.com",
+  "https://fundingchoicesmessages.google.com",
+];
+
+export const ADSENSE_CSP_SCRIPT = [
+  "https://*.adtrafficquality.google",
+  "https://www.googletagservices.com",
+  "https://adservice.google.com",
+  "https://www.gstatic.com",
+];
+
+export const ADSENSE_CSP_FRAME = [
+  "https://googleads.g.doubleclick.net",
+  "https://tpc.googlesyndication.com",
+  "https://*.adtrafficquality.google",
+  "https://fundingchoicesmessages.google.com",
+  "https://www.google.com",
+];
+
+/** Cloudflare Turnstile challenge subdomains (e.g. brunhild.challenges.cloudflare.com). */
+export const TURNSTILE_CSP = [
+  "https://challenges.cloudflare.com",
+  "https://*.challenges.cloudflare.com",
+];
+
 /**
  * Maps internal AdSlot `slotId` values to AdSense numeric ad-unit ids.
  * Fill these in once the units exist in the AdSense dashboard.

@@ -12,8 +12,8 @@ public static class FeedMediaMapper
         }
 
         // Older rows may still hold expired DALL-E image URLs that render as a broken
-        // "content not available" tile. Serve a stable catalog GIF instead. Tenor
-        // (media.tenor.com) URLs are stable CDN links and are intentionally persisted.
+        // "content not available" tile. Serve a stable catalog GIF instead. Giphy/Tenor
+        // CDN URLs are stable links and are intentionally persisted.
         if (IsExpiringHost(item.ImageUrl))
         {
             return new FeedMediaResponse(
