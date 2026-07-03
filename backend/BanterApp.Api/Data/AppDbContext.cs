@@ -37,6 +37,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<IngestionError> IngestionErrors => Set<IngestionError>();
     public DbSet<OperationalError> OperationalErrors => Set<OperationalError>();
     public DbSet<AppMetric> AppMetrics => Set<AppMetric>();
+    public DbSet<Country> Countries => Set<Country>();
+    public DbSet<Player> Players => Set<Player>();
+    public DbSet<PlayerStat> PlayerStats => Set<PlayerStat>();
+    public DbSet<LeaderboardEntry> LeaderboardEntries => Set<LeaderboardEntry>();
+    public DbSet<UserPrediction> UserPredictions => Set<UserPrediction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,8 +60,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.ToTable("anonymous_users");
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.CookieId).IsUnique();
+            e.HasIndex(x => x.Username).IsUnique();
             e.Property(x => x.RecoveryCode).HasMaxLength(32);
             e.Property(x => x.CookieId).HasMaxLength(64);
+            e.Property(x => x.Username).HasMaxLength(20);
             e.Property(x => x.DeviceFingerprint).HasMaxLength(64).IsRequired(false);
         });
 
@@ -137,6 +144,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.ToTable("news_feed_items");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasMaxLength(64);
+            e.Property(x => x.MatchId).HasMaxLength(64);
+            e.Property(x => x.PredictionSummary).HasMaxLength(500);
+            e.HasIndex(x => x.MatchId);
+            e.HasIndex(x => x.QualityScore);
         });
 
         modelBuilder.Entity<BracketPick>(e =>
@@ -408,9 +419,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Team).HasMaxLength(StringLimits.OpinionTeam);
             e.Property(x => x.Player).HasMaxLength(StringLimits.OpinionPlayer);
             e.Property(x => x.MatchName).HasMaxLength(StringLimits.OpinionMatchName);
+            e.Property(x => x.MatchId).HasMaxLength(64);
             e.Property(x => x.PredictionType).HasMaxLength(StringLimits.PredictionType);
+            e.HasIndex(x => x.MatchId);
             e.HasOne(x => x.SourceItem).WithMany(i => i.Opinions).HasForeignKey(x => x.SourceItemId);
             e.HasOne(x => x.Pundit).WithMany(p => p.Opinions).HasForeignKey(x => x.PunditId);
+            e.HasOne(x => x.Match).WithMany().HasForeignKey(x => x.MatchId).IsRequired(false);
         });
 
         modelBuilder.Entity<PredictionAggregate>(e =>
@@ -421,6 +435,92 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.EntityType).HasMaxLength(StringLimits.PredictionEntityType);
             e.Property(x => x.EntityName).HasMaxLength(StringLimits.PredictionEntityName);
             e.Property(x => x.PredictionType).HasMaxLength(StringLimits.PredictionType);
+        });
+
+        modelBuilder.Entity<Country>(e =>
+        {
+            e.ToTable("countries");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.ExternalProvider, x.ExternalId }).IsUnique()
+                .HasFilter("\"ExternalProvider\" IS NOT NULL AND \"ExternalId\" IS NOT NULL");
+            e.HasIndex(x => x.Code);
+            e.HasIndex(x => x.IsActive);
+            e.Property(x => x.ExternalId).HasMaxLength(StringLimits.ExternalId);
+            e.Property(x => x.ExternalProvider).HasMaxLength(32);
+            e.Property(x => x.Name).HasMaxLength(120);
+            e.Property(x => x.Code).HasMaxLength(8);
+            e.Property(x => x.FlagUrl).HasMaxLength(512);
+            e.Property(x => x.Continent).HasMaxLength(32);
+            e.Property(x => x.MetadataJson).HasColumnType("text");
+        });
+
+        modelBuilder.Entity<Player>(e =>
+        {
+            e.ToTable("players");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.ExternalProvider, x.ExternalId }).IsUnique()
+                .HasFilter("\"ExternalProvider\" IS NOT NULL AND \"ExternalId\" IS NOT NULL");
+            e.HasIndex(x => x.DisplayName);
+            e.HasIndex(x => x.Position);
+            e.HasIndex(x => x.IsActive);
+            e.HasIndex(x => x.CountryId);
+            e.Property(x => x.ExternalId).HasMaxLength(StringLimits.ExternalId);
+            e.Property(x => x.ExternalProvider).HasMaxLength(32);
+            e.Property(x => x.FirstName).HasMaxLength(80);
+            e.Property(x => x.LastName).HasMaxLength(80);
+            e.Property(x => x.DisplayName).HasMaxLength(120);
+            e.Property(x => x.KnownName).HasMaxLength(120);
+            e.Property(x => x.Position).HasMaxLength(16);
+            e.Property(x => x.PhotoUrl).HasMaxLength(512);
+            e.Property(x => x.ClubName).HasMaxLength(120);
+            e.Property(x => x.NationalTeamName).HasMaxLength(120);
+            e.Property(x => x.MetadataJson).HasColumnType("text");
+            e.HasOne(x => x.Country).WithMany(c => c.Players).HasForeignKey(x => x.CountryId);
+        });
+
+        modelBuilder.Entity<PlayerStat>(e =>
+        {
+            e.ToTable("player_stats");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.PlayerId, x.CountryId, x.Competition, x.Season, x.SourceProvider }).IsUnique();
+            e.Property(x => x.Competition).HasMaxLength(32);
+            e.Property(x => x.Season).HasMaxLength(16);
+            e.Property(x => x.SourceProvider).HasMaxLength(32);
+            e.Property(x => x.Rating).HasPrecision(4, 2);
+            e.Property(x => x.MetadataJson).HasColumnType("text");
+            e.HasOne(x => x.Player).WithMany(p => p.Stats).HasForeignKey(x => x.PlayerId);
+            e.HasOne(x => x.Country).WithMany(c => c.PlayerStats).HasForeignKey(x => x.CountryId);
+        });
+
+        modelBuilder.Entity<LeaderboardEntry>(e =>
+        {
+            e.ToTable("leaderboard_entries");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.LeaderboardType, x.PlayerId, x.Competition, x.Season, x.SourceProvider }).IsUnique();
+            e.HasIndex(x => new { x.LeaderboardType, x.Competition, x.Season, x.Rank });
+            e.Property(x => x.LeaderboardType).HasMaxLength(32);
+            e.Property(x => x.Competition).HasMaxLength(32);
+            e.Property(x => x.Season).HasMaxLength(16);
+            e.Property(x => x.SourceProvider).HasMaxLength(32);
+            e.Property(x => x.Value).HasPrecision(10, 2);
+            e.Property(x => x.MetadataJson).HasColumnType("text");
+            e.HasOne(x => x.Player).WithMany(p => p.LeaderboardEntries).HasForeignKey(x => x.PlayerId);
+            e.HasOne(x => x.Country).WithMany(c => c.LeaderboardEntries).HasForeignKey(x => x.CountryId);
+        });
+
+        modelBuilder.Entity<UserPrediction>(e =>
+        {
+            e.ToTable("user_predictions");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.UserId, x.PredictionType, x.Competition, x.Season }).IsUnique();
+            e.HasIndex(x => x.PredictionType);
+            e.Property(x => x.PredictionType).HasMaxLength(32);
+            e.Property(x => x.Competition).HasMaxLength(32);
+            e.Property(x => x.Season).HasMaxLength(16);
+            e.Property(x => x.PredictionValue).HasMaxLength(200);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
+            e.HasOne(x => x.Country).WithMany(c => c.UserPredictions).HasForeignKey(x => x.CountryId);
+            e.HasOne(x => x.Player).WithMany(p => p.UserPredictions).HasForeignKey(x => x.PlayerId);
         });
     }
 }

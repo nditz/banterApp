@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { useSession } from "@/hooks/useSession";
 import { getTurnstileToken } from "@/lib/turnstile-token";
 import { mockPredictionHistory } from "@/lib/mock-data";
 import type { Prediction } from "@/lib/types";
@@ -12,18 +13,25 @@ export interface CreatePredictionPayload {
   predictionValue: string;
 }
 
+function usePredictionHistoryQueryOptions() {
+  const { data: session, isLoading: sessionLoading } = useSession();
+  const termsAccepted = session?.termsAccepted ?? false;
+
+  return {
+    enabled: !sessionLoading && termsAccepted,
+    placeholderData: termsAccepted ? undefined : mockPredictionHistory,
+  };
+}
+
 export function usePredictions() {
   const queryClient = useQueryClient();
+  const historyOptions = usePredictionHistoryQueryOptions();
 
   const historyQuery = useQuery({
     queryKey: ["predictions", "history"],
-    queryFn: async () => {
-      try {
-        return await apiFetch<Prediction[]>("/api/predictions/history");
-      } catch {
-        return mockPredictionHistory;
-      }
-    },
+    queryFn: () => apiFetch<Prediction[]>("/api/predictions/history"),
+    ...historyOptions,
+    retry: 1,
   });
 
   const createMutation = useMutation({
@@ -76,13 +84,8 @@ export function usePredictions() {
     } catch (error) {
       const refreshed = await queryClient.fetchQuery({
         queryKey: ["predictions", "history"],
-        queryFn: async () => {
-          try {
-            return await apiFetch<Prediction[]>("/api/predictions/history");
-          } catch {
-            return mockPredictionHistory;
-          }
-        },
+        queryFn: () => apiFetch<Prediction[]>("/api/predictions/history"),
+        ...historyOptions,
       });
       const created = refreshed.find(
         (p) =>
@@ -108,14 +111,12 @@ export function usePredictions() {
 }
 
 export function usePredictionHistory() {
+  const historyOptions = usePredictionHistoryQueryOptions();
+
   return useQuery({
     queryKey: ["predictions", "history"],
-    queryFn: async () => {
-      try {
-        return await apiFetch<Prediction[]>("/api/predictions/history");
-      } catch {
-        return mockPredictionHistory;
-      }
-    },
+    queryFn: () => apiFetch<Prediction[]>("/api/predictions/history"),
+    ...historyOptions,
+    retry: 1,
   });
 }

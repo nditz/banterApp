@@ -9,6 +9,7 @@ public class PunditOpinion
     public string? Team { get; set; }
     public string? Player { get; set; }
     public string? MatchName { get; set; }
+    public string? MatchId { get; set; }
     public string Opinion { get; set; } = string.Empty;
     public string? Prediction { get; set; }
     public string? PredictionType { get; set; }
@@ -24,6 +25,7 @@ public class PunditOpinion
     public string? ExtractedJson { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 
+    public Match? Match { get; set; }
     public MediaItem SourceItem { get; set; } = null!;
     public Pundit Pundit { get; set; } = null!;
 }

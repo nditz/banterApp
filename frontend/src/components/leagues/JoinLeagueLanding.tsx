@@ -132,8 +132,8 @@ export function JoinLeagueLanding({ inviteCode }: JoinLeagueLandingProps) {
       ) : (
         <div className="space-y-4 rounded-lg border border-border bg-card/85 p-5 backdrop-blur">
           <p className="text-sm text-muted-foreground">
-            Your player name is assigned automatically from your account email
-            or guest session — no custom usernames on this family-friendly site.
+            Join with your league username — pick one after accepting terms (shown below
+            your recovery key). It appears on standings across every league you play in.
           </p>
           {error && (
             <p className="text-sm text-destructive" role="alert">

@@ -111,7 +111,7 @@ export function PlayerPickCombobox({
             >
               <option value="">All countries</option>
               {teams.map((team) => (
-                <option key={team.code} value={team.code}>
+                <option key={`${team.code}-${team.name}`} value={team.code}>
                   {team.name}
                 </option>
               ))}

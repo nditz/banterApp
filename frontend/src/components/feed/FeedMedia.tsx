@@ -25,14 +25,24 @@ export function FeedMedia({ media, className }: FeedMediaProps) {
   }
 
   if (media.type === "gif" || media.type === "image") {
+    const isAnimatedGif =
+      media.type === "gif" &&
+      (media.url.includes("giphy.com") ||
+        media.url.includes("tenor.com") ||
+        /\.gif($|[?#])/i.test(media.url));
+
     return (
       <div className={cn("overflow-hidden rounded-md border border-border", className)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={failed ? FALLBACK_MEDIA_SRC : media.url}
           alt={media.alt ?? "Feed media"}
-          className="max-h-48 w-full object-contain sm:max-h-64 sm:object-cover"
+          className={cn(
+            "w-full object-contain",
+            isAnimatedGif ? "max-h-56 sm:max-h-72" : "max-h-48 sm:max-h-64 sm:object-cover"
+          )}
           loading="lazy"
+          decoding="async"
           onError={() => {
             if (!failed) setFailed(true);
           }}

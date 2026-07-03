@@ -118,4 +118,9 @@ public interface IContentGenerator
         FootballBanterOpenAiConfig openAiConfig,
         int banterIntensity,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Suggest a fantasy-style username (letters and numbers only). Does not count toward generation limits.
+    /// </summary>
+    Task<string> GenerateUsernameSuggestionAsync(CancellationToken cancellationToken = default);
 }

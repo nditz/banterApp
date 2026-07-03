@@ -16,18 +16,21 @@ public sealed class PunditReviewFlagger
         PunditExtractionOpinionDto opinion,
         string punditName,
         int sourceTextLength,
-        int distinctPunditCount)
+        int distinctPunditCount,
+        string? role = null)
     {
         if (opinion.NeedsHumanReview)
         {
             return true;
         }
 
+        var isJournalist = IsJournalistRole(role);
+
         // Always review when we can't attribute the take to a named pundit.
         if (string.IsNullOrWhiteSpace(punditName) ||
             string.Equals(punditName, "Unknown", StringComparison.OrdinalIgnoreCase))
         {
-            return true;
+            return !isJournalist;
         }
 
         // Paraphrases: only auto-publish when allowed AND confidence is high enough.
@@ -46,6 +49,11 @@ public sealed class PunditReviewFlagger
 
         if (opinion.Confidence < _options.MinConfidenceWithoutReview)
         {
+            if (isJournalist && opinion.Confidence >= _options.AutoApproveConfidence)
+            {
+                return false;
+            }
+
             return true;
         }
 
@@ -69,5 +77,17 @@ public sealed class PunditReviewFlagger
         }
 
         return false;
+    }
+
+    private static bool IsJournalistRole(string? role)
+    {
+        if (string.IsNullOrWhiteSpace(role))
+        {
+            return false;
+        }
+
+        return role.Contains("journalist", StringComparison.OrdinalIgnoreCase) ||
+               role.Contains("reporter", StringComparison.OrdinalIgnoreCase) ||
+               role.Contains("columnist", StringComparison.OrdinalIgnoreCase);
     }
 }

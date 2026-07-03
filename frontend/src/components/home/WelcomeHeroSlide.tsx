@@ -59,6 +59,7 @@ export function WelcomeHeroSlide({ slide, eyebrow, footer }: WelcomeHeroSlidePro
               alt=""
               width={52}
               height={52}
+              loading="eager"
               className="welcome-hero__sticker"
             />
           )}

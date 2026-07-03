@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Copy, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UsernameSetup } from "@/components/session/UsernameSetup";
 import { useSession } from "@/hooks/useSession";
 import { getStoredRecoveryToken } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -75,6 +76,9 @@ export function SessionKeyNotice({ className, compact = false }: SessionKeyNotic
               )}
               {copied ? "Copied" : "Copy key"}
             </Button>
+          </div>
+          <div className="mt-4 border-t border-gold/20 pt-4">
+            <UsernameSetup initialUsername={session?.username} compact />
           </div>
         </div>
       </div>

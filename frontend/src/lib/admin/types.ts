@@ -137,3 +137,62 @@ export interface LaunchChecklistItem {
   label: string;
   passed: boolean;
 }
+
+export interface FootballDataOverview {
+  countriesCount: number;
+  playersCount: number;
+  statsCount: number;
+  leaderboardEntriesCount: number;
+  lastSyncAt: string | null;
+  failedSyncCount: number;
+  currentProvider: string;
+  competition: string;
+  season: string;
+  recentJobs: Array<{
+    jobName: string;
+    status: string;
+    startedAt: string;
+    finishedAt: string | null;
+  }>;
+}
+
+export interface FootballCountryAdminItem {
+  id: string;
+  name: string;
+  code: string | null;
+  flagUrl: string | null;
+  isActive: boolean;
+  externalProvider: string | null;
+  externalId: string | null;
+  metadataPreview: string | null;
+  updatedAt: string;
+}
+
+export interface FootballPlayerAdminItem {
+  id: string;
+  displayName: string;
+  position: string | null;
+  photoUrl: string | null;
+  countryId: string | null;
+  countryName: string | null;
+  isActive: boolean;
+  externalProvider: string | null;
+  externalId: string | null;
+  metadataPreview: string | null;
+  updatedAt: string;
+}
+
+export interface FootballLeaderboardsAdminResponse {
+  leaderboardType: string;
+  competition: string;
+  season: string;
+  entries: Array<{
+    id: string;
+    rank: number | null;
+    value: number;
+    playerName: string;
+    countryName: string | null;
+    sourceProvider: string | null;
+    sourceUpdatedAt: string | null;
+  }>;
+}

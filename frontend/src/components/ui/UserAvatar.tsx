@@ -57,6 +57,7 @@ export function UserAvatar({
       height={size}
       unoptimized
       onError={() => setFailed(true)}
+      style={{ width: "auto", height: "auto", maxWidth: size, maxHeight: size }}
       className={cn(
         "inline-block shrink-0 rounded-full object-cover ring-1 ring-border/50",
         highlight && "ring-pitch/40",
@@ -113,6 +114,7 @@ export function LeagueAvatar({
       height={size}
       unoptimized
       onError={() => setFailed(true)}
+      style={{ width: "auto", height: "auto", maxWidth: size, maxHeight: size }}
       className={cn(
         "inline-block shrink-0 object-cover ring-1 ring-border/50",
         isFlag ? "rounded-sm" : "rounded-full",

@@ -72,6 +72,25 @@ public static class AdminEndpoints
         group.MapPost("/backfill/youtube", BackfillYoutube).RequireRateLimiting(RateLimitPolicies.YoutubeSyncTrigger);
         group.MapPost("/backfill/failed-extractions", BackfillFailedExtractions).RequireRateLimiting(RateLimitPolicies.Write);
         group.MapPost("/backfill/prediction-aggregates", BackfillPredictionAggregates).RequireRateLimiting(RateLimitPolicies.Write);
+
+        group.MapGet("/football-data/overview", GetFootballDataOverview);
+        group.MapGet("/football-data/countries", GetFootballCountries);
+        group.MapGet("/football-data/players", GetFootballPlayers);
+        group.MapGet("/football-data/leaderboards", GetFootballLeaderboards);
+        group.MapPatch("/football-data/countries/{id:guid}/active", SetCountryActive)
+            .RequireRateLimiting(RateLimitPolicies.Write);
+        group.MapPatch("/football-data/players/{id:guid}/active", SetPlayerActive)
+            .RequireRateLimiting(RateLimitPolicies.Write);
+        group.MapPost("/football-data/sync/countries", SyncFootballCountries)
+            .RequireRateLimiting(RateLimitPolicies.AdminJobsRun);
+        group.MapPost("/football-data/sync/players", SyncFootballPlayers)
+            .RequireRateLimiting(RateLimitPolicies.AdminJobsRun);
+        group.MapPost("/football-data/sync/top-scorers", SyncFootballTopScorers)
+            .RequireRateLimiting(RateLimitPolicies.AdminJobsRun);
+        group.MapPost("/football-data/sync/top-assists", SyncFootballTopAssists)
+            .RequireRateLimiting(RateLimitPolicies.AdminJobsRun);
+        group.MapPost("/football-data/sync/all", SyncAllFootballData)
+            .RequireRateLimiting(RateLimitPolicies.AdminJobsRun);
     }
 
     private static async Task<IResult> RunJob(
@@ -645,6 +664,84 @@ public static class AdminEndpoints
         return Results.Ok(new { triggered = PredictionAggregateJob.JobId });
     }
 
+    private static async Task<IResult> GetFootballDataOverview(
+        FootballDataAdminService service, CancellationToken ct) =>
+        Results.Ok(await service.GetOverviewAsync(ct));
+
+    private static async Task<IResult> GetFootballCountries(
+        FootballDataAdminService service, string? search, int? limit, CancellationToken ct) =>
+        Results.Ok(await service.ListCountriesAsync(search, limit, ct));
+
+    private static async Task<IResult> GetFootballPlayers(
+        FootballDataAdminService service, Guid? countryId, string? position, string? search, int? limit, CancellationToken ct) =>
+        Results.Ok(await service.ListPlayersAsync(countryId, position, search, limit, ct));
+
+    private static async Task<IResult> GetFootballLeaderboards(
+        FootballDataAdminService service, string? type, CancellationToken ct) =>
+        Results.Ok(await service.ListLeaderboardsAsync(type, ct));
+
+    private static async Task<IResult> SetCountryActive(
+        Guid id, SetActiveRequest request, FootballDataAdminService service,
+        IUserContext user, IAdminAuditService audit, HttpContext http, CancellationToken ct)
+    {
+        var ok = await service.SetCountryActiveAsync(id, request.IsActive, ct);
+        if (!ok) return Results.NotFound();
+        await audit.LogAsync(user, http, "football.country.active", "country", id.ToString(),
+            new { request.IsActive }, ct);
+        return Results.Ok(new { id, request.IsActive });
+    }
+
+    private static async Task<IResult> SetPlayerActive(
+        Guid id, SetActiveRequest request, FootballDataAdminService service,
+        IUserContext user, IAdminAuditService audit, HttpContext http, CancellationToken ct)
+    {
+        var ok = await service.SetPlayerActiveAsync(id, request.IsActive, ct);
+        if (!ok) return Results.NotFound();
+        await audit.LogAsync(user, http, "football.player.active", "player", id.ToString(),
+            new { request.IsActive }, ct);
+        return Results.Ok(new { id, request.IsActive });
+    }
+
+    private static async Task<IResult> SyncFootballCountries(
+        FootballDataAdminService service, IUserContext user, IAdminAuditService audit, HttpContext http, CancellationToken ct)
+    {
+        service.TriggerSync("football.countries.sync");
+        await audit.LogAsync(user, http, "football.sync.countries", "football-data", null, ct: ct);
+        return Results.Ok(new { triggered = "football.countries.sync" });
+    }
+
+    private static async Task<IResult> SyncFootballPlayers(
+        FootballDataAdminService service, IUserContext user, IAdminAuditService audit, HttpContext http, CancellationToken ct)
+    {
+        service.TriggerSync("football.players.sync");
+        await audit.LogAsync(user, http, "football.sync.players", "football-data", null, ct: ct);
+        return Results.Ok(new { triggered = "football.players.sync" });
+    }
+
+    private static async Task<IResult> SyncFootballTopScorers(
+        FootballDataAdminService service, IUserContext user, IAdminAuditService audit, HttpContext http, CancellationToken ct)
+    {
+        service.TriggerSync("football.top_scorers.sync");
+        await audit.LogAsync(user, http, "football.sync.top-scorers", "football-data", null, ct: ct);
+        return Results.Ok(new { triggered = "football.top_scorers.sync" });
+    }
+
+    private static async Task<IResult> SyncFootballTopAssists(
+        FootballDataAdminService service, IUserContext user, IAdminAuditService audit, HttpContext http, CancellationToken ct)
+    {
+        service.TriggerSync("football.top_assists.sync");
+        await audit.LogAsync(user, http, "football.sync.top-assists", "football-data", null, ct: ct);
+        return Results.Ok(new { triggered = "football.top_assists.sync" });
+    }
+
+    private static async Task<IResult> SyncAllFootballData(
+        FootballDataAdminService service, IUserContext user, IAdminAuditService audit, HttpContext http, CancellationToken ct)
+    {
+        service.TriggerSync("football.reference_data.full_sync");
+        await audit.LogAsync(user, http, "football.sync.all", "football-data", null, ct: ct);
+        return Results.Ok(new { triggered = "football.reference_data.full_sync" });
+    }
+
     private static string MapRunStatus(string status) => status switch
     {
         "completed" => "success",
@@ -655,3 +752,5 @@ public static class AdminEndpoints
 }
 
 public sealed record AdminReviewRejectRequest(string? Notes);
+
+public sealed record SetActiveRequest(bool IsActive);

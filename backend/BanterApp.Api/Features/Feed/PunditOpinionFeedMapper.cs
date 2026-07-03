@@ -13,30 +13,37 @@ public static class PunditOpinionFeedMapper
     public static NewsFeedItem ToNewsFeedItem(PunditOpinion opinion, Pundit pundit, MediaItem item)
     {
         var publication = item.Publication ?? item.MediaSource?.Name ?? "Unknown outlet";
+        var matchLabel = opinion.Match is not null
+            ? $"{opinion.Match.TeamA} vs {opinion.Match.TeamB}"
+            : opinion.MatchName;
+
         return new NewsFeedItem
         {
             Id = FeedItemId(opinion.Id),
             Source = StringLimits.Truncate(publication, 120) ?? publication,
             Author = StringLimits.Truncate(pundit.Name, StringLimits.MediaAuthor) ?? pundit.Name,
-            Title = BuildTitle(pundit.Name, opinion),
+            Title = BuildTitle(pundit.Name, opinion, matchLabel),
             Summary = BuildBody(opinion),
             Url = item.SourceUrl,
             Category = FeedCategory,
             PublishedAt = item.PublishedAt ?? opinion.CreatedAt,
             ViewCount = 0,
-            MediaType = "gif"
+            MediaType = "gif",
+            MatchId = opinion.MatchId,
+            PredictionSummary = BuildPredictionSummary(opinion, pundit.Name)
         };
     }
 
     public static FeedItemResponse ToFeedItem(PunditOpinion opinion, Pundit pundit, MediaItem item)
     {
         var publication = item.Publication ?? item.MediaSource?.Name ?? "Unknown outlet";
+        var matchLabel = opinion.MatchName;
         var media = FeedMediaMapper.FromGifMood("pundit", $"{pundit.Name} take", opinion.Id.GetHashCode());
 
         return new FeedItemResponse(
             FeedItemId(opinion.Id),
             "pundit_quote",
-            BuildTitle(pundit.Name, opinion),
+            BuildTitle(pundit.Name, opinion, matchLabel),
             BuildBody(opinion),
             media.Url,
             publication,
@@ -46,18 +53,23 @@ public static class PunditOpinionFeedMapper
             Reactions: null,
             Media: media,
             Author: pundit.Name,
-            ContentLabel: opinion.IsDirectQuote ? "direct_quote" : "paraphrase");
+            ContentLabel: opinion.IsDirectQuote ? "direct_quote" : "paraphrase",
+            MatchId: opinion.MatchId,
+            Prediction: opinion.Prediction,
+            Confidence: opinion.Confidence);
     }
 
     public static string FormatSourceAttribution(string punditName, string publication) =>
         $"{punditName.Trim()} · {publication.Trim()}";
 
-    private static string BuildTitle(string punditName, PunditOpinion opinion)
+    private static string BuildTitle(string punditName, PunditOpinion opinion, string? matchLabel = null)
     {
+        var matchPrefix = string.IsNullOrWhiteSpace(matchLabel) ? string.Empty : $"{matchLabel}: ";
+
         if (!string.IsNullOrWhiteSpace(opinion.Prediction))
         {
             var teamPrefix = string.IsNullOrWhiteSpace(opinion.Team) ? string.Empty : $"{opinion.Team}: ";
-            return $"{punditName}: {teamPrefix}{StringLimits.Truncate(opinion.Prediction, 120)}";
+            return $"{punditName}: {matchPrefix}{teamPrefix}{StringLimits.Truncate(opinion.Prediction, 120)}";
         }
 
         if (!string.IsNullOrWhiteSpace(opinion.Team))
@@ -91,5 +103,15 @@ public static class PunditOpinionFeedMapper
         }
 
         return parts.Count > 0 ? string.Join("\n\n", parts) : "Pundit take extracted from source.";
+    }
+
+    private static string? BuildPredictionSummary(PunditOpinion opinion, string punditName)
+    {
+        if (string.IsNullOrWhiteSpace(opinion.Prediction))
+        {
+            return null;
+        }
+
+        return $"{punditName}: {opinion.Prediction.Trim()}";
     }
 }

@@ -44,8 +44,37 @@ public static class TournamentBonusEndpoints
             : teamCode.Trim().ToUpperInvariant();
         var trimmedQuery = query?.Trim() ?? string.Empty;
 
-        // Live lineup names (real synced squads) merged with the curated directory so that
-        // both known stars and freshly-synced players are searchable.
+        // Synced players table (primary), merged with directory + lineup fallbacks.
+        var syncedQuery = db.Players.AsNoTracking().Where(p => p.IsActive);
+        if (normalizedTeam is not null)
+        {
+            syncedQuery = syncedQuery.Where(p =>
+                p.Country != null && p.Country.Code == normalizedTeam);
+        }
+
+        if (trimmedQuery.Length > 0)
+        {
+            var loweredQuery = trimmedQuery.ToLower();
+            syncedQuery = syncedQuery.Where(p =>
+                p.DisplayName.ToLower().Contains(loweredQuery) ||
+                (p.KnownName != null && p.KnownName.ToLower().Contains(loweredQuery)));
+        }
+
+        var syncedPlayers = await syncedQuery
+            .Include(p => p.Country)
+            .OrderBy(p => p.DisplayName)
+            .Take(take)
+            .Select(p => new
+            {
+                p.Id,
+                p.DisplayName,
+                TeamCode = p.Country != null ? p.Country.Code ?? "" : "",
+                TeamName = p.Country != null ? p.Country.Name : p.NationalTeamName ?? "",
+                p.PhotoUrl,
+                p.ClubName
+            })
+            .ToListAsync(ct);
+
         var lineupQuery = db.LineupPlayers.AsNoTracking().AsQueryable();
         if (normalizedTeam is not null)
         {
@@ -69,6 +98,18 @@ public static class TournamentBonusEndpoints
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var results = new List<TournamentBonusPlayerOption>();
 
+        foreach (var player in syncedPlayers)
+        {
+            var syncedTeamCode = string.IsNullOrEmpty(player.TeamCode) ? "UNK" : player.TeamCode;
+            var teamName = teamNameMap.GetValueOrDefault(syncedTeamCode) ?? player.TeamName ?? syncedTeamCode;
+            var key = $"{TournamentBonusScoringService.NormalizePlayerName(player.DisplayName)}|{syncedTeamCode}";
+            if (seen.Add(key))
+            {
+                results.Add(new TournamentBonusPlayerOption(
+                    player.DisplayName, syncedTeamCode, teamName, player.Id, player.PhotoUrl, player.ClubName));
+            }
+        }
+
         foreach (var player in directory.Search(trimmedQuery, normalizedTeam, take))
         {
             var teamName = teamNameMap.GetValueOrDefault(player.TeamCode) ?? player.TeamName;
@@ -81,13 +122,14 @@ public static class TournamentBonusEndpoints
 
         foreach (var player in lineupPlayers)
         {
-            var key = $"{TournamentBonusScoringService.NormalizePlayerName(player.PlayerName)}|{player.TeamCode}";
+            var lineupTeamCode = player.TeamCode;
+            var key = $"{TournamentBonusScoringService.NormalizePlayerName(player.PlayerName)}|{lineupTeamCode}";
             if (seen.Add(key))
             {
-                var teamName = teamNameMap.GetValueOrDefault(player.TeamCode)
-                    ?? directory.GetTeamName(player.TeamCode)
-                    ?? player.TeamCode;
-                results.Add(new TournamentBonusPlayerOption(player.PlayerName, player.TeamCode, teamName));
+                var teamName = teamNameMap.GetValueOrDefault(lineupTeamCode)
+                    ?? directory.GetTeamName(lineupTeamCode)
+                    ?? lineupTeamCode;
+                results.Add(new TournamentBonusPlayerOption(player.PlayerName, lineupTeamCode, teamName));
             }
         }
 
@@ -292,15 +334,45 @@ public static class TournamentBonusEndpoints
         return map;
     }
 
+    private static List<TournamentBonusTeamOption> DedupeTeamsByCode(
+        IReadOnlyList<TournamentBonusTeamOption> teams)
+    {
+        var byCode = new Dictionary<string, TournamentBonusTeamOption>(StringComparer.OrdinalIgnoreCase);
+        foreach (var team in teams)
+        {
+            if (!byCode.ContainsKey(team.Code))
+            {
+                byCode[team.Code] = team;
+            }
+        }
+
+        return byCode.Values
+            .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     private static async Task<List<TournamentBonusTeamOption>> LoadTeamsAsync(
         AppDbContext db,
         CancellationToken ct)
     {
+        var synced = await db.Countries
+            .AsNoTracking()
+            .Where(c => c.IsActive && c.Code != null)
+            .OrderBy(c => c.Name)
+            .Select(c => new TournamentBonusTeamOption(c.Code!, c.Name))
+            .ToListAsync(ct);
+
+        if (synced.Count > 0)
+        {
+            return DedupeTeamsByCode(synced);
+        }
+
         var map = await LoadTeamNameMapAsync(db, ct);
-        return map
-            .Select(kv => new TournamentBonusTeamOption(kv.Key, kv.Value))
-            .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        return DedupeTeamsByCode(
+            map
+                .Select(kv => new TournamentBonusTeamOption(kv.Key, kv.Value))
+                .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList());
     }
 }
 
@@ -329,7 +401,13 @@ public sealed record TournamentBonusCategoryInfo(
 
 public sealed record TournamentBonusTeamOption(string Code, string Name);
 
-public sealed record TournamentBonusPlayerOption(string Name, string TeamCode, string TeamName);
+public sealed record TournamentBonusPlayerOption(
+    string Name,
+    string TeamCode,
+    string TeamName,
+    Guid? PlayerId = null,
+    string? PhotoUrl = null,
+    string? ClubName = null);
 
 public sealed record TournamentBonusPlayerSearchResponse(
     IReadOnlyList<TournamentBonusPlayerOption> Players);

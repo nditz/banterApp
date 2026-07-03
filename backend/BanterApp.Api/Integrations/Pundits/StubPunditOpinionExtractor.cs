@@ -22,6 +22,7 @@ public sealed class StubPunditOpinionExtractor : IPunditOpinionExtractor
             Team: InferTeam(sourceText),
             Player: null,
             Match: null,
+            MatchId: null,
             Opinion: $"Stub summary of take from {sourceName}.",
             Prediction: InferPrediction(sourceText),
             PredictionType: "general_opinion",

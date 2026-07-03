@@ -95,7 +95,11 @@ public sealed class PredictionAggregateService
             yield return ($"player|{opinion.Player.Trim()}|{predictionType}", opinion);
         }
 
-        if (!string.IsNullOrWhiteSpace(opinion.MatchName))
+        if (!string.IsNullOrWhiteSpace(opinion.MatchId))
+        {
+            yield return ($"match|{opinion.MatchId}|{predictionType}", opinion);
+        }
+        else if (!string.IsNullOrWhiteSpace(opinion.MatchName))
         {
             yield return ($"match|{opinion.MatchName.Trim()}|{predictionType}", opinion);
         }

@@ -1,5 +1,8 @@
 using BanterApp.Api.Data;
+using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Feed;
+using BanterApp.Api.Features.UserPredictions;
+using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.FootballBanter;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Services;
@@ -23,28 +26,47 @@ public sealed class FeedBanterEnrichmentJob
         "meme",
     };
 
+    private static readonly HashSet<string> MatchCategories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "match_live",
+        "match_result",
+        "match_fixture",
+    };
+
     private readonly AppDbContext _db;
     private readonly IFootballBanterEngine _banterEngine;
+    private readonly BanterContextEnricher _banterContext;
     private readonly ReactionMediaResolver _reactionMedia;
+    private readonly FeedReactionMediaService _feedReactionMedia;
+    private readonly FeedRelevanceScorer _relevanceScorer;
     private readonly AiOptions _aiOptions;
     private readonly BackgroundJobsOptions _jobOptions;
+    private readonly ProcessingOptions _processing;
     private readonly IApplicationErrorLogger _errorLogger;
     private readonly ILogger<FeedBanterEnrichmentJob> _logger;
 
     public FeedBanterEnrichmentJob(
         AppDbContext db,
         IFootballBanterEngine banterEngine,
+        BanterContextEnricher banterContext,
         ReactionMediaResolver reactionMedia,
+        FeedReactionMediaService feedReactionMedia,
+        FeedRelevanceScorer relevanceScorer,
         IOptions<AiOptions> aiOptions,
         IOptions<BackgroundJobsOptions> jobOptions,
+        IOptions<ProcessingOptions> processing,
         IApplicationErrorLogger errorLogger,
         ILogger<FeedBanterEnrichmentJob> logger)
     {
         _db = db;
         _banterEngine = banterEngine;
+        _banterContext = banterContext;
         _reactionMedia = reactionMedia;
+        _feedReactionMedia = feedReactionMedia;
+        _relevanceScorer = relevanceScorer;
         _aiOptions = aiOptions.Value;
         _jobOptions = jobOptions.Value;
+        _processing = processing.Value;
         _errorLogger = errorLogger;
         _logger = logger;
     }
@@ -74,7 +96,8 @@ public sealed class FeedBanterEnrichmentJob
         var candidates = await _db.NewsFeedItems
             .Where(n => n.Category == null ||
                         (n.Category != "ai_reaction" && n.Category != "banter" && n.Category != "meme"))
-            .OrderByDescending(n => n.PublishedAt)
+            .OrderByDescending(n => n.QualityScore ?? 0)
+            .ThenByDescending(n => n.PublishedAt)
             .Take(batchSize * 4)
             .ToListAsync(cancellationToken);
 
@@ -101,8 +124,34 @@ public sealed class FeedBanterEnrichmentJob
                 continue;
             }
 
+            var linkedOpinion = await TryLoadLinkedOpinionAsync(item, cancellationToken);
+            var relevance = _relevanceScorer.Score(item, linkedOpinion);
+            item.QualityScore ??= relevance.Score;
+
+            if (!_relevanceScorer.ShouldGenerateBanter(relevance))
+            {
+                continue;
+            }
+
             var headline = FeedBanterFormat.Strip(item.Title);
             var summary = FeedBanterFormat.Strip(item.Summary ?? item.Title);
+            var referenceContext = await _banterContext.BuildContextJsonAsync(cancellationToken);
+            var sourceText = summary;
+
+            if (item.Category is not null &&
+                MatchCategories.Contains(item.Category) &&
+                !string.IsNullOrWhiteSpace(item.MatchId))
+            {
+                var punditContext = await MatchFeedContextBuilder.BuildPunditContextAsync(
+                    _db,
+                    item.MatchId,
+                    cancellationToken: cancellationToken);
+                if (!string.IsNullOrWhiteSpace(punditContext))
+                {
+                    sourceText = $"{summary}\n\nPundit context: {punditContext}";
+                    item.PredictionSummary ??= punditContext;
+                }
+            }
 
             var output = await _banterEngine.GenerateAsync(
                 new FootballBanterSourceInput
@@ -113,8 +162,11 @@ public sealed class FeedBanterEnrichmentJob
                     SourceTitle = headline,
                     PublishedAt = item.PublishedAt,
                     PunditName = item.Author,
-                    SourceText = summary,
-                    StatementType = FootballBanterStatementType.AiSummary
+                    SourceText = sourceText,
+                    Prediction = linkedOpinion?.Prediction ?? item.PredictionSummary,
+                    Confidence = linkedOpinion?.Confidence,
+                    StatementType = ResolveStatementType(linkedOpinion),
+                    ReferenceContextJson = referenceContext
                 },
                 cancellationToken);
 
@@ -138,13 +190,19 @@ public sealed class FeedBanterEnrichmentJob
             var mood = FootballBanterGifMoodResolver.Resolve(
                 output.GifSuggestions,
                 ResolveFallbackMood(item.Category));
+            var textQueries = FeedReactionMediaService.BuildSearchQueries(
+                output.Headline,
+                output.BanterSummary,
+                output.PunditName,
+                item.Category);
             var media = await _reactionMedia.ResolveAsync(
-                output.GifSuggestions,
+                output.GifSuggestions.Concat(textQueries),
                 mood,
                 item.Id.GetHashCode(),
                 cancellationToken);
             item.ImageUrl = media.Url;
             item.MediaType = media.Type;
+            item.QualityScore = Math.Max(item.QualityScore ?? 0, relevance.Score);
             processed++;
         }
 
@@ -153,7 +211,68 @@ public sealed class FeedBanterEnrichmentJob
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        _logger.LogInformation("Feed banter enrichment: rewrote {Count} feed cards.", processed);
+        var stickerCandidates = await _db.NewsFeedItems
+            .Where(n => n.ImageUrl != null && n.ImageUrl.StartsWith("/reactions/"))
+            .OrderByDescending(n => n.PublishedAt)
+            .Take(Math.Clamp(_jobOptions.FeedBanterEnrichmentBatchSize, 1, 25))
+            .ToListAsync(cancellationToken);
+
+        var upgraded = await _feedReactionMedia.UpgradeStoredStickersAsync(stickerCandidates, cancellationToken);
+        if (upgraded > 0)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        _logger.LogInformation(
+            "Feed banter enrichment: rewrote {Count} feed cards; upgraded {Upgraded} sticker rows to live GIFs.",
+            processed,
+            upgraded);
+    }
+
+    private async Task<PunditOpinion?> TryLoadLinkedOpinionAsync(
+        NewsFeedItem item,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(item.Category, PunditOpinionFeedMapper.FeedCategory, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (!item.Id.StartsWith(PunditOpinionFeedMapper.FeedItemIdPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var suffix = item.Id[PunditOpinionFeedMapper.FeedItemIdPrefix.Length..];
+        if (!Guid.TryParse(suffix, out var opinionId))
+        {
+            return null;
+        }
+
+        return await _db.PunditOpinions
+            .AsNoTracking()
+            .Include(o => o.Match)
+            .FirstOrDefaultAsync(o => o.Id == opinionId, cancellationToken);
+    }
+
+    private static FootballBanterStatementType ResolveStatementType(PunditOpinion? opinion)
+    {
+        if (opinion is null)
+        {
+            return FootballBanterStatementType.AiSummary;
+        }
+
+        if (opinion.IsDirectQuote)
+        {
+            return FootballBanterStatementType.DirectQuote;
+        }
+
+        if (!string.IsNullOrWhiteSpace(opinion.Prediction))
+        {
+            return FootballBanterStatementType.InferredPrediction;
+        }
+
+        return FootballBanterStatementType.Paraphrase;
     }
 
     private static string BuildFeedBody(FootballBanterOutput output)

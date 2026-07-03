@@ -52,6 +52,10 @@ Optional **`Database:TransactionUrl`** (port 6543) is documented for reference; 
 | `Security:TurnstileSecretKey` | Security | Bot checks (empty = disabled locally) |
 | `SportsData:Provider` | SportsData | `mock` or `apifootball` |
 | `SportsData:ApiKey` | SportsData | API-Football key |
+| `FootballReferenceData:Provider` | FootballReferenceData | `api_sports`, `sportmonks`, or `googleapis` |
+| `FootballReferenceData:CompetitionCode` | FootballReferenceData | e.g. `WC` |
+| `FootballReferenceData:Season` | FootballReferenceData | e.g. `2026` |
+| `FootballReferenceData:PredictionLockDeadline` | FootballReferenceData | ISO datetime when user predictions lock |
 | `Sportmonks:Token` | Sportmonks | Sportmonks fallback/validation |
 | `FootballData:Token` | FootballData | football-data.org fallback |
 | `YouTube:ApiKey` | YouTube | YouTube Data API for pundit video discovery |

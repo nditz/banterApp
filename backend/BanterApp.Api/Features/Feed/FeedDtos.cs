@@ -20,7 +20,11 @@ public sealed record FeedItemResponse(
     FeedReactions? Reactions = null,
     FeedMediaResponse? Media = null,
     string? Author = null,
-    string? ContentLabel = null);
+    string? ContentLabel = null,
+    string? MatchId = null,
+    string? Prediction = null,
+    double? Confidence = null,
+    int? QualityScore = null);
 
 public sealed record PaginatedFeedResponse(
     IReadOnlyList<FeedItemResponse> Items,

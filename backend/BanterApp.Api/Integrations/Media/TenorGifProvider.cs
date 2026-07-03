@@ -28,7 +28,7 @@ public sealed class TenorGifProvider : IReactionGifProvider
         _logger = logger;
     }
 
-    public bool IsEnabled => _options.Enabled;
+    public bool IsEnabled => _options.IsTenorEnabled;
 
     public async Task<string?> FindGifUrlAsync(
         string query,
@@ -62,7 +62,7 @@ public sealed class TenorGifProvider : IReactionGifProvider
     private async Task<string[]> FetchAsync(string query, CancellationToken cancellationToken)
     {
         var url =
-            $"{_options.BaseUrl.TrimEnd('/')}/search" +
+            $"{_options.TenorBaseUrl.TrimEnd('/')}/search" +
             $"?q={Uri.EscapeDataString(query)}" +
             $"&key={Uri.EscapeDataString(_options.ApiKey!)}" +
             $"&client_key={Uri.EscapeDataString(_options.ClientKey)}" +

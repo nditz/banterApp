@@ -1,7 +1,6 @@
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
-using BanterApp.Api.Features.Pundits;
 using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -137,39 +136,7 @@ public static class PersonalizedFeedService
         string matchId,
         CancellationToken ct)
     {
-        var sourceOpinion = await db.PunditOpinions
-            .AsNoTracking()
-            .Include(o => o.Pundit)
-            .Include(o => o.SourceItem)
-            .ThenInclude(i => i.MediaSource)
-            .Where(o => o.Pundit.Kind == PunditKind.Source &&
-                        !o.NeedsHumanReview &&
-                        o.ReviewStatus != "rejected" &&
-                        (o.MatchName != null && o.MatchName.Contains(matchId, StringComparison.OrdinalIgnoreCase) ||
-                         o.Team != null))
-            .OrderByDescending(o => o.CreatedAt)
-            .FirstOrDefaultAsync(ct);
-
-        if (sourceOpinion is not null)
-        {
-            var publication = sourceOpinion.SourceItem.Publication
-                ?? sourceOpinion.SourceItem.MediaSource.Name;
-            var take = sourceOpinion.Prediction ?? sourceOpinion.Opinion;
-            return $" {sourceOpinion.Pundit.Name} ({publication}) said {take}.";
-        }
-
-        var punditPick = await db.PunditPredictions
-            .Include(p => p.Pundit)
-            .Where(p => p.MatchId == matchId && p.Pundit.Kind == PunditKind.Source)
-            .OrderByDescending(p => p.PublishedAt)
-            .FirstOrDefaultAsync(ct);
-
-        if (punditPick?.Pundit is not null)
-        {
-            var display = PunditDisplayResolver.Resolve(punditPick.Pundit, punditPick);
-            return $" {display.DisplayName} at {display.DeskLabel} had {punditPick.Prediction} on the desk.";
-        }
-
-        return string.Empty;
+        var context = await MatchFeedContextBuilder.BuildPunditContextAsync(db, matchId, cancellationToken: ct);
+        return string.IsNullOrWhiteSpace(context) ? string.Empty : $" {context}";
     }
 }

@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TermsAcceptPanel } from "@/components/session/TermsAcceptPanel";
+import { UsernameSetup } from "@/components/session/UsernameSetup";
 import { Button } from "@/components/ui/button";
 import { useNeedsTerms } from "@/hooks/useNeedsTerms";
 import { BRAND } from "@/lib/brand";
@@ -66,6 +67,9 @@ export function TermsGate() {
           <code className="mt-2 block overflow-x-auto rounded-md bg-card px-2 py-1.5 text-[10px] text-muted-foreground">
             {recoveryToken}
           </code>
+          <div className="mt-4 border-t border-gold/20 pt-4">
+            <UsernameSetup initialUsername={session?.username} compact />
+          </div>
         </div>
       )}
     </>

@@ -102,7 +102,7 @@ function BracketMatch({
             const selected = slot.pickedWinnerCode === team.code;
             return (
               <Button
-                key={team.code}
+                key={`${slot.slotId}-${team.code}`}
                 type="button"
                 variant={selected ? "default" : "outline"}
                 size="sm"

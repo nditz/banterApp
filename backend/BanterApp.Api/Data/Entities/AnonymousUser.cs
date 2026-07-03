@@ -5,6 +5,7 @@ public class AnonymousUser
     public Guid Id { get; set; }
     public string RecoveryCode { get; set; } = string.Empty;
     public string CookieId { get; set; } = string.Empty;
+    public string? Username { get; set; }
     public string? CountryCode { get; set; }
     /// <summary>
     /// SHA-256 prefix of stable browser signals. When a recovery token is used

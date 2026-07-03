@@ -6,6 +6,7 @@ using BanterApp.Api.Features.Ai;
 using BanterApp.Api.Features.Pundits;
 using BanterApp.Api.Integrations.FootballBanter;
 using BanterApp.Api.Integrations.SportsData.Dtos;
+using BanterApp.Api.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -242,6 +243,40 @@ public sealed class OpenAiContentGenerator : IContentGenerator
         }
 
         return StubFeedBanterFromSeed(headline, summary, category, author);
+    }
+
+    public async Task<string> GenerateUsernameSuggestionAsync(CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        {
+            return await new StubContentGenerator().GenerateUsernameSuggestionAsync(cancellationToken);
+        }
+
+        const string systemPrompt =
+            "Generate cool nicknames like they have in board games like Dungeons and Dragons. " +
+            "Return ONLY one nickname: 3-20 characters, letters A-Z and numbers 0-9 only, no spaces or punctuation, PG-rated.";
+
+        try
+        {
+            var raw = await CompleteChatAsync(
+                systemPrompt,
+                "Generate one unique fantasy-style nickname for a football predictions league player.",
+                cancellationToken,
+                maxTokens: 24,
+                temperature: 1.0);
+
+            var sanitized = BanterApp.Api.Services.UsernameRules.Sanitize(raw?.Trim());
+            if (!string.IsNullOrWhiteSpace(sanitized))
+            {
+                return sanitized;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Username suggestion via OpenAI failed; using stub fallback.");
+        }
+
+        return await new StubContentGenerator().GenerateUsernameSuggestionAsync(cancellationToken);
     }
 
     private static FeedBanterCard StubFeedBanterFromSeed(
@@ -493,6 +528,13 @@ public sealed class OpenAiContentGenerator : IContentGenerator
                 : FootballBanterOutputParser.ToJsonString(input.StatementType.Value),
             ["banter_intensity"] = banterIntensity
         };
+
+        if (!string.IsNullOrWhiteSpace(input.ReferenceContextJson))
+        {
+            payload["reference_context"] = input.ReferenceContextJson;
+            payload["instruction"] =
+                "Only cite statistics from reference_context; do not invent numbers or player/country stats.";
+        }
 
         return JsonSerializer.Serialize(payload, FootballBanterJson.OutputOptions);
     }

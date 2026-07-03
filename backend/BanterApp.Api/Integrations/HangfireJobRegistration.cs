@@ -4,6 +4,7 @@ using BanterApp.Api.Integrations.Ai;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.News;
 using BanterApp.Api.Integrations.Pundits;
+using BanterApp.Api.Integrations.FootballReference.Jobs;
 using BanterApp.Api.Integrations.SportsData;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +27,13 @@ public static class HangfireJobRegistration
         ContentEnrichmentJob.JobId,
         FeedBanterEnrichmentJob.JobId,
         PunditExtractionJob.JobId,
-        PredictionAggregateJob.JobId
+        PredictionAggregateJob.JobId,
+        FootballCountriesSyncJob.JobId,
+        FootballPlayersSyncJob.JobId,
+        FootballPlayerStatsSyncJob.JobId,
+        FootballTopScorersSyncJob.JobId,
+        FootballTopAssistsSyncJob.JobId,
+        FootballReferenceFullSyncJob.JobId
     ];
 
     public static void RegisterRecurringJobs(WebApplication app)
@@ -181,6 +188,51 @@ public static class HangfireJobRegistration
             PredictionAggregateJob.JobId,
             job => job.RefreshAsync(CancellationToken.None),
             Cron.Never());
+
+        if (!IsPaused(pausedOrDisabled, "football.countries.sync"))
+        {
+            recurring.AddOrUpdate<FootballCountriesSyncJob>(
+                FootballCountriesSyncJob.JobId,
+                job => job.SyncAsync(CancellationToken.None),
+                "0 4 * * *");
+        }
+
+        if (!IsPaused(pausedOrDisabled, "football.players.sync"))
+        {
+            recurring.AddOrUpdate<FootballPlayersSyncJob>(
+                FootballPlayersSyncJob.JobId,
+                job => job.SyncAsync(CancellationToken.None),
+                "0 5 * * *");
+        }
+
+        if (!IsPaused(pausedOrDisabled, "football.player_stats.sync"))
+        {
+            recurring.AddOrUpdate<FootballPlayerStatsSyncJob>(
+                FootballPlayerStatsSyncJob.JobId,
+                job => job.SyncAsync(CancellationToken.None),
+                "0 6 * * *");
+        }
+
+        if (!IsPaused(pausedOrDisabled, "football.top_scorers.sync"))
+        {
+            recurring.AddOrUpdate<FootballTopScorersSyncJob>(
+                FootballTopScorersSyncJob.JobId,
+                job => job.SyncAsync(CancellationToken.None),
+                "*/30 * * * *");
+        }
+
+        if (!IsPaused(pausedOrDisabled, "football.top_assists.sync"))
+        {
+            recurring.AddOrUpdate<FootballTopAssistsSyncJob>(
+                FootballTopAssistsSyncJob.JobId,
+                job => job.SyncAsync(CancellationToken.None),
+                "*/30 * * * *");
+        }
+
+        recurring.AddOrUpdate<FootballReferenceFullSyncJob>(
+            FootballReferenceFullSyncJob.JobId,
+            job => job.SyncAsync(CancellationToken.None),
+            Cron.Never());
     }
 
     private static void RegisterJobById(IRecurringJobManager recurring, string hangfireJobId, BackgroundJobsOptions jobs)
@@ -233,6 +285,24 @@ public static class HangfireJobRegistration
                 break;
             case PredictionAggregateJob.JobId:
                 recurring.AddOrUpdate<PredictionAggregateJob>(PredictionAggregateJob.JobId, j => j.RefreshAsync(CancellationToken.None), Cron.Never());
+                break;
+            case FootballCountriesSyncJob.JobId:
+                recurring.AddOrUpdate<FootballCountriesSyncJob>(FootballCountriesSyncJob.JobId, j => j.SyncAsync(CancellationToken.None), "0 4 * * *");
+                break;
+            case FootballPlayersSyncJob.JobId:
+                recurring.AddOrUpdate<FootballPlayersSyncJob>(FootballPlayersSyncJob.JobId, j => j.SyncAsync(CancellationToken.None), "0 5 * * *");
+                break;
+            case FootballPlayerStatsSyncJob.JobId:
+                recurring.AddOrUpdate<FootballPlayerStatsSyncJob>(FootballPlayerStatsSyncJob.JobId, j => j.SyncAsync(CancellationToken.None), "0 6 * * *");
+                break;
+            case FootballTopScorersSyncJob.JobId:
+                recurring.AddOrUpdate<FootballTopScorersSyncJob>(FootballTopScorersSyncJob.JobId, j => j.SyncAsync(CancellationToken.None), "*/30 * * * *");
+                break;
+            case FootballTopAssistsSyncJob.JobId:
+                recurring.AddOrUpdate<FootballTopAssistsSyncJob>(FootballTopAssistsSyncJob.JobId, j => j.SyncAsync(CancellationToken.None), "*/30 * * * *");
+                break;
+            case FootballReferenceFullSyncJob.JobId:
+                recurring.AddOrUpdate<FootballReferenceFullSyncJob>(FootballReferenceFullSyncJob.JobId, j => j.SyncAsync(CancellationToken.None), Cron.Never());
                 break;
         }
     }

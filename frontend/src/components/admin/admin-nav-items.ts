@@ -10,6 +10,7 @@ export const adminNavItems: Array<{
   { href: "/admin/source-items", label: "Source Items" },
   { href: "/admin/review", label: "Review" },
   { href: "/admin/stats", label: "Stats" },
+  { href: "/admin/football-data", label: "Football Data" },
   { href: "/admin/health", label: "Health" },
   { href: "/admin/launch-checklist", label: "Launch Checklist" },
 ] ;

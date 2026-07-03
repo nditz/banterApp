@@ -227,5 +227,8 @@ public class FootballBanterEngineTests
             int banterIntensity,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(FootballBanterStubOutputBuilder.BuildJson(input));
+
+        public Task<string> GenerateUsernameSuggestionAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult("TestKnight42");
     }
 }
