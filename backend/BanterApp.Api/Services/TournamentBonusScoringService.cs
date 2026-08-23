@@ -7,55 +7,85 @@ namespace BanterApp.Api.Services;
 
 public sealed class TournamentBonusScoringService(IConfiguration configuration)
 {
-    /// <summary>Custom leagues need more than two members for bonus picks to count.</summary>
     public const int MinCustomLeagueMembers = 3;
 
-    public const int PlayerOfTournamentPoints = 50;
-    public const int TopScorerPoints = 40;
-    public const int TopAssistPoints = 35;
+    public const int PlayerOfTheSeasonPoints = 50;
+    public const int GoldenBootPoints = 40;
+    public const int MostAssistsPoints = 35;
     public const int GoldenGlovePoints = 35;
-    public const int SurprisePackagePoints = 30;
+    public const int SurpriseTeamPoints = 30;
+    public const int LeagueWinnerPoints = 50;
+    public const int TopFourClubPoints = 20;
+    public const int RelegatedClubPoints = 20;
+    public const int YoungPlayerPoints = 35;
+
+    public static int SlotCount(TournamentBonusCategory category) =>
+        category switch
+        {
+            TournamentBonusCategory.TopFour => 4,
+            TournamentBonusCategory.Relegated => 3,
+            _ => 1
+        };
 
     public static int PointsForCategory(TournamentBonusCategory category) =>
         category switch
         {
-            TournamentBonusCategory.PlayerOfTournament => PlayerOfTournamentPoints,
-            TournamentBonusCategory.TopScorer => TopScorerPoints,
-            TournamentBonusCategory.TopAssist => TopAssistPoints,
+            TournamentBonusCategory.PlayerOfTheSeason => PlayerOfTheSeasonPoints,
+            TournamentBonusCategory.GoldenBoot => GoldenBootPoints,
+            TournamentBonusCategory.MostAssists => MostAssistsPoints,
             TournamentBonusCategory.GoldenGlove => GoldenGlovePoints,
-            TournamentBonusCategory.SurprisePackage => SurprisePackagePoints,
+            TournamentBonusCategory.SurpriseTeam => SurpriseTeamPoints,
+            TournamentBonusCategory.LeagueWinner => LeagueWinnerPoints,
+            TournamentBonusCategory.TopFour => TopFourClubPoints,
+            TournamentBonusCategory.Relegated => RelegatedClubPoints,
+            TournamentBonusCategory.YoungPlayerOfTheSeason => YoungPlayerPoints,
             _ => 0
         };
 
     public static string CategoryLabel(TournamentBonusCategory category) =>
         category switch
         {
-            TournamentBonusCategory.PlayerOfTournament => "Player of the Tournament",
-            TournamentBonusCategory.TopScorer => "Top Scorer",
-            TournamentBonusCategory.TopAssist => "Top Assist",
+            TournamentBonusCategory.PlayerOfTheSeason => "Player of the Season",
+            TournamentBonusCategory.GoldenBoot => "Golden Boot",
+            TournamentBonusCategory.MostAssists => "Most assists",
             TournamentBonusCategory.GoldenGlove => "Golden Glove",
-            TournamentBonusCategory.SurprisePackage => "Surprise Package",
+            TournamentBonusCategory.SurpriseTeam => "Surprise team",
+            TournamentBonusCategory.LeagueWinner => "League winner",
+            TournamentBonusCategory.TopFour => "Top four",
+            TournamentBonusCategory.Relegated => "Relegated",
+            TournamentBonusCategory.YoungPlayerOfTheSeason => "Young Player of the Season",
             _ => category.ToString()
         };
 
     public static string CategoryDescription(TournamentBonusCategory category) =>
         category switch
         {
-            TournamentBonusCategory.PlayerOfTournament =>
-                "Who wins the official Player of the Tournament award?",
-            TournamentBonusCategory.TopScorer =>
-                "Who finishes as the tournament's leading goal scorer?",
-            TournamentBonusCategory.TopAssist =>
-                "Who leads the tournament in assists?",
+            TournamentBonusCategory.PlayerOfTheSeason =>
+                "Who wins the Premier League Player of the Season award?",
+            TournamentBonusCategory.GoldenBoot =>
+                "Who finishes as the Premier League's leading goal scorer?",
+            TournamentBonusCategory.MostAssists =>
+                "Who leads the Premier League in assists?",
             TournamentBonusCategory.GoldenGlove =>
-                "Which goalkeeper keeps the most clean sheets and wins the Golden Glove?",
-            TournamentBonusCategory.SurprisePackage =>
-                "Which team exceeds expectations and becomes the tournament's surprise package?",
+                "Which goalkeeper wins the Golden Glove?",
+            TournamentBonusCategory.SurpriseTeam =>
+                "Which club exceeds expectations this season?",
+            TournamentBonusCategory.LeagueWinner =>
+                "Who lifts the Premier League trophy?",
+            TournamentBonusCategory.TopFour =>
+                "Name the four clubs that finish in Champions League places.",
+            TournamentBonusCategory.Relegated =>
+                "Name the three clubs that go down.",
+            TournamentBonusCategory.YoungPlayerOfTheSeason =>
+                "Who wins Young Player of the Season?",
             _ => string.Empty
         };
 
     public static bool IsTeamCategory(TournamentBonusCategory category) =>
-        category == TournamentBonusCategory.SurprisePackage;
+        category is TournamentBonusCategory.SurpriseTeam
+            or TournamentBonusCategory.LeagueWinner
+            or TournamentBonusCategory.TopFour
+            or TournamentBonusCategory.Relegated;
 
     public int CalculatePoints(
         TournamentBonusCategory category,
@@ -79,10 +109,11 @@ public sealed class TournamentBonusScoringService(IConfiguration configuration)
     {
         if (IsTeamCategory(category))
         {
-            return string.Equals(
-                NormalizeTeamCode(pickValue),
-                NormalizeTeamCode(answerValue),
-                StringComparison.OrdinalIgnoreCase);
+            var answers = answerValue
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(NormalizeTeamCode)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return answers.Contains(NormalizeTeamCode(pickValue));
         }
 
         return string.Equals(
@@ -99,20 +130,20 @@ public sealed class TournamentBonusScoringService(IConfiguration configuration)
 
     public async Task<bool> IsLockedAsync(AppDbContext db, CancellationToken ct)
     {
-        if (configuration.GetValue("Tournament:DisableBonusPickLock", false))
+        if (configuration.GetValue("SeasonAwards:DisablePickLock", false) ||
+            configuration.GetValue("Tournament:DisableBonusPickLock", false))
         {
             return false;
         }
 
         if (DateTimeOffset.TryParse(
-                configuration["Tournament:BonusPicksLockUtc"],
+                configuration["SeasonAwards:PicksLockUtc"] ?? configuration["Tournament:BonusPicksLockUtc"],
                 out var configuredLock))
         {
             return DateTimeOffset.UtcNow >= configuredLock.ToUniversalTime();
         }
 
         var firstKickoff = await db.Matches
-            .Where(m => m.Group != null && m.Group != "")
             .OrderBy(m => m.KickoffTime)
             .Select(m => (DateTimeOffset?)m.KickoffTime)
             .FirstOrDefaultAsync(ct);
@@ -127,20 +158,13 @@ public sealed class TournamentBonusScoringService(IConfiguration configuration)
     {
         if (!user.IsAuthenticated && !user.IsAnonymous)
         {
-            return new TournamentBonusEligibilityResult(false, false, false, ["Accept terms to unlock bonus picks."]);
+            return new TournamentBonusEligibilityResult(false, false, false, ["Accept terms to unlock season awards."]);
         }
 
-        var hasPredictions = await db.Predictions.AnyAsync(p =>
+        var hasActivity = await db.Predictions.AnyAsync(p =>
             user.IsAuthenticated
                 ? p.UserId == user.UserId
                 : p.AnonymousUserId == user.AnonymousUserId, ct);
-
-        var hasBrackets = await db.BracketPicks.AnyAsync(p =>
-            user.IsAuthenticated
-                ? p.UserId == user.UserId
-                : p.AnonymousUserId == user.AnonymousUserId, ct);
-
-        var hasActivity = hasPredictions || hasBrackets;
 
         var customLeagueIds = await db.LeagueMembers
             .Where(m => user.IsAuthenticated
@@ -166,13 +190,13 @@ public sealed class TournamentBonusScoringService(IConfiguration configuration)
         var reasons = new List<string>();
         if (!hasActivity)
         {
-            reasons.Add("Make at least one match prediction or bracket pick for bonus points to count on qualifying league leaderboards.");
+            reasons.Add("Make at least one match prediction for award points to count on qualifying league leaderboards.");
         }
 
         if (!hasQualifyingLeague)
         {
             reasons.Add(
-                $"Join a private league with at least {MinCustomLeagueMembers} members for bonus points to count on that league's leaderboard.");
+                $"Join a private league with at least {MinCustomLeagueMembers} members for award points to count on that league's leaderboard.");
         }
 
         return new TournamentBonusEligibilityResult(
@@ -255,7 +279,11 @@ public sealed class TournamentBonusScoringService(IConfiguration configuration)
             ? db.Predictions.Where(p => p.UserId == user.UserId)
             : db.Predictions.Where(p => p.AnonymousUserId == user.AnonymousUserId);
 
-        return await query.SumAsync(p => p.PointsAwarded, ct);
+        var matchPoints = await query.SumAsync(p => p.PointsAwarded, ct);
+        var weekBonus = user.IsAuthenticated
+            ? await db.MatchweekBonuses.Where(b => b.UserId == user.UserId).SumAsync(b => b.PointsAwarded, ct)
+            : await db.MatchweekBonuses.Where(b => b.AnonymousUserId == user.AnonymousUserId).SumAsync(b => b.PointsAwarded, ct);
+        return matchPoints + weekBonus;
     }
 
     public async Task<Dictionary<Guid, int>> GetBonusPointsByIdentityAsync(

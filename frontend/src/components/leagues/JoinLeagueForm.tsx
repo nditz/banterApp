@@ -52,7 +52,7 @@ export function JoinLeagueForm() {
           id="invite-code"
           value={inviteCode}
           onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-          placeholder="WC2026AB"
+          placeholder="PL2026AB"
           className="font-mono uppercase"
           required
         />

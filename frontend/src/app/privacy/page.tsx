@@ -37,7 +37,7 @@ export default function PrivacyPage() {
         .
       </p>
       <div className="mt-10 border-t pt-8 text-sm text-muted-foreground">
-        Entertainment predictions only — not affiliated with FIFA, broadcasters, or pundits cited in parody desks.
+        Entertainment predictions only — not affiliated with the Premier League, broadcasters, or pundits cited in parody desks.
       </div>
     </main>
   );

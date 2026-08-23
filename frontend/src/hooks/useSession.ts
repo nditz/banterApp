@@ -60,7 +60,7 @@ export function useAcceptTerms() {
         setStoredRecoveryToken(data.recoveryToken);
       }
       queryClient.setQueryData(["session"], applySessionState(data));
-      queryClient.invalidateQueries({ queryKey: ["brackets"] });
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
       queryClient.invalidateQueries({ queryKey: ["predictions"] });
       queryClient.invalidateQueries({ queryKey: ["leagues"] });
     },
@@ -90,7 +90,7 @@ export function useRecoverSession() {
         setStoredRecoveryToken(data.recoveryToken);
       }
       queryClient.setQueryData(["session"], applySessionState(data));
-      queryClient.invalidateQueries({ queryKey: ["brackets"] });
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
       queryClient.invalidateQueries({ queryKey: ["predictions"] });
       queryClient.invalidateQueries({ queryKey: ["leagues"] });
     },

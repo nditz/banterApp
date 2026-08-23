@@ -10,8 +10,8 @@ public sealed class YouTubeOptions
 
     public string[] DefaultSearchTerms { get; set; } =
     [
-        "World Cup predictions",
-        "World Cup preview",
-        "World Cup score prediction"
+        "Premier League predictions",
+        "Premier League preview",
+        "Premier League score prediction"
     ];
 }

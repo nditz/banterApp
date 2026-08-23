@@ -11,7 +11,6 @@ using BanterApp.Api.Features.Leaderboards;
 using BanterApp.Api.Features.Leagues;
 using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Features.Predictions;
-using BanterApp.Api.Features.Brackets;
 using BanterApp.Api.Features.TournamentBonuses;
 using BanterApp.Api.Features.Football;
 using BanterApp.Api.Features.UserPredictions;
@@ -55,6 +54,9 @@ builder.Services.AddSingleton<HangfireErrorLoggingFilter>();
 builder.Services.AddScoped<LiveDataResetService>();
 builder.Services.AddSingleton<ScoringService>();
 builder.Services.AddSingleton<TournamentBonusScoringService>();
+builder.Services.AddScoped<CompetitionCatalogService>();
+builder.Services.AddScoped<PredictionRescoreService>();
+builder.Services.AddScoped<MatchweekBonusService>();
 builder.Services.AddSingleton<PlayerDirectory>();
 builder.Services.AddSingleton<SessionTokenService>();
 builder.Services.AddScoped<TurnstileService>();
@@ -290,7 +292,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "BanterApp API",
         Version = "v1",
-        Description = "Phase 1 — World Cup prediction battle platform"
+        Description = "Premier League prediction and banter platform"
     });
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -367,7 +369,6 @@ app.MapHealthEndpoints();
 app.MapSyncEndpoints();
 app.MapMatchEndpoints();
 app.MapPredictionEndpoints();
-app.MapBracketEndpoints();
 app.MapTournamentBonusEndpoints();
 app.MapFootballReferenceEndpoints();
 app.MapUserPredictionEndpoints();

@@ -4,18 +4,18 @@ import Link from "next/link";
 import {
   Clapperboard,
   Grid3x3,
-  MessageSquareQuote,
   Sparkles,
   Target,
   Trophy,
+  Users,
 } from "lucide-react";
 
 const sections = [
   { href: "#predictions", label: "Picks", icon: Target },
-  { href: "#banter-feed", label: "Banter", icon: MessageSquareQuote },
-  { href: "#rankings", label: "Rankings", icon: Trophy },
-  { href: "/bonuses", label: "Bonuses", icon: Sparkles },
-  { href: "/brackets", label: "Bracket", icon: Grid3x3 },
+  { href: "/matchweek", label: "Matchweek", icon: Grid3x3 },
+  { href: "/table", label: "Table", icon: Trophy },
+  { href: "/awards", label: "Awards", icon: Sparkles },
+  { href: "/leagues", label: "Leagues", icon: Users },
   { href: "/studio", label: "Studio", icon: Clapperboard },
 ] as const;
 

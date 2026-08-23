@@ -446,6 +446,23 @@ public static class LeagueEndpoints
             ? await bonusScoring.GetBonusPointsByIdentityAsync(db, members, ct)
             : [];
 
+        var weekBonus = await db.MatchweekBonuses
+            .Where(b =>
+                (b.UserId.HasValue && userIds.Contains(b.UserId.Value)) ||
+                (b.AnonymousUserId.HasValue && anonIds.Contains(b.AnonymousUserId.Value)))
+            .ToListAsync(ct);
+        var weekMap = new Dictionary<Guid, int>();
+        foreach (var row in weekBonus)
+        {
+            var id = row.UserId ?? row.AnonymousUserId;
+            if (id is null)
+            {
+                continue;
+            }
+
+            weekMap[id.Value] = weekMap.GetValueOrDefault(id.Value) + row.PointsAwarded;
+        }
+
         return members
             .Select(m =>
             {
@@ -456,7 +473,8 @@ public static class LeagueEndpoints
                         : null;
 
                 var identityId = m.UserId ?? m.AnonymousUserId;
-                var matchPoints = stats?.Points ?? 0;
+                var matchPoints = (stats?.Points ?? 0)
+                    + (identityId.HasValue ? weekMap.GetValueOrDefault(identityId.Value) : 0);
                 var bonus = identityId.HasValue && includeBonus
                     ? bonusMap.GetValueOrDefault(identityId.Value)
                     : 0;
@@ -482,7 +500,10 @@ public static class LeagueEndpoints
             ? db.Predictions.Where(p => p.UserId == user.UserId)
             : db.Predictions.Where(p => p.AnonymousUserId == user.AnonymousUserId);
 
-        return await query.SumAsync(p => p.PointsAwarded, ct);
+        return await query.SumAsync(p => p.PointsAwarded, ct)
+               + await (user.IsAuthenticated
+                   ? db.MatchweekBonuses.Where(b => b.UserId == user.UserId).SumAsync(b => b.PointsAwarded, ct)
+                   : db.MatchweekBonuses.Where(b => b.AnonymousUserId == user.AnonymousUserId).SumAsync(b => b.PointsAwarded, ct));
     }
 
     private static string NormalizeLeagueName(string name)

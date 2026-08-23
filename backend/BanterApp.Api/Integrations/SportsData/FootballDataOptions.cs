@@ -8,5 +8,5 @@ public sealed class FootballDataOptions
 
     public string? Token { get; set; }
 
-    public string WorldCupCompetitionCode { get; set; } = "WC";
+    public string CompetitionCode { get; set; } = "PL";
 }

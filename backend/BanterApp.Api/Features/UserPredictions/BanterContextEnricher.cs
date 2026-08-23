@@ -64,7 +64,7 @@ public sealed class BanterContextEnricher(
             .ToListAsync(cancellationToken);
 
         var winnerAgg = await aggregates.GetAggregatesAsync(
-            UserPredictionTypes.WinnerCountry, comp, season, cancellationToken);
+            UserPredictionTypes.LeagueWinner, comp, season, cancellationToken);
         var scorerAgg = await aggregates.GetAggregatesAsync(
             UserPredictionTypes.TopGoalScorer, comp, season, cancellationToken);
         var bestPlayerAgg = await aggregates.GetAggregatesAsync(
@@ -74,7 +74,7 @@ public sealed class BanterContextEnricher(
         {
             top_user_predictions = new[]
             {
-                new { type = UserPredictionTypes.WinnerCountry, entries = winnerAgg.Entries.Take(3) },
+                new { type = UserPredictionTypes.LeagueWinner, entries = winnerAgg.Entries.Take(3) },
                 new { type = UserPredictionTypes.TopGoalScorer, entries = scorerAgg.Entries.Take(3) },
                 new { type = UserPredictionTypes.BestPlayer, entries = bestPlayerAgg.Entries.Take(3) }
             },

@@ -35,7 +35,7 @@ Copy `appsettings.Development.json.example` → `appsettings.Development.json` a
 ### Sports data (`ISportsDataProvider`)
 
 1. Read `SportsData:Provider` from configuration (default: `mock`).
-2. **`mock`** — registers `MockSportsDataProvider` (12 World Cup 2026–style fixtures, 4 finished + 8 upcoming).
+2. **`mock`** — registers `MockSportsDataProvider` (Premier League 2026/27 matchweeks).
 3. **`apifootball`** — registers `ApiFootballProvider` via typed `HttpClient`. Reads `SportsData:ApiKey`. If the key is missing or API calls fail, each method gracefully falls back to mock data.
 4. Unknown values log a warning and fall back to mock.
 
@@ -55,7 +55,7 @@ In development the Hangfire dashboard is available at `http://localhost:5000/han
 
 | API | Free tier | Notes |
 |-----|-----------|-------|
-| **API-Football** (integrated) | 100 req/day | All endpoints incl. live scores; World Cup `league=1` |
+| **API-Football** (integrated) | 100 req/day | All endpoints incl. live scores; Premier League `league=39` |
 | football-data.org | 10 req/min, 12 competitions | Free forever; includes World Cup; good fallback |
 | TheSportsDB | 30 req/min | Crowd-sourced; best for logos/metadata, not live accuracy |
 

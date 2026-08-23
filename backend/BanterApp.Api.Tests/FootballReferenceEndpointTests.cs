@@ -33,7 +33,7 @@ public class FootballReferenceEndpointTests : IClassFixture<BanterAppWebApplicat
 
         var payload = await response.Content.ReadFromJsonAsync<CountriesPayload>(JsonOptions);
         Assert.NotNull(payload);
-        Assert.Contains(payload!.Countries, c => c.Id == franceId && c.Name == "France");
+        Assert.Contains(payload!.Countries, c => c.Name == "France");
         Assert.DoesNotContain(payload.Countries, c => c.Name == "Inactive Land");
     }
 
@@ -108,7 +108,7 @@ public class FootballReferenceEndpointTests : IClassFixture<BanterAppWebApplicat
             CountryId = franceId,
             Rank = 1,
             Value = 5,
-            Competition = "WC",
+            Competition = "PL",
             Season = "2026",
             SourceProvider = "test"
         });

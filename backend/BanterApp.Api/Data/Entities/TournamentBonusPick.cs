@@ -6,6 +6,7 @@ public class TournamentBonusPick
     public Guid? UserId { get; set; }
     public Guid? AnonymousUserId { get; set; }
     public TournamentBonusCategory Category { get; set; }
+    public int SlotIndex { get; set; }
     public string PickValue { get; set; } = string.Empty;
     public int PointsAwarded { get; set; }
     public DateTimeOffset? LockedAt { get; set; }

@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { MatchCard } from "@/components/prediction/MatchCard";
 import { Panel } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMatches } from "@/hooks/useMatches";
+import { useCurrentMatchweek, useMatches } from "@/hooks/useMatches";
 import { isMatchLocked } from "@/lib/anonymous";
 import type { Match } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -24,15 +24,19 @@ function chunk<T>(items: T[], size: number): T[][] {
 }
 
 export function PredictionCenter() {
-  const { data: matches, isLoading, isError } = useMatches();
+  const { data: currentWeek, isLoading: weekLoading, isError: weekError } = useCurrentMatchweek();
+  const { data: upcoming, isLoading: upcomingLoading, isError: upcomingError } = useMatches();
   const [page, setPage] = useState(0);
   const touchStartX = useRef<number | null>(null);
 
-  // Only games still open for predictions — locked/kicked-off games live in the bracket
-  const openMatches = useMemo(
-    () => (matches ?? []).filter((match) => !isMatchLocked(match)),
-    [matches]
-  );
+  const weekMatches = currentWeek?.matches;
+  const isLoading = weekLoading || ((weekMatches?.length ?? 0) === 0 && upcomingLoading);
+  const isError = weekError || upcomingError;
+
+  const openMatches = useMemo(() => {
+    const matches = weekMatches && weekMatches.length > 0 ? weekMatches : upcoming ?? [];
+    return matches.filter((match) => !isMatchLocked(match));
+  }, [weekMatches, upcoming]);
 
   const pages = useMemo(
     () => chunk<Match>(openMatches, MATCHES_PER_PAGE),
@@ -64,8 +68,8 @@ export function PredictionCenter() {
   return (
     <Panel
       id="prediction-center-heading"
-      title="Matchday picks"
-      subtitle="Open fixtures — lock in before kickoff"
+      title={currentWeek?.number ? `Matchweek ${currentWeek.number}` : "Matchweek picks"}
+      subtitle="Premier League fixtures — lock in before kickoff"
       accent="pitch"
       className="xl:flex xl:max-h-[calc(100vh-6.5rem)] xl:min-h-[34rem] xl:flex-col"
       bodyClassName="xl:flex xl:min-h-0 xl:flex-1 xl:flex-col"
@@ -84,7 +88,7 @@ export function PredictionCenter() {
         </div>
       ) : pageCount === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
-          No open fixtures right now. Check the bracket for the full tournament slate.
+          No open fixtures this matchweek. Check the full board for upcoming weeks.
         </p>
       ) : (
         <>
@@ -170,10 +174,10 @@ export function PredictionCenter() {
 
       <p className="mt-3 shrink-0 border-t border-border pt-3 text-center">
         <Link
-          href="/brackets"
+          href="/matchweek"
           className="text-xs font-medium text-primary hover:underline"
         >
-          Past picks & full tournament → Brackets
+          Full matchweek board →
         </Link>
       </p>
     </Panel>

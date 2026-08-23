@@ -18,7 +18,7 @@ public sealed class StubPunditOpinionExtractor : IPunditOpinionExtractor
         var punditName = string.IsNullOrWhiteSpace(author) ? "Unknown" : author;
         var quote = Truncate(sourceText, 120) ?? sourceTitle;
         var opinion = new PunditExtractionOpinionDto(
-            Topic: "World Cup 2026",
+            Topic: "Premier League",
             Team: InferTeam(sourceText),
             Player: null,
             Match: null,

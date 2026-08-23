@@ -10,8 +10,8 @@ public sealed class MockSportsDataProvider : ISportsDataProvider, ISportsDataEnr
 
     private static readonly Dictionary<string, MatchStatisticsDto> Statistics = new()
     {
-        ["wc26-grp-A-1"] = new("wc26-grp-A-1", 54, 46, 14, 9, 6, 3, 7, 4, 11, 13, 2, 3, 0, 0),
-        ["wc26-grp-A-2"] = new("wc26-grp-A-2", 61, 39, 18, 7, 9, 2, 5, 2, 8, 14, 1, 2, 0, 0),
+        ["pl26-mw1-1"] = new("pl26-mw1-1", 54, 46, 14, 9, 6, 3, 7, 4, 11, 13, 2, 3, 0, 0),
+        ["pl26-mw1-2"] = new("pl26-mw1-2", 61, 39, 18, 7, 9, 2, 5, 2, 8, 14, 1, 2, 0, 0),
     };
 
     public Task<IReadOnlyList<MatchDto>> GetAllFixturesAsync(CancellationToken cancellationToken = default) =>
@@ -57,8 +57,7 @@ public sealed class MockSportsDataProvider : ISportsDataProvider, ISportsDataEnr
         string group,
         CancellationToken cancellationToken = default)
     {
-        var key = group.Trim().ToUpperInvariant();
-        var matches = AllFixtures.Where(m => string.Equals(m.Group, key, StringComparison.OrdinalIgnoreCase)).ToList();
+        var matches = AllFixtures.Where(m => m.Status == "FT").ToList();
         if (matches.Count == 0)
         {
             return Task.FromResult<IReadOnlyList<StandingDto>>([]);
@@ -121,107 +120,90 @@ public sealed class MockSportsDataProvider : ISportsDataProvider, ISportsDataEnr
 
     private static IReadOnlyList<MatchDto> BuildFixtures()
     {
-        var fixtures = new List<MatchDto>();
-        fixtures.AddRange(BuildGroupFixtures());
-        fixtures.AddRange(BuildKnockoutFixtures());
-        return fixtures;
-    }
+        var ars = Team("ARS", "Arsenal", "ARS");
+        var avl = Team("AVL", "Aston Villa", "AVL");
+        var bou = Team("BOU", "Bournemouth", "BOU");
+        var bre = Team("BRE", "Brentford", "BRE");
+        var bha = Team("BHA", "Brighton", "BHA");
+        var che = Team("CHE", "Chelsea", "CHE");
+        var cry = Team("CRY", "Crystal Palace", "CRY");
+        var eve = Team("EVE", "Everton", "EVE");
+        var ful = Team("FUL", "Fulham", "FUL");
+        var liv = Team("LIV", "Liverpool", "LIV");
+        var mci = Team("MCI", "Manchester City", "MCI");
+        var mun = Team("MUN", "Manchester United", "MUN");
+        var neu = Team("NEW", "Newcastle", "NEW");
+        var nfo = Team("NFO", "Nottingham Forest", "NFO");
+        var tot = Team("TOT", "Tottenham", "TOT");
+        var whu = Team("WHU", "West Ham", "WHU");
+        var wol = Team("WOL", "Wolves", "WOL");
+        var lee = Team("LEE", "Leeds", "LEE");
+        var bur = Team("BUR", "Burnley", "BUR");
+        var sun = Team("SUN", "Sunderland", "SUN");
 
-    private static IEnumerable<MatchDto> BuildGroupFixtures()
-    {
-        var groups = new Dictionary<string, (TeamDto, TeamDto, TeamDto, TeamDto)>
+        var week1 = new (TeamDto Home, TeamDto Away, int Hs, int As)[]
         {
-            ["A"] = (Team("USA", "United States", "USA"), Team("CAN", "Canada", "CAN"), Team("MEX", "Mexico", "MEX"), Team("JAM", "Jamaica", "JAM")),
-            ["B"] = (Team("ENG", "England", "ENG"), Team("FRA", "France", "FRA"), Team("GER", "Germany", "GER"), Team("ESP", "Spain", "ESP")),
-            ["C"] = (Team("BRA", "Brazil", "BRA"), Team("ARG", "Argentina", "ARG"), Team("URU", "Uruguay", "URU"), Team("COL", "Colombia", "COL")),
-            ["D"] = (Team("POR", "Portugal", "POR"), Team("NED", "Netherlands", "NED"), Team("BEL", "Belgium", "BEL"), Team("CRO", "Croatia", "CRO")),
-            ["E"] = (Team("ITA", "Italy", "ITA"), Team("SUI", "Switzerland", "SUI"), Team("SRB", "Serbia", "SRB"), Team("POL", "Poland", "POL")),
-            ["F"] = (Team("MAR", "Morocco", "MAR"), Team("SEN", "Senegal", "SEN"), Team("GHA", "Ghana", "GHA"), Team("CMR", "Cameroon", "CMR")),
-            ["G"] = (Team("JPN", "Japan", "JPN"), Team("KOR", "South Korea", "KOR"), Team("AUS", "Australia", "AUS"), Team("IRN", "Iran", "IRN")),
-            ["H"] = (Team("ECU", "Ecuador", "ECU"), Team("PER", "Peru", "PER"), Team("CHI", "Chile", "CHI"), Team("PAR", "Paraguay", "PAR")),
+            (liv, ars, 1, 2),
+            (mci, che, 3, 1),
+            (mun, tot, 2, 2),
+            (neu, avl, 1, 0),
+            (bha, ful, 2, 1),
+            (bre, cry, 1, 1),
+            (eve, whu, 0, 1),
+            (bou, wol, 2, 0),
+            (nfo, lee, 1, 0),
+            (bur, sun, 0, 0),
         };
 
-        var pairings = new (int Home, int Away)[] { (0, 1), (2, 3), (0, 2), (1, 3), (0, 3), (1, 2) };
-        var dayOffset = -4;
-
-        foreach (var (group, teams) in groups)
+        var week2 = new (TeamDto Home, TeamDto Away)[]
         {
-            var teamList = new[] { teams.Item1, teams.Item2, teams.Item3, teams.Item4 };
-            for (var i = 0; i < pairings.Length; i++)
-            {
-                var home = teamList[pairings[i].Home];
-                var away = teamList[pairings[i].Away];
-                var id = $"wc26-grp-{group}-{i + 1}";
-                var kickoff = Now.AddDays(dayOffset + i);
-                var finished = group == "A" && i < 2;
+            (ars, mci),
+            (che, liv),
+            (tot, neu),
+            (avl, mun),
+            (ful, bre),
+            (cry, bha),
+            (whu, bou),
+            (wol, eve),
+            (lee, bur),
+            (sun, nfo),
+        };
 
-                yield return finished
-                    ? Finished(id, home, away, kickoff, group, GroupVenue(group), i == 0 ? 2 : 1, i == 0 ? 1 : 0)
-                    : Upcoming(id, home, away, kickoff, group, GroupVenue(group));
-            }
+        var fixtures = new List<MatchDto>();
+        for (var i = 0; i < week1.Length; i++)
+        {
+            var (home, away, hs, ascore) = week1[i];
+            fixtures.Add(Finished($"pl26-mw1-{i + 1}", home, away, Now.AddDays(-7).AddHours(i), 1, "Premier League stadium", hs, ascore));
         }
-    }
 
-    private static IEnumerable<MatchDto> BuildKnockoutFixtures()
-    {
-        yield return Upcoming("wc26-r16-01", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(10), "Round of 16", "", "AT&T Stadium, Dallas");
-        yield return Upcoming("wc26-r16-02", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(10).AddHours(3), "Round of 16", "", "Mercedes-Benz Stadium, Atlanta");
-        yield return Upcoming("wc26-r16-03", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(11), "Round of 16", "", "Lumen Field, Seattle");
-        yield return Upcoming("wc26-r16-04", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(11).AddHours(3), "Round of 16", "", "BC Place, Vancouver");
-        yield return Upcoming("wc26-r16-05", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(12), "Round of 16", "", "Levi's Stadium, San Francisco");
-        yield return Upcoming("wc26-r16-06", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(12).AddHours(3), "Round of 16", "", "BMO Field, Toronto");
-        yield return Upcoming("wc26-r16-07", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(13), "Round of 16", "", "NRG Stadium, Houston");
-        yield return Upcoming("wc26-r16-08", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(13).AddHours(3), "Round of 16", "", "Lincoln Financial Field, Philadelphia");
-        yield return Upcoming("wc26-qf-01", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(16), "Quarter-finals", "", "MetLife Stadium, New Jersey");
-        yield return Upcoming("wc26-qf-02", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(16).AddHours(3), "Quarter-finals", "", "SoFi Stadium, Los Angeles");
-        yield return Upcoming("wc26-qf-03", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(17), "Quarter-finals", "", "Hard Rock Stadium, Miami");
-        yield return Upcoming("wc26-qf-04", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(17).AddHours(3), "Quarter-finals", "", "Estadio Azteca, Mexico City");
-        yield return Upcoming("wc26-sf-01", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(20), "Semi-finals", "", "AT&T Stadium, Dallas");
-        yield return Upcoming("wc26-sf-02", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(21), "Semi-finals", "", "Mercedes-Benz Stadium, Atlanta");
-        yield return Upcoming("wc26-final", Team("TBD", "TBD", "TBD"), Team("TBD", "TBD", "TBD"), Now.AddDays(24), "Final", "", "MetLife Stadium, New Jersey");
-    }
+        for (var i = 0; i < week2.Length; i++)
+        {
+            var (home, away) = week2[i];
+            fixtures.Add(Upcoming($"pl26-mw2-{i + 1}", home, away, Now.AddDays(i == 0 ? 0.5 : 1 + i * 0.1), 2, "Premier League stadium"));
+        }
 
-    private static string GroupVenue(string group) => group switch
-    {
-        "A" => "MetLife Stadium, New Jersey",
-        "B" => "AT&T Stadium, Dallas",
-        "C" => "SoFi Stadium, Los Angeles",
-        "D" => "Hard Rock Stadium, Miami",
-        "E" => "Mercedes-Benz Stadium, Atlanta",
-        "F" => "Lumen Field, Seattle",
-        "G" => "BC Place, Vancouver",
-        _ => "BMO Field, Toronto",
-    };
+        return fixtures;
+    }
 
     private static MatchDto Finished(
         string id,
         TeamDto home,
         TeamDto away,
         DateTimeOffset kickoff,
-        string group,
+        int matchweek,
         string venue,
         int homeScore,
         int awayScore) =>
-        new(id, home, away, kickoff, $"Group {group}", group, venue, "FT", homeScore, awayScore);
+        new(id, home, away, kickoff, $"Regular Season - {matchweek}", "PL", venue, "FT", homeScore, awayScore, matchweek);
 
     private static MatchDto Upcoming(
         string id,
         TeamDto home,
         TeamDto away,
         DateTimeOffset kickoff,
-        string group,
+        int matchweek,
         string venue) =>
-        new(id, home, away, kickoff, $"Group {group}", group, venue, "NS", null, null);
-
-    private static MatchDto Upcoming(
-        string id,
-        TeamDto home,
-        TeamDto away,
-        DateTimeOffset kickoff,
-        string stage,
-        string group,
-        string venue) =>
-        new(id, home, away, kickoff, stage, group, venue, "NS", null, null);
+        new(id, home, away, kickoff, $"Regular Season - {matchweek}", "PL", venue, "NS", null, null, matchweek);
 
     private static TeamDto Team(string id, string name, string code) =>
         new(id, name, code, code);
@@ -249,7 +231,7 @@ public sealed class MockSportsDataProvider : ISportsDataProvider, ISportsDataEnr
     public async Task<IReadOnlyDictionary<string, IReadOnlyList<StandingDto>>> GetAllStandingsAsync(
         CancellationToken cancellationToken = default)
     {
-        var groups = AllFixtures.Select(m => m.Group).Where(g => !string.IsNullOrWhiteSpace(g)).Distinct();
+        var groups = new[] { "PL" };
         var result = new Dictionary<string, IReadOnlyList<StandingDto>>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in groups)
         {

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BanterApp.Api.Integrations.SportsData.Dtos;
+using BanterApp.Api.Services;
 
 namespace BanterApp.Api.Integrations.SportsData;
 
@@ -132,16 +133,17 @@ public static class ApiFootballFixtureMapper
                     continue;
                 }
 
-                var groupKey = "A";
-                var rows = new List<StandingDto>();
-                var rank = 1;
+                    var groupKey = "PL";
+                    var rows = new List<StandingDto>();
+                    var rank = 1;
 
-                foreach (var row in groupTable.EnumerateArray())
-                {
-                    if (row.TryGetProperty("group", out var groupName))
+                    foreach (var row in groupTable.EnumerateArray())
                     {
-                        groupKey = ExtractGroupLetter(groupName.GetString() ?? string.Empty);
-                    }
+                        if (row.TryGetProperty("group", out var groupName))
+                        {
+                            var letter = ExtractGroupLetter(groupName.GetString() ?? string.Empty);
+                            groupKey = string.IsNullOrEmpty(letter) ? "PL" : letter;
+                        }
 
                     if (!row.TryGetProperty("team", out var teamEl) ||
                         !row.TryGetProperty("all", out var allEl))
@@ -195,10 +197,14 @@ public static class ApiFootballFixtureMapper
             : "NS";
 
         var stage = league.TryGetProperty("round", out var roundEl)
-            ? roundEl.GetString() ?? "Group Stage"
-            : "Group Stage";
+            ? roundEl.GetString() ?? "Regular Season"
+            : "Regular Season";
 
         var group = ExtractGroupLetter(stage);
+        if (string.IsNullOrEmpty(group))
+        {
+            group = "PL";
+        }
         var venue = fixture.TryGetProperty("venue", out var venueEl) && venueEl.TryGetProperty("name", out var venueName)
             ? venueName.GetString() ?? string.Empty
             : string.Empty;
@@ -229,7 +235,8 @@ public static class ApiFootballFixtureMapper
             venue,
             status,
             homeScore,
-            awayScore);
+            awayScore,
+            MatchweekParser.TryParse(stage));
     }
 
     private static TeamDto MapTeam(JsonElement teamEl)
@@ -241,8 +248,9 @@ public static class ApiFootballFixtureMapper
             : name.Length >= 3
                 ? name[..3].ToUpperInvariant()
                 : "TBD";
+        var logo = teamEl.TryGetProperty("logo", out var logoEl) ? logoEl.GetString() : null;
 
-        return new TeamDto(id, name, code, code);
+        return new TeamDto(id, name, code, code, logo);
     }
 
     private static string ExtractGroupLetter(string value)

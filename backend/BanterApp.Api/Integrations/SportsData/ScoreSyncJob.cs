@@ -1,6 +1,6 @@
 using BanterApp.Api.Data;
-using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.Common;
+using BanterApp.Api.Services;
 using Hangfire;
 
 namespace BanterApp.Api.Integrations.SportsData;
@@ -18,6 +18,9 @@ public sealed class ScoreSyncJob
     private readonly IEnumerable<ISportsDataFallbackProvider> _fallbacks;
     private readonly AppDbContext _db;
     private readonly SyncRunTracker _tracker;
+    private readonly CompetitionCatalogService _catalog;
+    private readonly PredictionRescoreService _rescore;
+    private readonly MatchweekBonusService _matchweekBonuses;
     private readonly ILogger<ScoreSyncJob> _logger;
 
     public ScoreSyncJob(
@@ -25,12 +28,18 @@ public sealed class ScoreSyncJob
         IEnumerable<ISportsDataFallbackProvider> fallbacks,
         AppDbContext db,
         SyncRunTracker tracker,
+        CompetitionCatalogService catalog,
+        PredictionRescoreService rescore,
+        MatchweekBonusService matchweekBonuses,
         ILogger<ScoreSyncJob> logger)
     {
         _provider = provider;
         _fallbacks = fallbacks;
         _db = db;
         _tracker = tracker;
+        _catalog = catalog;
+        _rescore = rescore;
+        _matchweekBonuses = matchweekBonuses;
         _logger = logger;
     }
 
@@ -43,6 +52,7 @@ public sealed class ScoreSyncJob
 
         try
         {
+            var season = await _catalog.EnsureCurrentPremierLeagueAsync(cancellationToken);
             var all = await _provider.GetAllFixturesAsync(cancellationToken);
             var live = await _provider.GetLiveFixturesAsync(cancellationToken);
 
@@ -77,16 +87,29 @@ public sealed class ScoreSyncJob
                 var match = await _db.Matches.FindAsync([dto.Id], cancellationToken);
                 if (match is null)
                 {
-                    _db.Matches.Add(MatchMapper.FromDto(dto));
+                    match = MatchMapper.FromDto(dto);
+                    match.CompetitionSeasonId = season.Id;
+                    _db.Matches.Add(match);
                     added++;
                 }
                 else if (MatchMapper.ApplyDto(match, dto))
                 {
+                    match.CompetitionSeasonId = season.Id;
                     updated++;
                 }
 
+                if (match.MatchweekNumber is int weekNumber)
+                {
+                    var week = await _catalog.EnsureMatchweekAsync(season, weekNumber, dto.KickoffUtc, cancellationToken);
+                    match.MatchweekId = week.Id;
+                    match.MatchweekNumber = weekNumber;
+                }
+
+                await _catalog.UpsertClubAsync(dto.HomeTeam.Code, dto.HomeTeam.Name, dto.HomeTeam.LogoUrl, dto.HomeTeam.Id, cancellationToken);
+                await _catalog.UpsertClubAsync(dto.AwayTeam.Code, dto.AwayTeam.Name, dto.AwayTeam.LogoUrl, dto.AwayTeam.Id, cancellationToken);
+
                 if (dto.Id.StartsWith("apifb-", StringComparison.OrdinalIgnoreCase) ||
-                    dto.Id.StartsWith("of26-", StringComparison.OrdinalIgnoreCase))
+                    dto.Id.StartsWith("pl26-", StringComparison.OrdinalIgnoreCase))
                 {
                     var externalId = dto.Id.Contains('-')
                         ? dto.Id[(dto.Id.IndexOf('-') + 1)..]
@@ -94,24 +117,25 @@ public sealed class ScoreSyncJob
                     await _tracker.UpsertExternalIdAsync(
                         "fixture",
                         dto.Id,
-                        dto.Id.StartsWith("of26-", StringComparison.OrdinalIgnoreCase) ? "openfootball" : Provider,
+                        dto.Id.StartsWith("pl26-", StringComparison.OrdinalIgnoreCase) ? "mock" : Provider,
                         externalId,
                         ct: cancellationToken);
                 }
             }
 
-            if (added > 0 || updated > 0)
-            {
-                await _db.SaveChangesAsync(cancellationToken);
-            }
+            await _db.SaveChangesAsync(cancellationToken);
+            var rescored = await _rescore.RescoreFinishedMatchesAsync(cancellationToken);
+            var bonuses = await _matchweekBonuses.AwardFinishedMatchweeksAsync(cancellationToken);
 
             await _tracker.CompleteAsync(run, added, updated, ct: cancellationToken);
             _logger.LogInformation(
-                "Score sync: {Total} fixtures ({Live} live, {Added} added, {Updated} updated).",
+                "Score sync: {Total} fixtures ({Live} live, {Added} added, {Updated} updated, {Rescored} rescored, {Bonuses} matchweek bonuses).",
                 merged.Count,
                 live.Count,
                 added,
-                updated);
+                updated,
+                rescored,
+                bonuses);
         }
         catch (Exception ex)
         {

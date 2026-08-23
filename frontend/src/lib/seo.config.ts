@@ -4,7 +4,7 @@ import { BRAND } from "@/lib/brand";
 export const SITE_NAME = BRAND.name;
 export const SITE_URL = `https://${BRAND.domain}`;
 export const SITE_DESCRIPTION =
-  "Ball Takes is the home of football predictions, banter and aura rankings — lock in your picks, take on the pundits, build private leagues and climb the leaderboard.";
+  "Ball Takes is the Premier League prediction game — lock matchweek picks, take on your mates in private leagues, and climb the aura rankings.";
 
 export const DEFAULT_OG_IMAGE = {
   url: "/opengraph-image.jpg",

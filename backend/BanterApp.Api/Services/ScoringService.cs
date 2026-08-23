@@ -7,8 +7,7 @@ public sealed class ScoringService
     public const int CorrectResultPoints = 3;
     public const int CorrectScorePoints = 7;
     public const int DoubleChancePoints = 2;
-    public const int PerfectMatchDayBonus = 5;
-    public const int PerfectGroupStageBonus = 20;
+    public const int PerfectMatchweekBonus = 5;
 
     public int CalculatePoints(PredictionType type, string predictionValue, Match match)
     {
@@ -26,57 +25,39 @@ public sealed class ScoringService
         };
     }
 
-    public int CalculatePerfectMatchDayBonus(IReadOnlyList<Prediction> dayPredictions, IReadOnlyList<Match> matches)
+    public int CalculatePerfectMatchweekBonus(IReadOnlyList<Prediction> weekPredictions, IReadOnlyList<Match> matches)
     {
-        if (dayPredictions.Count == 0)
+        if (weekPredictions.Count == 0 || matches.Count == 0)
         {
             return 0;
         }
 
         var matchLookup = matches.ToDictionary(m => m.Id);
-        var allCorrect = dayPredictions.All(p =>
-        {
-            if (!matchLookup.TryGetValue(p.MatchId, out var match))
-            {
-                return false;
-            }
-
-            return CalculatePoints(p.PredictionType, p.PredictionValue, match) > 0;
-        });
-
-        return allCorrect ? PerfectMatchDayBonus : 0;
-    }
-
-    public int CalculatePerfectGroupStageBonus(IReadOnlyList<Prediction> groupPredictions, IReadOnlyList<Match> groupMatches)
-    {
-        if (groupPredictions.Count == 0 || groupMatches.Count == 0)
-        {
-            return 0;
-        }
-
-        var finished = groupMatches.Where(m => m.Status == "FT").ToList();
-        if (finished.Count == 0)
-        {
-            return 0;
-        }
-
-        var predictionsByMatch = groupPredictions
+        var resultPicks = weekPredictions
             .Where(p => p.PredictionType == PredictionType.Result)
             .GroupBy(p => p.MatchId)
             .ToDictionary(g => g.Key, g => g.First());
 
-        var allGroupResultsCorrect = finished.All(match =>
+        if (resultPicks.Count < matches.Count)
         {
-            if (!predictionsByMatch.TryGetValue(match.Id, out var prediction))
+            return 0;
+        }
+
+        var allCorrect = matches.All(match =>
+        {
+            if (!resultPicks.TryGetValue(match.Id, out var prediction))
             {
                 return false;
             }
 
-            return IsCorrectResult(prediction.PredictionValue, match);
+            return CalculatePoints(prediction.PredictionType, prediction.PredictionValue, match) > 0;
         });
 
-        return allGroupResultsCorrect ? PerfectGroupStageBonus : 0;
+        return allCorrect ? PerfectMatchweekBonus : 0;
     }
+
+    public int CalculatePerfectMatchDayBonus(IReadOnlyList<Prediction> dayPredictions, IReadOnlyList<Match> matches) =>
+        CalculatePerfectMatchweekBonus(dayPredictions, matches);
 
     public static string ResolveMatchResult(Match match)
     {

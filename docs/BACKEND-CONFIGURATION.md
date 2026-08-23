@@ -76,7 +76,7 @@ See **`docs/MEDIA-FEED-INTEGRATION.md`** for full setup (RSS, podcasts, YouTube,
 | `BackgroundJobs:NewsIngestIntervalMinutes` | How often news is pulled |
 | `BackgroundJobs:MediaIngestIntervalMinutes` | How often podcasts/YouTube are scanned |
 
-Non-secret tuning (job intervals, World Cup league id, etc.) stays in committed `appsettings.json`.
+Non-secret tuning (job intervals, Premier League league id, etc.) stays in committed `appsettings.json`.
 
 ## Deploy / GitHub Actions
 

@@ -77,7 +77,7 @@ export function ConceptSlider({
           aria-label="Slide autoplay progress"
         >
           <div
-            className="h-full rounded-full bg-gradient-to-r from-brand via-pitch to-electric transition-[width] duration-100 ease-linear motion-reduce:transition-none"
+            className="h-full rounded-full bg-foreground/35 transition-[width] duration-100 ease-linear motion-reduce:transition-none"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -95,7 +95,7 @@ export function ConceptSlider({
                 className={cn(
                   "cursor-pointer shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide transition-all duration-200",
                   i === index
-                    ? "border-logo-green/50 bg-logo-green/15 text-foreground"
+                    ? "border-border bg-muted text-foreground"
                     : "border-transparent bg-muted/40 text-muted-foreground hover:text-foreground"
                 )}
               >

@@ -35,7 +35,7 @@ public sealed class FootballDataProvider : ISportsDataFallbackProvider
         try
         {
             var url =
-                $"{_options.BaseUrl.TrimEnd('/')}/competitions/{_options.WorldCupCompetitionCode}/matches";
+                $"{_options.BaseUrl.TrimEnd('/')}/competitions/{_options.CompetitionCode}/matches";
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add("X-Auth-Token", _options.Token);
             using var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -67,7 +67,7 @@ public sealed class FootballDataProvider : ISportsDataFallbackProvider
         try
         {
             var url =
-                $"{_options.BaseUrl.TrimEnd('/')}/competitions/{_options.WorldCupCompetitionCode}/standings";
+                $"{_options.BaseUrl.TrimEnd('/')}/competitions/{_options.CompetitionCode}/standings";
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add("X-Auth-Token", _options.Token);
             using var response = await _httpClient.SendAsync(request, cancellationToken);

@@ -10,4 +10,5 @@ public sealed record MatchDto(
     string Venue,
     string Status,
     int? HomeScore,
-    int? AwayScore);
+    int? AwayScore,
+    int? MatchweekNumber = null);

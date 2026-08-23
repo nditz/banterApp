@@ -105,7 +105,7 @@ public sealed class PredictionAggregateService
         }
 
         if (!string.IsNullOrWhiteSpace(opinion.Topic) &&
-            opinion.Topic.Contains("World Cup", StringComparison.OrdinalIgnoreCase))
+            opinion.Topic.Contains("Premier League", StringComparison.OrdinalIgnoreCase))
         {
             yield return ($"tournament|{opinion.Topic.Trim()}|{predictionType}", opinion);
         }

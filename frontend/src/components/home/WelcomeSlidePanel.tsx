@@ -10,7 +10,7 @@ interface WelcomeSlidePanelProps {
   className?: string;
 }
 
-/** Slide shell with accent glow — content carries its own imagery via WelcomeSlideBody. */
+/** Slide shell — copy lives in WelcomeSlideBody. */
 export function WelcomeSlidePanel({
   accent,
   ariaLabel,

@@ -10,9 +10,9 @@ public sealed class SportsDataOptions
 
     public string BaseUrl { get; set; } = "https://v3.football.api-sports.io";
 
-    public int WorldCupLeagueId { get; set; } = 1;
+    public int LeagueId { get; set; } = 39;
 
-    public int WorldCupSeason { get; set; } = 2026;
+    public int Season { get; set; } = 2026;
 
     /// <summary>How often the Hangfire score sync job runs (minutes).</summary>
     public int SyncIntervalMinutes { get; set; } = 5;

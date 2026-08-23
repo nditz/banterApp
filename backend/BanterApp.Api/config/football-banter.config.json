@@ -7,12 +7,12 @@
       "enabled": true,
       "api_base_url": "https://www.googleapis.com/youtube/v3",
       "search_terms": [
-        "World Cup 2026 predictions pundits",
+        "Premier League 2026/27 predictions pundits",
         "football pundits predictions",
-        "BBC Sport World Cup predictions",
-        "Sky Sports World Cup predictions",
+        "BBC Sport Premier League predictions",
+        "Sky Sports Premier League predictions",
         "ESPN FC predictions",
-        "Guardian Football World Cup analysis"
+        "Guardian Football Premier League analysis"
       ],
       "max_results_per_search": 25,
       "sync_interval_minutes": 180,
@@ -33,8 +33,8 @@
       ],
       "feeds": [
         {
-          "name": "BBC Sport Football World Cup",
-          "url": "https://feeds.bbci.co.uk/sport/football/world-cup/rss.xml",
+          "name": "BBC Sport Football Premier League",
+          "url": "https://feeds.bbci.co.uk/sport/football/premier-league/rss.xml",
           "source_name": "BBC Sport"
         },
         {
@@ -43,8 +43,8 @@
           "source_name": "ESPN"
         },
         {
-          "name": "Guardian Football World Cup 2026",
-          "url": "https://www.theguardian.com/football/world-cup-2026/rss",
+          "name": "Guardian Football Premier League",
+          "url": "https://www.theguardian.com/football/premierleague/rss",
           "source_name": "The Guardian"
         },
         {

@@ -35,7 +35,7 @@ public sealed class StubContentGenerator : IContentGenerator
         [BanterTone.Praise] =
         [
             "LEGEND. You nailed {prediction} and it finished {result}. The pundits wish they had your instincts.",
-            "Absolute masterclass — {prediction} locked in, {result} confirmed. You're basically a World Cup oracle.",
+            "Absolute masterclass — {prediction} locked in, {result} confirmed. You're basically a Premier League oracle.",
             "You called {prediction} before anyone believed it. {result} at full time. Take a bow.",
             "Chef's kiss prediction: {prediction}. Result: {result}. You're cooking with gas.",
         ],
@@ -75,7 +75,7 @@ public sealed class StubContentGenerator : IContentGenerator
         [(VideoScriptFormat.TikTok, VideoScriptDuration.Fifteen)] =
         [
             "[0-3s] HOOK: '{context}' — did you see that coming?\n[3-12s] Quick recap + your prediction vs result.\n[12-15s] CTA: Drop your pick for the next match!",
-            "[0-2s] 'Wait for it...' — {context}\n[2-13s] Fast cuts, score graphic, reaction face.\n[13-15s] Follow for daily World Cup banter.",
+            "[0-2s] 'Wait for it...' — {context}\n[2-13s] Fast cuts, score graphic, reaction face.\n[13-15s] Follow for daily Premier League banter.",
         ],
         [(VideoScriptFormat.TikTok, VideoScriptDuration.Thirty)] =
         [
@@ -89,7 +89,7 @@ public sealed class StubContentGenerator : IContentGenerator
         ],
         [(VideoScriptFormat.YouTubeShort, VideoScriptDuration.Fifteen)] =
         [
-            "[0-3s] Title card: {context}\n[3-12s] One-stat breakdown + punchline.\n[12-15s] Subscribe for World Cup predictions.",
+            "[0-3s] Title card: {context}\n[3-12s] One-stat breakdown + punchline.\n[12-15s] Subscribe for Premier League predictions.",
         ],
         [(VideoScriptFormat.YouTubeShort, VideoScriptDuration.Thirty)] =
         [

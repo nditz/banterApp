@@ -68,7 +68,7 @@ public sealed class PunditOpinionPersistenceTests
                     "pundit",
                     [
                         new PunditExtractionOpinionDto(
-                            "World Cup 2026",
+                            "Premier League",
                             "United States",
                             null,
                             "United States vs Mexico",
@@ -146,7 +146,7 @@ public sealed class PunditOpinionPersistenceTests
                     "journalist",
                     [
                         new PunditExtractionOpinionDto(
-                            "World Cup 2026",
+                            "Premier League",
                             "France",
                             null,
                             null,

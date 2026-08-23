@@ -9,6 +9,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<User> Users => Set<User>();
     public DbSet<AnonymousUser> AnonymousUsers => Set<AnonymousUser>();
     public DbSet<Match> Matches => Set<Match>();
+    public DbSet<Competition> Competitions => Set<Competition>();
+    public DbSet<CompetitionSeason> CompetitionSeasons => Set<CompetitionSeason>();
+    public DbSet<Matchweek> Matchweeks => Set<Matchweek>();
+    public DbSet<ClubTeam> ClubTeams => Set<ClubTeam>();
+    public DbSet<SeasonTeam> SeasonTeams => Set<SeasonTeam>();
+    public DbSet<MatchweekBonus> MatchweekBonuses => Set<MatchweekBonus>();
     public DbSet<Prediction> Predictions => Set<Prediction>();
     public DbSet<League> Leagues => Set<League>();
     public DbSet<LeagueMember> LeagueMembers => Set<LeagueMember>();
@@ -16,7 +22,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PunditPrediction> PunditPredictions => Set<PunditPrediction>();
     public DbSet<GeneratedContent> GeneratedContents => Set<GeneratedContent>();
     public DbSet<NewsFeedItem> NewsFeedItems => Set<NewsFeedItem>();
-    public DbSet<BracketPick> BracketPicks => Set<BracketPick>();
     public DbSet<TournamentBonusPick> TournamentBonusPicks => Set<TournamentBonusPick>();
     public DbSet<TournamentAwardResult> TournamentAwardResults => Set<TournamentAwardResult>();
     public DbSet<ExternalId> ExternalIds => Set<ExternalId>();
@@ -72,7 +77,85 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.ToTable("matches");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasMaxLength(64);
+            e.Property(x => x.HomeLogoUrl).HasMaxLength(512);
+            e.Property(x => x.AwayLogoUrl).HasMaxLength(512);
             e.HasIndex(x => x.KickoffTime);
+            e.HasIndex(x => x.MatchweekNumber);
+            e.HasIndex(x => x.CompetitionSeasonId);
+            e.HasOne(x => x.CompetitionSeason).WithMany(s => s.Matches).HasForeignKey(x => x.CompetitionSeasonId);
+            e.HasOne(x => x.Matchweek).WithMany(w => w.Matches).HasForeignKey(x => x.MatchweekId);
+        });
+
+        modelBuilder.Entity<Competition>(e =>
+        {
+            e.ToTable("competitions");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Slug).IsUnique();
+            e.HasIndex(x => x.Code);
+            e.Property(x => x.Name).HasMaxLength(120);
+            e.Property(x => x.Slug).HasMaxLength(80);
+            e.Property(x => x.Code).HasMaxLength(8);
+            e.Property(x => x.CountryCode).HasMaxLength(8);
+            e.Property(x => x.LogoUrl).HasMaxLength(512);
+            e.Property(x => x.Provider).HasMaxLength(32);
+            e.Property(x => x.ProviderCompetitionId).HasMaxLength(64);
+        });
+
+        modelBuilder.Entity<CompetitionSeason>(e =>
+        {
+            e.ToTable("competition_seasons");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.CompetitionId, x.StartYear }).IsUnique();
+            e.HasIndex(x => x.IsCurrent);
+            e.Property(x => x.Name).HasMaxLength(32);
+            e.Property(x => x.ProviderSeasonId).HasMaxLength(64);
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.HasOne(x => x.Competition).WithMany(c => c.Seasons).HasForeignKey(x => x.CompetitionId);
+        });
+
+        modelBuilder.Entity<Matchweek>(e =>
+        {
+            e.ToTable("matchweeks");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.CompetitionSeasonId, x.Number }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(40);
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.HasOne(x => x.CompetitionSeason).WithMany(s => s.Matchweeks).HasForeignKey(x => x.CompetitionSeasonId);
+        });
+
+        modelBuilder.Entity<ClubTeam>(e =>
+        {
+            e.ToTable("club_teams");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Code);
+            e.HasIndex(x => x.Slug).IsUnique();
+            e.HasIndex(x => new { x.Provider, x.ProviderTeamId });
+            e.Property(x => x.Name).HasMaxLength(120);
+            e.Property(x => x.ShortName).HasMaxLength(40);
+            e.Property(x => x.Slug).HasMaxLength(80);
+            e.Property(x => x.Code).HasMaxLength(8);
+            e.Property(x => x.LogoUrl).HasMaxLength(512);
+            e.Property(x => x.Provider).HasMaxLength(32);
+            e.Property(x => x.ProviderTeamId).HasMaxLength(64);
+        });
+
+        modelBuilder.Entity<SeasonTeam>(e =>
+        {
+            e.ToTable("season_teams");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.CompetitionSeasonId, x.TeamId }).IsUnique();
+            e.HasOne(x => x.CompetitionSeason).WithMany(s => s.Teams).HasForeignKey(x => x.CompetitionSeasonId);
+            e.HasOne(x => x.Team).WithMany(t => t.SeasonTeams).HasForeignKey(x => x.TeamId);
+        });
+
+        modelBuilder.Entity<MatchweekBonus>(e =>
+        {
+            e.ToTable("matchweek_bonuses");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.UserId, x.CompetitionSeasonId, x.MatchweekNumber });
+            e.HasIndex(x => new { x.AnonymousUserId, x.CompetitionSeasonId, x.MatchweekNumber });
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
+            e.HasOne(x => x.AnonymousUser).WithMany().HasForeignKey(x => x.AnonymousUserId);
         });
 
         modelBuilder.Entity<Prediction>(e =>
@@ -150,26 +233,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(x => x.QualityScore);
         });
 
-        modelBuilder.Entity<BracketPick>(e =>
-        {
-            e.ToTable("bracket_picks");
-            e.HasKey(x => x.Id);
-            e.HasIndex(x => new { x.UserId, x.SlotId });
-            e.HasIndex(x => new { x.AnonymousUserId, x.SlotId });
-            e.Property(x => x.SlotId).HasMaxLength(32);
-            e.Property(x => x.MatchId).HasMaxLength(64);
-            e.Property(x => x.WinnerTeamCode).HasMaxLength(8);
-            e.HasOne(x => x.User).WithMany(u => u.BracketPicks).HasForeignKey(x => x.UserId);
-            e.HasOne(x => x.AnonymousUser).WithMany(a => a.BracketPicks).HasForeignKey(x => x.AnonymousUserId);
-            e.HasOne(x => x.Match).WithMany().HasForeignKey(x => x.MatchId);
-        });
-
         modelBuilder.Entity<TournamentBonusPick>(e =>
         {
             e.ToTable("tournament_bonus_picks");
             e.HasKey(x => x.Id);
-            e.HasIndex(x => new { x.UserId, x.Category });
-            e.HasIndex(x => new { x.AnonymousUserId, x.Category });
+            e.HasIndex(x => new { x.UserId, x.Category, x.SlotIndex });
+            e.HasIndex(x => new { x.AnonymousUserId, x.Category, x.SlotIndex });
             e.Property(x => x.PickValue).HasMaxLength(100);
             e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
             e.HasOne(x => x.AnonymousUser).WithMany().HasForeignKey(x => x.AnonymousUserId);
@@ -340,10 +409,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.ToTable("standing_rows");
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.GroupKey, x.TeamCode, x.Provider }).IsUnique();
+            e.HasIndex(x => x.CompetitionSeasonId);
             e.Property(x => x.GroupKey).HasMaxLength(8);
             e.Property(x => x.TeamCode).HasMaxLength(8);
             e.Property(x => x.TeamName).HasMaxLength(100);
+            e.Property(x => x.LogoUrl).HasMaxLength(512);
             e.Property(x => x.Provider).HasMaxLength(32);
+            e.HasOne(x => x.CompetitionSeason).WithMany().HasForeignKey(x => x.CompetitionSeasonId);
         });
 
         modelBuilder.Entity<MatchEvent>(e =>

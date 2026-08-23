@@ -49,7 +49,8 @@ public static class TournamentBonusEndpoints
         if (normalizedTeam is not null)
         {
             syncedQuery = syncedQuery.Where(p =>
-                p.Country != null && p.Country.Code == normalizedTeam);
+                (p.ClubName != null && p.ClubName.ToLower().Contains(normalizedTeam.ToLower())) ||
+                (p.Country != null && p.Country.Code == normalizedTeam));
         }
 
         if (trimmedQuery.Length > 0)
@@ -180,7 +181,8 @@ public static class TournamentBonusEndpoints
         var categories = Enum.GetValues<TournamentBonusCategory>()
             .Select(category =>
             {
-                var pick = picks.FirstOrDefault(p => p.Category == category);
+                var categoryPicks = picks.Where(p => p.Category == category).OrderBy(p => p.SlotIndex).ToList();
+                var pick = categoryPicks.FirstOrDefault();
                 awardMap.TryGetValue(category, out var award);
 
                 return new TournamentBonusCategoryInfo(
@@ -197,14 +199,24 @@ public static class TournamentBonusEndpoints
                             pick.PickValue,
                             pick.PointsAwarded,
                             pick.LockedAt,
-                            pick.CreatedAt),
+                            pick.CreatedAt,
+                            pick.SlotIndex),
                     award is null
                         ? null
                         : new TournamentBonusAwardResponse(
                             TournamentBonusCategoryJsonConverter.ToApiString(award.Category),
                             award.AnswerValue,
                             award.AnswerDisplay,
-                            award.AnnouncedAt));
+                            award.AnnouncedAt),
+                    TournamentBonusScoringService.SlotCount(category),
+                    categoryPicks.Select(p => new TournamentBonusPickResponse(
+                        p.Id,
+                        TournamentBonusCategoryJsonConverter.ToApiString(p.Category),
+                        p.PickValue,
+                        p.PointsAwarded,
+                        p.LockedAt,
+                        p.CreatedAt,
+                        p.SlotIndex)).ToList());
             })
             .ToList();
 
@@ -237,7 +249,12 @@ public static class TournamentBonusEndpoints
 
         if (await scoring.IsLockedAsync(db, ct))
         {
-            return Results.BadRequest(new { error = "Tournament bonus picks locked at kickoff." });
+            return Results.BadRequest(new { error = "Season awards locked at the first Premier League kickoff." });
+        }
+
+        if (request.SlotIndex < 0 || request.SlotIndex >= TournamentBonusScoringService.SlotCount(request.Category))
+        {
+            return Results.BadRequest(new { error = "Invalid award slot." });
         }
 
         var ip = http.Connection.RemoteIpAddress?.ToString();
@@ -254,7 +271,7 @@ public static class TournamentBonusEndpoints
                 m.TeamACode == pickValue || m.TeamBCode == pickValue, ct);
             if (!teamExists)
             {
-                return Results.BadRequest(new { error = "Pick a team from the tournament." });
+                return Results.BadRequest(new { error = "Pick a Premier League club." });
             }
         }
         else
@@ -268,6 +285,7 @@ public static class TournamentBonusEndpoints
 
         var existing = await db.TournamentBonusPicks.FirstOrDefaultAsync(p =>
             p.Category == request.Category &&
+            p.SlotIndex == request.SlotIndex &&
             (user.IsAuthenticated
                 ? p.UserId == user.UserId
                 : p.AnonymousUserId == user.AnonymousUserId), ct);
@@ -280,6 +298,7 @@ public static class TournamentBonusEndpoints
                 UserId = user.IsAuthenticated ? user.UserId : null,
                 AnonymousUserId = user.IsAnonymous ? user.AnonymousUserId : null,
                 Category = request.Category,
+                SlotIndex = request.SlotIndex,
                 PickValue = pickValue,
                 PointsAwarded = points
             };
@@ -305,7 +324,8 @@ public static class TournamentBonusEndpoints
             existing.PickValue,
             existing.PointsAwarded,
             existing.LockedAt,
-            existing.CreatedAt));
+            existing.CreatedAt,
+            existing.SlotIndex));
     }
 
     private static async Task<Dictionary<string, string>> LoadTeamNameMapAsync(
@@ -355,11 +375,10 @@ public static class TournamentBonusEndpoints
         AppDbContext db,
         CancellationToken ct)
     {
-        var synced = await db.Countries
+        var synced = await db.ClubTeams
             .AsNoTracking()
-            .Where(c => c.IsActive && c.Code != null)
-            .OrderBy(c => c.Name)
-            .Select(c => new TournamentBonusTeamOption(c.Code!, c.Name))
+            .OrderBy(t => t.Name)
+            .Select(t => new TournamentBonusTeamOption(t.Code, t.Name))
             .ToListAsync(ct);
 
         if (synced.Count > 0)
@@ -382,7 +401,8 @@ public sealed record TournamentBonusPickResponse(
     string PickValue,
     int PointsAwarded,
     DateTimeOffset? LockedAt,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    int SlotIndex = 0);
 
 public sealed record TournamentBonusAwardResponse(
     string Category,
@@ -397,7 +417,9 @@ public sealed record TournamentBonusCategoryInfo(
     int Points,
     bool IsTeamPick,
     TournamentBonusPickResponse? Pick,
-    TournamentBonusAwardResponse? OfficialResult);
+    TournamentBonusAwardResponse? OfficialResult,
+    int SlotCount = 1,
+    IReadOnlyList<TournamentBonusPickResponse>? Picks = null);
 
 public sealed record TournamentBonusTeamOption(string Code, string Name);
 
@@ -426,13 +448,15 @@ public sealed record TournamentBonusStatusResponse(
 public record SaveTournamentBonusPickRequest(
     TournamentBonusCategory Category,
     string PickValue,
-    string? TurnstileToken);
+    string? TurnstileToken,
+    int SlotIndex = 0);
 
 public sealed class SaveTournamentBonusPickValidator : AbstractValidator<SaveTournamentBonusPickRequest>
 {
     public SaveTournamentBonusPickValidator()
     {
         RuleFor(x => x.Category).IsInEnum();
+        RuleFor(x => x.SlotIndex).GreaterThanOrEqualTo(0).LessThan(8);
         RuleFor(x => x.PickValue).NotEmpty().MaximumLength(100);
     }
 }

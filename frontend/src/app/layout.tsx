@@ -1,13 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow, Barlow_Condensed, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { AppShell } from "@/components/layout/AppShell";
 import { ClientErrorReporter } from "@/components/ClientErrorReporter";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { OrganizationJsonLd, WebsiteJsonLd } from "@/components/JsonLd";
 import { BRAND } from "@/lib/brand";
 import { BASE_METADATA } from "@/lib/seo.config";
 import { ADSENSE_CLIENT, ADSENSE_ENABLED, ADSENSE_SCRIPT_SRC } from "@/lib/ads";
 import "./globals.css";
+
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("ball-takes-theme");var d=t==="dark"||t==null||(t==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",!!d);}catch(e){}})();`;
 
 const barlow = Barlow({
   variable: "--font-barlow",
@@ -53,7 +57,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0891b2",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4f2ec" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c0d10" },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -71,22 +78,27 @@ export default function RootLayout({
       className={`${barlow.variable} ${barlowCondensed.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
+      <body className="min-h-full flex flex-col">
+        <Script id="theme-init" strategy="beforeInteractive">
+          {THEME_INIT_SCRIPT}
+        </Script>
         {ADSENSE_ENABLED ? (
-          <script
+          <Script
+            id="adsense"
             async
             src={ADSENSE_SCRIPT_SRC}
             crossOrigin="anonymous"
+            strategy="afterInteractive"
           />
         ) : null}
-      </head>
-      <body className="min-h-full flex flex-col">
         <OrganizationJsonLd />
         <WebsiteJsonLd />
-        <QueryProvider>
-          <ClientErrorReporter />
-          <AppShell>{children}</AppShell>
-        </QueryProvider>
+        <ThemeProvider>
+          <QueryProvider>
+            <ClientErrorReporter />
+            <AppShell>{children}</AppShell>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -107,7 +107,7 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
                             try
                             {
                                 opinions.Add(new PunditExtractionOpinionDto(
-                                    Topic: GetString(opEl, "topic") ?? "World Cup 2026",
+                                    Topic: GetString(opEl, "topic") ?? "Premier League",
                                     Team: GetString(opEl, "team"),
                                     Player: GetString(opEl, "player"),
                                     Match: GetString(opEl, "match"),

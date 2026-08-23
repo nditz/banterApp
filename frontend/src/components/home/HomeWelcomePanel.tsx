@@ -18,7 +18,7 @@ function WelcomeHeroEyebrow() {
   return (
     <p className="welcome-hero__brand">
       <span className="font-display text-lg text-foreground sm:text-xl">{BRAND.name}</span>
-      <span className="text-pitch">{BRAND.tagline}</span>
+      <span className="text-muted-foreground">{BRAND.tagline}</span>
     </p>
   );
 }
@@ -29,7 +29,7 @@ function SlideActions({ onCreateContent }: { onCreateContent: () => void }) {
       <Button
         type="button"
         size="sm"
-        className="btn-tournament h-8 cursor-pointer px-3 text-[11px] shadow-md"
+        className="btn-tournament h-8 cursor-pointer px-3 text-[11px]"
         onClick={onCreateContent}
       >
         <Clapperboard className="size-3" aria-hidden />
@@ -39,7 +39,7 @@ function SlideActions({ onCreateContent }: { onCreateContent: () => void }) {
         href="#predictions"
         className={cn(
           buttonVariants({ variant: "outline", size: "sm" }),
-          "h-8 cursor-pointer border-electric/30 px-3 text-[11px] font-bold uppercase tracking-wider"
+          "h-8 cursor-pointer border-border px-3 text-[11px] font-bold uppercase tracking-wider"
         )}
       >
         <Sparkles className="size-3" aria-hidden />
@@ -107,8 +107,8 @@ export function HomeWelcomePanel() {
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="inline-flex size-7 items-center justify-center rounded-lg border border-logo-green/40 bg-logo-green/10">
-            <Zap className="size-3.5 text-brand" aria-hidden />
+          <span className="inline-flex size-7 items-center justify-center rounded-lg border border-border bg-muted/40">
+            <Zap className="size-3.5 text-muted-foreground" aria-hidden />
           </span>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
@@ -162,7 +162,7 @@ export function HomeWelcomePanel() {
         </div>
       </div>
 
-      <div className="mt-4 space-y-3 border-t border-logo-green/30 pt-3">
+      <div className="mt-4 space-y-3 border-t border-border pt-3">
         <div
           className="h-1 overflow-hidden rounded-full bg-muted/60"
           role="progressbar"
@@ -172,7 +172,7 @@ export function HomeWelcomePanel() {
           aria-label="Slide autoplay progress"
         >
           <div
-            className="h-full rounded-full bg-gradient-to-r from-electric via-pitch to-logo-green transition-[width] duration-100 ease-linear motion-reduce:transition-none"
+            className="h-full rounded-full bg-foreground/35 transition-[width] duration-100 ease-linear motion-reduce:transition-none"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -190,7 +190,7 @@ export function HomeWelcomePanel() {
                 className={cn(
                   "cursor-pointer shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-all duration-200",
                   i === index
-                    ? "border-logo-green/50 bg-logo-green/15 text-foreground shadow-sm"
+                    ? "border-border bg-muted text-foreground"
                     : "border-transparent bg-muted/40 text-muted-foreground hover:border-border hover:bg-muted/70 hover:text-foreground"
                 )}
               >

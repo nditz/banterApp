@@ -1,5 +1,6 @@
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 using Hangfire;
@@ -69,7 +70,7 @@ public sealed class StandingsSyncJob
                 foreach (var row in rows)
                 {
                     var existing = await _db.StandingRows.FirstOrDefaultAsync(
-                        x => x.GroupKey == groupKey &&
+                        x => x.GroupKey == "PL" &&
                              x.TeamCode == row.Team.Code &&
                              x.Provider == Provider,
                         cancellationToken);
@@ -79,10 +80,12 @@ public sealed class StandingsSyncJob
                         _db.StandingRows.Add(new StandingRow
                         {
                             Id = Guid.NewGuid(),
-                            GroupKey = groupKey,
+                            CompetitionSeasonId = PremierLeagueCatalog.SeasonId,
+                            GroupKey = "PL",
                             Rank = row.Rank,
                             TeamCode = row.Team.Code,
                             TeamName = row.Team.Name,
+                            LogoUrl = row.Team.LogoUrl,
                             Played = row.Played,
                             Won = row.Won,
                             Drawn = row.Drawn,
@@ -100,6 +103,8 @@ public sealed class StandingsSyncJob
                     {
                         existing.Rank = row.Rank;
                         existing.TeamName = row.Team.Name;
+                        existing.LogoUrl = row.Team.LogoUrl ?? existing.LogoUrl;
+                        existing.CompetitionSeasonId = PremierLeagueCatalog.SeasonId;
                         existing.Played = row.Played;
                         existing.Won = row.Won;
                         existing.Drawn = row.Drawn;

@@ -1,6 +1,8 @@
 # PROJECT.md
 
-# World Cup Prediction Battle Platform
+# Premier League prediction game (Ball Takes)
+
+The live product is a Premier League prediction game, not a FIFA World Cup tournament. Historical World Cup product copy below is superseded by `docs/balltakes-evolution/`.
 
 ## Project Overview
 

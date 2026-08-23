@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Sparkles, UserRound } from "lucide-react";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import { Button } from "@/components/ui/button";
@@ -29,34 +29,24 @@ export function UsernameSetup({
 }: UsernameSetupProps) {
   const suggest = useSuggestUsername(!initialUsername);
   const setUsername = useSetUsername();
-  const [username, setUsernameInput] = useState(initialUsername ?? "");
+  const [draft, setDraft] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [saved, setSaved] = useState(Boolean(initialUsername));
+  const [justSaved, setJustSaved] = useState(false);
 
-  useEffect(() => {
-    if (initialUsername) {
-      setUsernameInput(initialUsername);
-      setSaved(true);
-    }
-  }, [initialUsername]);
-
-  useEffect(() => {
-    if (!initialUsername && suggest.data?.username && !username) {
-      setUsernameInput(suggest.data.username);
-    }
-  }, [initialUsername, suggest.data?.username, username]);
+  const username = draft ?? initialUsername ?? suggest.data?.username ?? "";
+  const saved = justSaved || (Boolean(initialUsername) && draft === null);
 
   const handleInputChange = (value: string) => {
-    setSaved(false);
+    setJustSaved(false);
     setErrorMessage(null);
-    setUsernameInput(sanitizeUsernameInput(value));
+    setDraft(sanitizeUsernameInput(value));
   };
 
   const handleSuggest = () => {
     if (suggest.data?.username) {
-      setUsernameInput(suggest.data.username);
-      setSaved(false);
+      setDraft(suggest.data.username);
+      setJustSaved(false);
       setErrorMessage(null);
       return;
     }
@@ -72,7 +62,8 @@ export function UsernameSetup({
     setErrorMessage(null);
     try {
       const result = await setUsername.mutateAsync({ username: username.trim(), turnstileToken });
-      setSaved(true);
+      setDraft(result.username);
+      setJustSaved(true);
       onSaved?.(result.username);
     } catch (err) {
       setErrorMessage(getApiErrorMessage(err));
@@ -82,7 +73,7 @@ export function UsernameSetup({
   return (
     <div className={cn("space-y-2", className)}>
       <div className="flex items-start gap-2">
-        <UserRound className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+        <UserRound className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
         <div className="min-w-0 flex-1">
           <p className={cn("font-semibold text-foreground", compact ? "text-xs" : "text-sm")}>
             Your league username

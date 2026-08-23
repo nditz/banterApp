@@ -3,6 +3,7 @@ import { BanterFeedPanel } from "@/components/home/BanterFeedPanel";
 import { HomeQuickNav } from "@/components/home/HomeQuickNav";
 import { HomeStatsBar } from "@/components/home/HomeStatsBar";
 import { HomeWelcomePanel } from "@/components/home/HomeWelcomePanel";
+import { LeagueTable } from "@/components/home/LeagueTable";
 import { PredictionCenter } from "@/components/home/PredictionCenter";
 import { RankingsPanel } from "@/components/home/RankingsPanel";
 import { PageWithSideAds } from "@/components/layout/PageWithSideAds";
@@ -10,10 +11,10 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Ball Takes — Football Predictions, Banter & Aura Rankings",
+    absolute: "Ball Takes — Premier League Predictions, Banter & Aura Rankings",
   },
   description:
-    "Lock in football predictions, watch the banter feed, take on the pundits and climb the aura rankings. Create private leagues and prove you know ball — no signup required.",
+    "Predict the Premier League. Beat your mates. Come back next matchweek. Lock picks, compete in private leagues and climb the aura rankings — no signup required.",
   alternates: { canonical: "/" },
 };
 
@@ -48,7 +49,10 @@ export default function HomePage() {
           className={cn(stickyScrollSideClass, "lg:col-span-12 xl:col-span-4")}
         >
           <p className="home-section-label">Ball takes board</p>
-          <RankingsPanel />
+          <div className="space-y-4">
+            <LeagueTable compact />
+            <RankingsPanel />
+          </div>
         </div>
       </div>
     </PageWithSideAds>
