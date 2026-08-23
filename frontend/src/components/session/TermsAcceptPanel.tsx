@@ -217,7 +217,7 @@ export function TermsAcceptPanel({ variant = "inline", className }: TermsAcceptP
 
       <div className="flex items-start gap-2">
 
-        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
 
         <div>
 

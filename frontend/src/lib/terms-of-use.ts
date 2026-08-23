@@ -26,7 +26,7 @@ export const TERMS_SECTIONS = [
     id: "affiliation",
     title: "Fan game — no official affiliation",
     paragraphs: [
-      `${brand} is a fan prediction game for the World Cup. It is not affiliated with FIFA or any football governing body.`,
+      `${brand} is a fan prediction game for the Premier League. It is not affiliated with the Premier League, the FA, or any football governing body.`,
     ],
   },
   {

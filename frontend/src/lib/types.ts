@@ -10,10 +10,13 @@ export interface Match {
   teamB: string;
   teamACode?: string;
   teamBCode?: string;
+  homeLogoUrl?: string;
+  awayLogoUrl?: string;
   kickoffTime: string;
   group?: string;
   venue?: string;
   stage?: string;
+  matchweekNumber?: number;
   status?: string;
   homeScore?: number;
   awayScore?: number;

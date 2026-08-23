@@ -38,7 +38,7 @@ export function getUserAvatarUrl(
   return `https://api.dicebear.com/9.x/thumbs/svg?seed=${seed}&backgroundColor=${color}`;
 }
 
-/** Default avatar for leagues — country flag, global fans shot, or custom crest. */
+/** Default avatar for leagues — generated mark, country flag, or custom crest. */
 export function getLeagueAvatarUrl(league: {
   id: string;
   name: string;
@@ -46,7 +46,8 @@ export function getLeagueAvatarUrl(league: {
   countryCode?: string;
 }): string {
   if (league.kind === "global") {
-    return "/images/fans_main_image_1.png";
+    const seed = encodeURIComponent(league.id || league.name || "global");
+    return `https://api.dicebear.com/9.x/shapes/svg?seed=${seed}&backgroundColor=1c1e24,2a2d33`;
   }
 
   if (league.kind === "country" && league.countryCode?.trim()) {

@@ -5,7 +5,6 @@ import { Calendar, MapPin } from "lucide-react";
 import { FixtureStatusBadge } from "@/components/prediction/FixtureStatusBadge";
 import { PredictionButtons } from "@/components/prediction/PredictionButtons";
 import { TeamFlag } from "@/components/brackets/TeamFlag";
-import { Badge } from "@/components/ui/badge";
 import { isMatchLocked } from "@/lib/anonymous";
 import { usePredictionHistory } from "@/hooks/usePredictions";
 import type { Match } from "@/lib/types";
@@ -25,53 +24,41 @@ function formatKickoff(iso: string): string {
   }).format(date);
 }
 
+function shortName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return name;
+  if (name.startsWith("Manchester")) return parts[1] ?? name;
+  if (name.startsWith("West ")) return name;
+  return parts[parts.length - 1] ?? name;
+}
+
 export function MatchCard({ match }: MatchCardProps) {
-  const [selectedPrediction, setSelectedPrediction] = useState<string | null>(
-    null
-  );
+  const [selectedPrediction, setSelectedPrediction] = useState<string | null>(null);
   const { data: predictions } = usePredictionHistory();
   const matchPredictions = useMemo(
     () => predictions?.filter((p) => p.matchId === match.id) ?? [],
     [predictions, match.id]
   );
   const locked = isMatchLocked(match);
+  const hasScore = match.homeScore != null && match.awayScore != null;
+  const live = match.status === "LIVE" || match.status === "1H" || match.status === "2H" || match.status === "HT";
 
   return (
-    <article className="match-card match-card-featured overflow-hidden">
-      <div className="border-b border-border/60 px-3.5 py-3">
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          {match.group && (
-            <Badge
-              variant="secondary"
-              className="h-5 border-border/60 bg-muted/50 px-1.5 text-[10px] font-semibold uppercase tracking-wide"
-            >
-              {match.group}
-            </Badge>
-          )}
-          <FixtureStatusBadge status={locked ? "locked" : "open"} />
+    <article className="match-card match-card-featured">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          {match.matchweekNumber ? (
+            <span className="page-kicker">MW {match.matchweekNumber}</span>
+          ) : null}
+          <FixtureStatusBadge status={live ? "live" : locked ? "locked" : "open"} />
         </div>
-        <h3 className="font-display text-base font-semibold leading-snug">
-          <span className="inline-flex items-center gap-2 text-foreground">
-            {match.teamACode && (
-              <TeamFlag code={match.teamACode} name={match.teamA} />
-            )}
-            {match.teamA}
-          </span>{" "}
-          <span className="font-normal text-muted-foreground">v</span>{" "}
-          <span className="inline-flex items-center gap-2 text-foreground">
-            {match.teamBCode && (
-              <TeamFlag code={match.teamBCode} name={match.teamB} />
-            )}
-            {match.teamB}
-          </span>
-        </h3>
-        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <Calendar className="size-3" aria-hidden />
             {formatKickoff(match.kickoffTime)}
           </span>
           {match.venue && (
-            <span className="inline-flex items-center gap-1">
+            <span className="hidden items-center gap-1 sm:inline-flex">
               <MapPin className="size-3" aria-hidden />
               {match.venue}
             </span>
@@ -79,13 +66,68 @@ export function MatchCard({ match }: MatchCardProps) {
         </div>
       </div>
 
-      <div className="px-3.5 py-3">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-4 sm:gap-4 sm:px-4">
+        <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
+          {match.teamACode && (
+            <TeamFlag
+              code={match.teamACode}
+              name={match.teamA}
+              logoUrl={match.homeLogoUrl}
+              size={40}
+            />
+          )}
+          <p className="font-display text-sm leading-tight text-foreground sm:text-base">
+            {shortName(match.teamA)}
+          </p>
+          {match.teamACode && (
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {match.teamACode}
+            </p>
+          )}
+        </div>
+
+        <div className="flex min-w-[4.5rem] flex-col items-center justify-center">
+          {hasScore ? (
+            <p className="font-display text-3xl leading-none tabular-nums text-foreground sm:text-4xl">
+              {match.homeScore}
+              <span className="px-1 text-xl text-muted-foreground">–</span>
+              {match.awayScore}
+            </p>
+          ) : (
+            <p className="font-display text-xl text-muted-foreground sm:text-2xl">v</p>
+          )}
+          {live && <span className="live-chip mt-1.5">Live</span>}
+        </div>
+
+        <div className="flex min-w-0 flex-col items-start gap-1.5 text-left">
+          {match.teamBCode && (
+            <TeamFlag
+              code={match.teamBCode}
+              name={match.teamB}
+              logoUrl={match.awayLogoUrl}
+              size={40}
+            />
+          )}
+          <p className="font-display text-sm leading-tight text-foreground sm:text-base">
+            {shortName(match.teamB)}
+          </p>
+          {match.teamBCode && (
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {match.teamBCode}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="border-t border-border px-3.5 py-3">
         <PredictionButtons
           matchId={match.id}
           teamA={match.teamA}
           teamB={match.teamB}
           teamACode={match.teamACode}
           teamBCode={match.teamBCode}
+          homeLogoUrl={match.homeLogoUrl}
+          awayLogoUrl={match.awayLogoUrl}
           isLocked={locked}
           existingPredictions={matchPredictions}
           selectedValue={selectedPrediction}

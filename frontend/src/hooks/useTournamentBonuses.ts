@@ -6,10 +6,18 @@ import { dedupeTeamsByCode } from "@/lib/dedupe-teams";
 import { getTurnstileToken } from "@/lib/turnstile-token";
 
 export type TournamentBonusCategoryId =
+  | "player_of_the_season"
+  | "golden_boot"
+  | "most_assists"
+  | "golden_glove"
+  | "surprise_team"
+  | "league_winner"
+  | "top_four"
+  | "relegated"
+  | "young_player_of_the_season"
   | "player_of_tournament"
   | "top_scorer"
   | "top_assist"
-  | "golden_glove"
   | "surprise_package";
 
 export interface TournamentBonusPick {
@@ -19,6 +27,7 @@ export interface TournamentBonusPick {
   pointsAwarded: number;
   lockedAt: string | null;
   createdAt: string;
+  slotIndex?: number;
 }
 
 export interface TournamentBonusAward {
@@ -36,6 +45,8 @@ export interface TournamentBonusCategoryInfo {
   isTeamPick: boolean;
   pick: TournamentBonusPick | null;
   officialResult: TournamentBonusAward | null;
+  slotCount?: number;
+  picks?: TournamentBonusPick[] | null;
 }
 
 export interface TournamentBonusTeam {
@@ -110,14 +121,16 @@ export function useSaveTournamentBonusPick() {
     mutationFn: async ({
       category,
       pickValue,
+      slotIndex = 0,
     }: {
       category: TournamentBonusCategoryId;
       pickValue: string;
+      slotIndex?: number;
     }) => {
       const turnstileToken = await getTurnstileToken();
       return apiFetch<TournamentBonusPick>("/api/tournament-bonuses/pick", {
         method: "PUT",
-        body: JSON.stringify({ category, pickValue, turnstileToken }),
+        body: JSON.stringify({ category, pickValue, slotIndex, turnstileToken }),
       });
     },
     onSuccess: () => {

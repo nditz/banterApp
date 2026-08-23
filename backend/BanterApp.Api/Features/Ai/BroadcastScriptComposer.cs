@@ -90,7 +90,7 @@ public static class BroadcastScriptComposer
         sb.AppendLine("[OUTRO — vertical clip hook]");
         sb.AppendLine($"Post this before kickoff. Tag us when it lands. {Tagline}");
         sb.AppendLine();
-        sb.Append("#WorldCup2026 #BanterApp #BallTakes #PreMatch");
+        sb.Append("#PremierLeague #BanterApp #BallTakes #PreMatch");
 
         return sb.ToString();
     }
@@ -173,7 +173,7 @@ public static class BroadcastScriptComposer
         sb.AppendLine();
         sb.AppendLine($"[SIGN-OFF] {Tagline}");
         sb.AppendLine();
-        sb.Append(style == "burn" ? "#Receipts #BanterApp #Cooked" : "#BallTakes #BanterApp #WorldCup2026");
+        sb.Append(style == "burn" ? "#Receipts #BanterApp #Cooked" : "#BallTakes #BanterApp #PremierLeague");
 
         return sb.ToString();
     }

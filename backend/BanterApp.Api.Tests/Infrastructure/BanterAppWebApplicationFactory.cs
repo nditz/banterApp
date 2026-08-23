@@ -80,7 +80,7 @@ public sealed class BanterAppWebApplicationFactory : WebApplicationFactory<Progr
         builder.UseSetting("BackgroundJobs:Enabled", "false");
         builder.UseSetting("Admin:AllowedEmails:0", TestUsers.AdminEmail);
         builder.UseSetting("Admin:ExposeErrorDetail", "true");
-        builder.UseSetting("FootballReferenceData:CompetitionCode", "WC");
+        builder.UseSetting("FootballReferenceData:CompetitionCode", "PL");
         builder.UseSetting("FootballReferenceData:Season", "2026");
 
         builder.ConfigureServices(services =>

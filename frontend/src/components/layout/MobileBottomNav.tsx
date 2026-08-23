@@ -8,10 +8,10 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home, hash: null },
-  { href: "/#predictions", label: "Picks", icon: Grid3x3, hash: "#predictions" },
-  { href: "/#banter-feed", label: "Feed", icon: Flame, hash: "#banter-feed" },
-  { href: "/#rankings", label: "Board", icon: Users, hash: "#rankings" },
-  { href: "/brackets", label: "Knockout", icon: Trophy, hash: null },
+  { href: "/matchweek", label: "Picks", icon: Grid3x3, hash: null },
+  { href: "/table", label: "Table", icon: Trophy, hash: null },
+  { href: "/leagues", label: "Leagues", icon: Users, hash: null },
+  { href: "/studio", label: "Studio", icon: Flame, hash: null },
 ] as const;
 
 function getCurrentHash() {
@@ -48,7 +48,7 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/90 backdrop-blur-md lg:hidden"
+      className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/92 backdrop-blur-md lg:hidden"
       aria-label="Mobile navigation"
     >
       <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom,0px)]">
@@ -61,7 +61,7 @@ export function MobileBottomNav() {
               className={cn(
                 "mobile-nav-item flex min-h-[3.25rem] min-w-[3rem] flex-1 flex-col items-center justify-center gap-0.5 px-0.5 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors duration-200 sm:min-w-[3.5rem]",
                 active
-                  ? "text-electric"
+                  ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"
               )}
               aria-current={active ? "page" : undefined}
@@ -69,7 +69,7 @@ export function MobileBottomNav() {
               <span
                 className={cn(
                   "flex size-8 items-center justify-center rounded-md transition-all duration-200",
-                  active && "bg-electric/12 ring-1 ring-electric/30"
+                  active && "bg-foreground/8"
                 )}
               >
                 <Icon className="size-[18px]" aria-hidden />

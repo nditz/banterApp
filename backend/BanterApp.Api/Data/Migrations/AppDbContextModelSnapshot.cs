@@ -238,48 +238,175 @@ namespace BanterApp.Api.Data.Migrations
                     b.ToTable("auth_audit_logs", (string)null);
                 });
 
-            modelBuilder.Entity("BanterApp.Api.Data.Entities.BracketPick", b =>
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.ClubTeam", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("AnonymousUserId")
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ProviderTeamId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ShortName")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.HasIndex("Provider", "ProviderTeamId");
+
+                    b.ToTable("club_teams", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.Competition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsAvailableForPrediction")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ProviderCompetitionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("competitions", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.CompetitionSeason", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompetitionId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTimeOffset?>("LockedAt")
+                    b.Property<DateTimeOffset?>("EndDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("MatchId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<bool>("IsCurrent")
+                        .HasColumnType("boolean");
 
-                    b.Property<string>("SlotId")
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("ProviderSeasonId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
-                    b.Property<string>("WinnerTeamCode")
+                    b.Property<DateTimeOffset?>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("StartYear")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)");
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MatchId");
+                    b.HasIndex("IsCurrent");
 
-                    b.HasIndex("AnonymousUserId", "SlotId");
+                    b.HasIndex("CompetitionId", "StartYear")
+                        .IsUnique();
 
-                    b.HasIndex("UserId", "SlotId");
-
-                    b.ToTable("bracket_picks", (string)null);
+                    b.ToTable("competition_seasons", (string)null);
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.Country", b =>
@@ -722,17 +849,37 @@ namespace BanterApp.Api.Data.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<string>("AwayLogoUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<int?>("AwayScore")
                         .HasColumnType("integer");
+
+                    b.Property<Guid?>("CompetitionSeasonId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Group")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("HomeLogoUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<int?>("HomeScore")
                         .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("KickoffTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("MatchweekId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("MatchweekNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("PredictionLockAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Stage")
@@ -765,7 +912,13 @@ namespace BanterApp.Api.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CompetitionSeasonId");
+
                     b.HasIndex("KickoffTime");
+
+                    b.HasIndex("MatchweekId");
+
+                    b.HasIndex("MatchweekNumber");
 
                     b.ToTable("matches", (string)null);
                 });
@@ -816,6 +969,81 @@ namespace BanterApp.Api.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("match_events", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.Matchweek", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompetitionSeasonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompetitionSeasonId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("matchweeks", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.MatchweekBonus", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AnonymousUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AwardedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CompetitionSeasonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("MatchweekNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PointsAwarded")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnonymousUserId", "CompetitionSeasonId", "MatchweekNumber");
+
+                    b.HasIndex("UserId", "CompetitionSeasonId", "MatchweekNumber");
+
+                    b.ToTable("matchweek_bonuses", (string)null);
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.MediaItem", b =>
@@ -1657,10 +1885,35 @@ namespace BanterApp.Api.Data.Migrations
                     b.ToTable("pundit_predictions", (string)null);
                 });
 
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.SeasonTeam", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompetitionSeasonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TeamId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TeamId");
+
+                    b.HasIndex("CompetitionSeasonId", "TeamId")
+                        .IsUnique();
+
+                    b.ToTable("season_teams", (string)null);
+                });
+
             modelBuilder.Entity("BanterApp.Api.Data.Entities.StandingRow", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CompetitionSeasonId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Drawn")
@@ -1682,6 +1935,10 @@ namespace BanterApp.Api.Data.Migrations
 
                     b.Property<DateTimeOffset>("LastSyncedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
 
                     b.Property<int>("Lost")
                         .HasColumnType("integer");
@@ -1714,6 +1971,8 @@ namespace BanterApp.Api.Data.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompetitionSeasonId");
 
                     b.HasIndex("GroupKey", "TeamCode", "Provider")
                         .IsUnique();
@@ -1882,6 +2141,9 @@ namespace BanterApp.Api.Data.Migrations
                     b.Property<int>("PointsAwarded")
                         .HasColumnType("integer");
 
+                    b.Property<int>("SlotIndex")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1890,9 +2152,9 @@ namespace BanterApp.Api.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AnonymousUserId", "Category");
+                    b.HasIndex("AnonymousUserId", "Category", "SlotIndex");
 
-                    b.HasIndex("UserId", "Category");
+                    b.HasIndex("UserId", "Category", "SlotIndex");
 
                     b.ToTable("tournament_bonus_picks", (string)null);
                 });
@@ -2007,27 +2269,15 @@ namespace BanterApp.Api.Data.Migrations
                     b.ToTable("user_predictions", (string)null);
                 });
 
-            modelBuilder.Entity("BanterApp.Api.Data.Entities.BracketPick", b =>
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.CompetitionSeason", b =>
                 {
-                    b.HasOne("BanterApp.Api.Data.Entities.AnonymousUser", "AnonymousUser")
-                        .WithMany("BracketPicks")
-                        .HasForeignKey("AnonymousUserId");
-
-                    b.HasOne("BanterApp.Api.Data.Entities.Match", "Match")
-                        .WithMany()
-                        .HasForeignKey("MatchId")
+                    b.HasOne("BanterApp.Api.Data.Entities.Competition", "Competition")
+                        .WithMany("Seasons")
+                        .HasForeignKey("CompetitionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BanterApp.Api.Data.Entities.User", "User")
-                        .WithMany("BracketPicks")
-                        .HasForeignKey("UserId");
-
-                    b.Navigation("AnonymousUser");
-
-                    b.Navigation("Match");
-
-                    b.Navigation("User");
+                    b.Navigation("Competition");
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.GeneratedContent", b =>
@@ -2111,6 +2361,21 @@ namespace BanterApp.Api.Data.Migrations
                     b.Navigation("Match");
                 });
 
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.Match", b =>
+                {
+                    b.HasOne("BanterApp.Api.Data.Entities.CompetitionSeason", "CompetitionSeason")
+                        .WithMany("Matches")
+                        .HasForeignKey("CompetitionSeasonId");
+
+                    b.HasOne("BanterApp.Api.Data.Entities.Matchweek", "Matchweek")
+                        .WithMany("Matches")
+                        .HasForeignKey("MatchweekId");
+
+                    b.Navigation("CompetitionSeason");
+
+                    b.Navigation("Matchweek");
+                });
+
             modelBuilder.Entity("BanterApp.Api.Data.Entities.MatchEvent", b =>
                 {
                     b.HasOne("BanterApp.Api.Data.Entities.Match", "Match")
@@ -2120,6 +2385,32 @@ namespace BanterApp.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Match");
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.Matchweek", b =>
+                {
+                    b.HasOne("BanterApp.Api.Data.Entities.CompetitionSeason", "CompetitionSeason")
+                        .WithMany("Matchweeks")
+                        .HasForeignKey("CompetitionSeasonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompetitionSeason");
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.MatchweekBonus", b =>
+                {
+                    b.HasOne("BanterApp.Api.Data.Entities.AnonymousUser", "AnonymousUser")
+                        .WithMany()
+                        .HasForeignKey("AnonymousUserId");
+
+                    b.HasOne("BanterApp.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("AnonymousUser");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.MediaItem", b =>
@@ -2224,6 +2515,34 @@ namespace BanterApp.Api.Data.Migrations
                     b.Navigation("Pundit");
                 });
 
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.SeasonTeam", b =>
+                {
+                    b.HasOne("BanterApp.Api.Data.Entities.CompetitionSeason", "CompetitionSeason")
+                        .WithMany("Teams")
+                        .HasForeignKey("CompetitionSeasonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BanterApp.Api.Data.Entities.ClubTeam", "Team")
+                        .WithMany("SeasonTeams")
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompetitionSeason");
+
+                    b.Navigation("Team");
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.StandingRow", b =>
+                {
+                    b.HasOne("BanterApp.Api.Data.Entities.CompetitionSeason", "CompetitionSeason")
+                        .WithMany()
+                        .HasForeignKey("CompetitionSeasonId");
+
+                    b.Navigation("CompetitionSeason");
+                });
+
             modelBuilder.Entity("BanterApp.Api.Data.Entities.SyncError", b =>
                 {
                     b.HasOne("BanterApp.Api.Data.Entities.SyncRun", "SyncRun")
@@ -2273,11 +2592,28 @@ namespace BanterApp.Api.Data.Migrations
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.AnonymousUser", b =>
                 {
-                    b.Navigation("BracketPicks");
-
                     b.Navigation("GeneratedContents");
 
                     b.Navigation("Predictions");
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.ClubTeam", b =>
+                {
+                    b.Navigation("SeasonTeams");
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.Competition", b =>
+                {
+                    b.Navigation("Seasons");
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.CompetitionSeason", b =>
+                {
+                    b.Navigation("Matches");
+
+                    b.Navigation("Matchweeks");
+
+                    b.Navigation("Teams");
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.Country", b =>
@@ -2301,6 +2637,11 @@ namespace BanterApp.Api.Data.Migrations
                     b.Navigation("Predictions");
 
                     b.Navigation("PunditPredictions");
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.Matchweek", b =>
+                {
+                    b.Navigation("Matches");
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.MediaItem", b =>
@@ -2331,8 +2672,6 @@ namespace BanterApp.Api.Data.Migrations
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.User", b =>
                 {
-                    b.Navigation("BracketPicks");
-
                     b.Navigation("GeneratedContents");
 
                     b.Navigation("LeagueMemberships");

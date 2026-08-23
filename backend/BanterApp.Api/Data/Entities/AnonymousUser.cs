@@ -19,5 +19,4 @@ public class AnonymousUser
 
     public ICollection<Prediction> Predictions { get; set; } = [];
     public ICollection<GeneratedContent> GeneratedContents { get; set; } = [];
-    public ICollection<BracketPick> BracketPicks { get; set; } = [];
 }

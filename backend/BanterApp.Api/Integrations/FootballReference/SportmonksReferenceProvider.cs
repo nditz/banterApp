@@ -89,7 +89,7 @@ public sealed class SportmonksReferenceProvider : IFootballReferenceDataProvider
         SyncPlayersParams? parameters = null,
         CancellationToken cancellationToken = default)
     {
-        if (!IsConfigured || _options.WorldCupSeasonId <= 0)
+        if (!IsConfigured || _options.SeasonId <= 0)
         {
             return [];
         }
@@ -97,7 +97,7 @@ public sealed class SportmonksReferenceProvider : IFootballReferenceDataProvider
         try
         {
             var url =
-                $"{_options.BaseUrl.TrimEnd('/')}/squads/seasons/{_options.WorldCupSeasonId}" +
+                $"{_options.BaseUrl.TrimEnd('/')}/squads/seasons/{_options.SeasonId}" +
                 $"?api_token={_options.Token}&include=player;team";
             using var response = await _httpClient.GetAsync(url, cancellationToken);
             if (!response.IsSuccessStatusCode)
@@ -194,7 +194,7 @@ public sealed class SportmonksReferenceProvider : IFootballReferenceDataProvider
         string statType,
         CancellationToken cancellationToken)
     {
-        if (!IsConfigured || _options.WorldCupSeasonId <= 0)
+        if (!IsConfigured || _options.SeasonId <= 0)
         {
             return [];
         }
@@ -202,7 +202,7 @@ public sealed class SportmonksReferenceProvider : IFootballReferenceDataProvider
         try
         {
             var url =
-                $"{_options.BaseUrl.TrimEnd('/')}/topscorers/seasons/{_options.WorldCupSeasonId}" +
+                $"{_options.BaseUrl.TrimEnd('/')}/topscorers/seasons/{_options.SeasonId}" +
                 $"?api_token={_options.Token}&include=player;participant";
             using var response = await _httpClient.GetAsync(url, cancellationToken);
             if (!response.IsSuccessStatusCode)

@@ -4,7 +4,7 @@ import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { CalendarDays, Shield, Sparkles, Users } from "lucide-react";
 import { useAura } from "@/hooks/useAura";
-import { useMatches } from "@/hooks/useMatches";
+import { useCurrentMatchweek, useMatches } from "@/hooks/useMatches";
 import { useMyLeagues } from "@/hooks/useLeaderboard";
 import { isMatchLocked } from "@/lib/anonymous";
 import { cn } from "@/lib/utils";
@@ -61,23 +61,25 @@ function StatItem({ icon, label, value, hint, href, accent = "gold" }: StatItemP
 
 export function HomeStatsBar() {
   const { data: matches } = useMatches();
+  const { data: currentWeek } = useCurrentMatchweek();
   const { data: myLeagues } = useMyLeagues();
   const { aura } = useAura();
 
   const openFixtures = useMemo(
-    () => (matches ?? []).filter((m) => !isMatchLocked(m)).length,
-    [matches]
+    () => (currentWeek?.matches ?? matches ?? []).filter((m) => !isMatchLocked(m)).length,
+    [currentWeek?.matches, matches]
   );
   const leagueCount = myLeagues?.leagues.length ?? 0;
+  const matchweekLabel = currentWeek?.number ? `MW ${currentWeek.number}` : "Open picks";
 
   return (
     <section
       className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3"
-      aria-label="Tournament at a glance"
+      aria-label="Season at a glance"
     >
       <StatItem
         icon={<CalendarDays className="size-4" aria-hidden />}
-        label="Open picks"
+        label={matchweekLabel}
         value={formatCount(openFixtures)}
         hint="Fixtures still open"
         href="#predictions"

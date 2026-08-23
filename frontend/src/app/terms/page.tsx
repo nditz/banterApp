@@ -20,7 +20,7 @@ export default function TermsPage() {
         </p>
       </div>
 
-      <section className="rounded-md border border-logo-green/50 bg-card p-4 shadow-sm sm:p-5">
+      <section className="rounded-md border border-border bg-card p-4 shadow-sm sm:p-5">
         <TermsOfUseContent showTitle={false} />
       </section>
 

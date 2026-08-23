@@ -14,6 +14,7 @@ public static class DatabaseSeeder
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var sports = scope.ServiceProvider.GetRequiredService<ISportsDataProvider>();
         var news = scope.ServiceProvider.GetRequiredService<INewsProvider>();
+        var catalog = scope.ServiceProvider.GetRequiredService<CompetitionCatalogService>();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseSeeder");
 
         var providerName = db.Database.ProviderName ?? "unknown";
@@ -47,6 +48,7 @@ public static class DatabaseSeeder
 
         if (!await db.Matches.AnyAsync(cancellationToken))
         {
+            await catalog.EnsureCurrentPremierLeagueAsync(cancellationToken);
             await SeedMatchesAsync(db, sports, cancellationToken);
         }
 
@@ -129,25 +131,9 @@ public static class DatabaseSeeder
 
         foreach (var dto in all)
         {
-            db.Matches.Add(MatchMapper.FromDto(dto));
-        }
-    }
-
-    private static async Task SeedMissingKnockoutMatchesAsync(
-        AppDbContext db,
-        ISportsDataProvider sports,
-        CancellationToken cancellationToken)
-    {
-        var all = await sports.GetAllFixturesAsync(cancellationToken);
-        var existingIds = await db.Matches.Select(m => m.Id).ToListAsync(cancellationToken);
-        var existing = existingIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var dto in all)
-        {
-            if (!existing.Contains(dto.Id))
-            {
-                db.Matches.Add(MatchMapper.FromDto(dto));
-            }
+            var match = MatchMapper.FromDto(dto);
+            match.CompetitionSeasonId = PremierLeagueCatalog.SeasonId;
+            db.Matches.Add(match);
         }
     }
 }

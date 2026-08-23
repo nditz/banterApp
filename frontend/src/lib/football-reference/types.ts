@@ -92,22 +92,28 @@ export interface PredictionAggregateResponse {
 }
 
 export type UserPredictionType =
-  | "winner_country"
-  | "finalist_country"
+  | "league_winner"
+  | "top_four"
+  | "relegated"
   | "best_player"
   | "top_goal_scorer"
   | "top_assist_provider"
   | "golden_boot"
   | "best_young_player"
-  | "player_of_tournament";
+  | "player_of_the_season"
+  | "golden_glove"
+  | "surprise_team";
 
 export const PREDICTION_ROUTES: Record<UserPredictionType, string> = {
-  winner_country: "/predictions/make",
-  finalist_country: "/predictions/make",
-  best_player: "/predictions/best-player",
-  top_goal_scorer: "/predictions/top-scorer",
-  top_assist_provider: "/predictions/top-assists",
-  golden_boot: "/predictions/top-scorer",
-  best_young_player: "/predictions/best-player",
-  player_of_tournament: "/predictions/best-player",
+  league_winner: "/awards",
+  top_four: "/awards",
+  relegated: "/awards",
+  best_player: "/awards",
+  top_goal_scorer: "/awards",
+  top_assist_provider: "/awards",
+  golden_boot: "/awards",
+  best_young_player: "/awards",
+  player_of_the_season: "/awards",
+  golden_glove: "/awards",
+  surprise_team: "/awards",
 };

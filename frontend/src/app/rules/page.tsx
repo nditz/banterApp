@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "Rules & How It Works",
   description:
-    "How Ball Takes works: prediction types, points scoring, tournament bonus picks, content scripts and private leagues — everything you need to start playing.",
+    "How Ball Takes works: prediction types, points scoring, season awards, content scripts and private leagues — everything you need to start playing.",
   alternates: { canonical: "/rules" },
 };
 
@@ -50,7 +50,7 @@ export default function RulesPage() {
                   className={cn(
                     "shrink-0 rounded-md px-2 py-1 text-xs font-bold",
                     "bonus" in rule && rule.bonus
-                      ? "bg-gold/15 text-gold-foreground"
+                      ? "bg-gold/15 text-gold"
                       : "bg-pitch/15 text-pitch"
                   )}
                 >
@@ -65,9 +65,9 @@ export default function RulesPage() {
       </section>
 
       <section className="rounded-md border border-gold/25 bg-gold/5 p-4 shadow-sm sm:p-5">
-        <h2 className="text-base font-semibold">Tournament bonus picks</h2>
+        <h2 className="text-base font-semibold">Season awards</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Five tournament-long predictions with big point swings — only in private leagues with at
+          Season-long predictions with big point swings — only in private leagues with at
           least {TOURNAMENT_BONUS_ELIGIBILITY.minCustomLeagueMembers} members.
         </p>
 
@@ -88,7 +88,7 @@ export default function RulesPage() {
                     e.g. {rule.example}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-md bg-gold/15 px-2 py-1 text-xs font-bold text-gold-foreground">
+                <span className="shrink-0 rounded-md bg-gold/15 px-2 py-1 text-xs font-bold text-gold">
                   +{rule.points}
                 </span>
               </div>
@@ -100,10 +100,10 @@ export default function RulesPage() {
           {TOURNAMENT_BONUS_ELIGIBILITY.summary}
         </p>
         <Link
-          href="/bonuses"
+          href="/awards"
           className={cn(buttonVariants({ size: "sm" }), "btn-tournament mt-4 h-8 text-xs")}
         >
-          Make bonus picks
+          Make season awards
         </Link>
       </section>
 

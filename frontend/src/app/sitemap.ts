@@ -10,9 +10,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: number;
   }> = [
     { path: "/", changeFrequency: "daily", priority: 1 },
-    { path: "/brackets", changeFrequency: "daily", priority: 0.8 },
+    { path: "/matchweek", changeFrequency: "daily", priority: 0.9 },
+    { path: "/table", changeFrequency: "daily", priority: 0.8 },
+    { path: "/awards", changeFrequency: "weekly", priority: 0.8 },
     { path: "/leagues", changeFrequency: "weekly", priority: 0.8 },
-    { path: "/bonuses", changeFrequency: "weekly", priority: 0.8 },
+    { path: "/studio", changeFrequency: "weekly", priority: 0.5 },
     { path: "/rules", changeFrequency: "monthly", priority: 0.6 },
     { path: "/terms", changeFrequency: "yearly", priority: 0.3 },
     { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },

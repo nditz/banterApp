@@ -10,7 +10,7 @@ async function fetchUpcomingMatches(): Promise<Match[]> {
     return await apiFetch<Match[]>("/api/matches/upcoming");
   } catch (error) {
     if (error instanceof ApiError) {
-      return mockMatches;
+      return mockMatches.filter((m) => m.status !== "FT");
     }
     throw error;
   }
@@ -29,9 +29,7 @@ async function fetchMatchResults(): Promise<Match[]> {
     return await apiFetch<Match[]>("/api/matches/results");
   } catch (error) {
     if (error instanceof ApiError) {
-      return mockMatches.filter(
-        (m) => m.homeScore != null && m.awayScore != null
-      );
+      return mockMatches.filter((m) => m.homeScore != null && m.awayScore != null);
     }
     throw error;
   }
@@ -41,6 +39,56 @@ export function useMatchResults() {
   return useQuery({
     queryKey: ["matches", "results"],
     queryFn: fetchMatchResults,
+    staleTime: 60_000,
+  });
+}
+
+export function useCurrentMatchweek() {
+  return useQuery({
+    queryKey: ["matchweeks", "current"],
+    queryFn: async () => {
+      try {
+        return await apiFetch<{ number: number; matches: Match[] }>("/api/matchweeks/current");
+      } catch (error) {
+        if (error instanceof ApiError) {
+          const number = mockMatches.find((m) => m.status !== "FT")?.matchweekNumber ?? 1;
+          return {
+            number,
+            matches: mockMatches.filter((m) => m.matchweekNumber === number),
+          };
+        }
+        throw error;
+      }
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useLeagueTable() {
+  return useQuery({
+    queryKey: ["standings"],
+    queryFn: async () => {
+      try {
+        return await apiFetch<
+          Array<{
+            rank: number;
+            teamCode: string;
+            teamName: string;
+            logoUrl?: string;
+            played: number;
+            won: number;
+            drawn: number;
+            lost: number;
+            goalsFor: number;
+            goalsAgainst: number;
+            goalDiff: number;
+            points: number;
+          }>
+        >("/api/standings");
+      } catch {
+        return [];
+      }
+    },
     staleTime: 60_000,
   });
 }

@@ -4,7 +4,7 @@ export const BRAND = {
   domain: "balltakes.com",
   description:
     "Football predictions, banter, aura rankings and pundit comparisons.",
-  themeColor: "#9FDC03",
+  themeColor: "#0c0d10",
   logoGreen: "#9FDC03",
   headerBackground: "#000000",
   background: "#000000",

@@ -6,8 +6,8 @@ using Microsoft.Extensions.Options;
 namespace BanterApp.Api.Integrations.SportsData;
 
 /// <summary>
-/// Free World Cup 2026 schedule/results from openfootball/worldcup.json (no API key).
-/// Used when paid APIs (API-Football 2026 season) are unavailable.
+/// Disabled by default. Previously used for World Cup schedule dumps; Premier League
+/// fixtures come from API-Football (league 39) or the mock provider.
 /// </summary>
 public sealed class OpenFootballProvider : ISportsDataFallbackProvider
 {

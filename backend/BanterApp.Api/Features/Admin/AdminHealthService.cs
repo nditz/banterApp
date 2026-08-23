@@ -78,6 +78,9 @@ public sealed class AdminHealthService(
         var opinionsVisibleInFeed = await db.PunditOpinions.CountAsync(
             o => o.Pundit.Kind == PunditKind.Source && !o.NeedsHumanReview && o.ReviewStatus != "rejected", ct);
 
+        var fixtureCount = await db.Matches.CountAsync(ct);
+        var matchweekCount = await db.Matchweeks.CountAsync(ct);
+
         return new
         {
             database = new { connected = dbConnected, provider = isPostgres ? "postgresql" : "inmemory" },
@@ -106,6 +109,14 @@ public sealed class AdminHealthService(
                 usingLiveGifs = reactionGifOptions.Value.Enabled
             },
             rss = new { reachable = rssProbe },
+            sportsData = new
+            {
+                competition = "Premier League",
+                leagueId = configuration.GetValue("SportsData:LeagueId", 39),
+                season = configuration.GetValue("SportsData:Season", 2026),
+                fixtureCount,
+                matchweekCount
+            },
             punditPipeline = new
             {
                 aiProvider = usingOpenAiExtractor ? "openai" : "stub",
@@ -162,6 +173,7 @@ public sealed class AdminHealthService(
             : true;
 
         var openAiSummary = await providerUsageGuard.GetTodaySummaryAsync("openai", ct);
+        var premierLeagueFixtures = await db.Matches.AnyAsync(ct);
 
         return new
         {
@@ -174,6 +186,8 @@ public sealed class AdminHealthService(
                 Check("Queue connected", true),
                 Check("Admin user exists", adminExists),
                 Check("RSS sources configured", rssConfigured),
+                Check("Premier League fixtures present", premierLeagueFixtures),
+                Check("SportsData league is Premier League (39)", configuration.GetValue("SportsData:LeagueId", 0) == 39),
                 Check("Job scheduler active", backgroundJobsOptions.Value.Enabled),
                 Check("Error logging active", true),
                 Check("Production environment variables valid", productionChecks),

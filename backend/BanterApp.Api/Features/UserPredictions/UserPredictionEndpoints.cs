@@ -271,27 +271,33 @@ public static class UserPredictionTypeLabels
 {
     public static string Label(string type) => type switch
     {
-        UserPredictionTypes.WinnerCountry => "Winning Country",
-        UserPredictionTypes.FinalistCountry => "Finalist Country",
-        UserPredictionTypes.BestPlayer => "Best Player",
+        UserPredictionTypes.LeagueWinner => "League winner",
+        UserPredictionTypes.TopFour => "Top four",
+        UserPredictionTypes.Relegated => "Relegated",
+        UserPredictionTypes.BestPlayer => "Player of the Season",
         UserPredictionTypes.TopGoalScorer => "Top Goal Scorer",
-        UserPredictionTypes.TopAssistProvider => "Top Assist Provider",
+        UserPredictionTypes.TopAssistProvider => "Most assists",
         UserPredictionTypes.GoldenBoot => "Golden Boot",
-        UserPredictionTypes.BestYoungPlayer => "Best Young Player",
-        UserPredictionTypes.PlayerOfTournament => "Player of the Tournament",
+        UserPredictionTypes.BestYoungPlayer => "Young Player of the Season",
+        UserPredictionTypes.PlayerOfTheSeason => "Player of the Season",
+        UserPredictionTypes.GoldenGlove => "Golden Glove",
+        UserPredictionTypes.SurpriseTeam => "Surprise team",
         _ => type
     };
 
     public static string Description(string type) => type switch
     {
-        UserPredictionTypes.WinnerCountry => "Which country wins the tournament?",
-        UserPredictionTypes.FinalistCountry => "Which country reaches the final?",
-        UserPredictionTypes.BestPlayer => "Who is the best player of the tournament?",
+        UserPredictionTypes.LeagueWinner => "Who lifts the Premier League trophy?",
+        UserPredictionTypes.TopFour => "Which four clubs finish in the top four?",
+        UserPredictionTypes.Relegated => "Which three clubs go down?",
+        UserPredictionTypes.BestPlayer => "Who is Player of the Season?",
         UserPredictionTypes.TopGoalScorer => "Who finishes as top goal scorer?",
         UserPredictionTypes.TopAssistProvider => "Who leads in assists?",
         UserPredictionTypes.GoldenBoot => "Who wins the Golden Boot?",
-        UserPredictionTypes.BestYoungPlayer => "Who is the best young player?",
-        UserPredictionTypes.PlayerOfTournament => "Who wins Player of the Tournament?",
+        UserPredictionTypes.BestYoungPlayer => "Who is Young Player of the Season?",
+        UserPredictionTypes.PlayerOfTheSeason => "Who wins Player of the Season?",
+        UserPredictionTypes.GoldenGlove => "Who wins the Golden Glove?",
+        UserPredictionTypes.SurpriseTeam => "Which club exceeds expectations?",
         _ => string.Empty
     };
 }

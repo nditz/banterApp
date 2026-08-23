@@ -31,6 +31,8 @@ interface PredictionButtonsProps {
   teamB: string;
   teamACode?: string;
   teamBCode?: string;
+  homeLogoUrl?: string;
+  awayLogoUrl?: string;
   isLocked?: boolean;
   existingPredictions?: Prediction[];
   selectedValue?: string | null;
@@ -130,6 +132,8 @@ export function PredictionButtons({
   teamB,
   teamACode,
   teamBCode,
+  homeLogoUrl,
+  awayLogoUrl,
   isLocked = false,
   existingPredictions = [],
   selectedValue,
@@ -298,7 +302,12 @@ export function PredictionButtons({
                   >
                     <span className="flex items-center justify-center gap-1.5 font-semibold">
                       {flagCode && (
-                        <TeamFlag code={flagCode} name={label} />
+                        <TeamFlag
+                          code={flagCode}
+                          name={label}
+                          logoUrl={value === "home" ? homeLogoUrl : value === "away" ? awayLogoUrl : undefined}
+                          size={20}
+                        />
                       )}
                       <span className="line-clamp-2">{label}</span>
                     </span>

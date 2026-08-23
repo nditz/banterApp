@@ -2,9 +2,13 @@ namespace BanterApp.Api.Data.Entities;
 
 public enum TournamentBonusCategory
 {
-    PlayerOfTournament = 0,
-    TopScorer = 1,
-    TopAssist = 2,
+    PlayerOfTheSeason = 0,
+    GoldenBoot = 1,
+    MostAssists = 2,
     GoldenGlove = 3,
-    SurprisePackage = 4
+    SurpriseTeam = 4,
+    LeagueWinner = 5,
+    TopFour = 6,
+    Relegated = 7,
+    YoungPlayerOfTheSeason = 8
 }

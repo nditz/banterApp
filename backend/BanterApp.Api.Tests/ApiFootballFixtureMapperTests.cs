@@ -38,6 +38,37 @@ public class ApiFootballFixtureMapperTests
     }
 
     [Fact]
+    public void MapFixtures_ParsesPremierLeagueMatchweek()
+    {
+        const string json = """
+            {
+              "response": [
+                {
+                  "fixture": { "id": 9001, "date": "2026-08-15T14:00:00+00:00", "status": { "short": "NS" }, "venue": { "name": "Emirates Stadium" } },
+                  "league": { "id": 39, "round": "Regular Season - 1" },
+                  "teams": {
+                    "home": { "id": 42, "name": "Arsenal", "code": "ARS", "logo": "https://media.api-sports.io/football/teams/42.png" },
+                    "away": { "id": 49, "name": "Chelsea", "code": "CHE", "logo": "https://media.api-sports.io/football/teams/49.png" }
+                  },
+                  "goals": { "home": null, "away": null }
+                }
+              ]
+            }
+            """;
+
+        using var document = JsonDocument.Parse(json);
+        var fixtures = ApiFootballFixtureMapper.MapFixtures(document.RootElement);
+
+        Assert.Single(fixtures);
+        var match = fixtures[0];
+        Assert.Equal("apifb-9001", match.Id);
+        Assert.Equal("Arsenal", match.HomeTeam.Name);
+        Assert.Equal("PL", match.Group);
+        Assert.Equal(1, match.MatchweekNumber);
+        Assert.Equal("https://media.api-sports.io/football/teams/42.png", match.HomeTeam.LogoUrl);
+    }
+
+    [Fact]
     public void MapEvents_ParsesGoalEvent()
     {
         const string json = """
@@ -103,18 +134,19 @@ public class ApiFootballFixtureMapperTests
 public class MockSportsDataProviderTests
 {
     [Fact]
-    public async Task GetAllFixtures_ReturnsWorldCupStyleFixtures()
+    public async Task GetAllFixtures_ReturnsPremierLeagueFixtures()
     {
         var provider = new MockSportsDataProvider();
         var fixtures = await provider.GetAllFixturesAsync();
         Assert.True(fixtures.Count >= 12);
+        Assert.All(fixtures, f => Assert.Equal("PL", f.Group));
     }
 
     [Fact]
-    public async Task GetAllStandings_ReturnsGroups()
+    public async Task GetAllStandings_ReturnsPremierLeagueTable()
     {
         var provider = new MockSportsDataProvider();
         var standings = await provider.GetAllStandingsAsync();
-        Assert.Contains(standings.Keys, k => k == "A");
+        Assert.Contains(standings.Keys, k => k == "PL");
     }
 }

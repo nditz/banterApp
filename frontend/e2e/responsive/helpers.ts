@@ -37,8 +37,8 @@ export const publicRoutes = [
   { path: "/#rankings", name: "rankings section" },
   { path: "/predictions/history", name: "prediction history" },
   { path: "/studio", name: "studio" },
-  { path: "/brackets", name: "brackets" },
-  { path: "/bonuses", name: "bonuses" },
+  { path: "/matchweek", name: "matchweek" },
+  { path: "/awards", name: "awards" },
   { path: "/auth/login", name: "login" },
 ] as const;
 

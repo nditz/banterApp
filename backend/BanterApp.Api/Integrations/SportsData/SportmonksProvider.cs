@@ -49,10 +49,10 @@ public sealed class SportmonksProvider : ISportsDataFallbackProvider
 
         try
         {
-            var path = _options.WorldCupSeasonId > 0
-                ? $"fixtures?filters=fixtureSeasons:{_options.WorldCupSeasonId}"
-                : _options.WorldCupLeagueId > 0
-                    ? $"fixtures?filters=fixtureLeagues:{_options.WorldCupLeagueId}"
+            var path = _options.SeasonId > 0
+                ? $"fixtures?filters=fixtureSeasons:{_options.SeasonId}"
+                : _options.LeagueId > 0
+                    ? $"fixtures?filters=fixtureLeagues:{_options.LeagueId}"
                     : "fixtures";
 
             var url =
@@ -80,7 +80,7 @@ public sealed class SportmonksProvider : ISportsDataFallbackProvider
     public async Task<IReadOnlyDictionary<string, IReadOnlyList<StandingDto>>> GetStandingsAsync(
         CancellationToken cancellationToken = default)
     {
-        if (!IsConfigured || _options.WorldCupSeasonId <= 0)
+        if (!IsConfigured || _options.SeasonId <= 0)
         {
             return new Dictionary<string, IReadOnlyList<StandingDto>>();
         }
@@ -88,7 +88,7 @@ public sealed class SportmonksProvider : ISportsDataFallbackProvider
         try
         {
             var url =
-                $"{_options.BaseUrl.TrimEnd('/')}/standings/seasons/{_options.WorldCupSeasonId}" +
+                $"{_options.BaseUrl.TrimEnd('/')}/standings/seasons/{_options.SeasonId}" +
                 $"?api_token={_options.Token}" +
                 "&include=participant;group;details";
             using var response = await _httpClient.GetAsync(url, cancellationToken);

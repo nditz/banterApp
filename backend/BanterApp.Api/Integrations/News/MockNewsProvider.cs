@@ -6,50 +6,50 @@ public sealed class MockNewsProvider : INewsProvider
     [
         new(
             "news-001",
-            "USA edge Canada in World Cup 2026 opener as Pulisic strikes late",
-            "Christian Pulisic's 78th-minute goal sealed a 2-1 win for the hosts in a tense Group A clash at MetLife Stadium.",
+            "Arsenal edge Liverpool as Havertz strike decides the North London-Merseyside clash",
+            "A late winner at Anfield keeps the title race wide open after a tense Premier League night.",
             "ESPN",
-            "https://www.espn.com/soccer/story/_/id/example-usa-canada-wc26",
-            "Jeff Carlisle",
+            "https://www.espn.com/soccer/story/_/id/example-arsenal-liverpool",
+            "Mark Ogden",
             DateTimeOffset.UtcNow.AddHours(-8),
             null,
             "Match Report"),
         new(
             "news-002",
-            "Mexico send statement with 3-0 win over Jamaica at Azteca",
-            "El Tri dominated from the first whistle, with Lozano and Jimenez on the scoresheet in a roaring home atmosphere.",
+            "Manchester City put four past Chelsea to send a statement",
+            "Pep Guardiola's side looked ruthless in a statement win that puts pressure on the chasing pack.",
             "The Guardian",
-            "https://www.theguardian.com/football/example-mexico-jamaica-wc26",
+            "https://www.theguardian.com/football/example-man-city-chelsea",
             "Jonathan Wilson",
             DateTimeOffset.UtcNow.AddHours(-14),
             null,
             "Match Report"),
         new(
             "news-003",
-            "England vs France preview: Kane and Mbappe set for Group B blockbuster",
-            "Two European heavyweights collide in Dallas with both sides eyeing early control of the so-called Group of Death.",
+            "Arsenal vs Manchester City: title-race preview",
+            "Two of the Premier League's heavyweights meet with the table still tight at the top.",
             "BBC Sport",
-            "https://www.bbc.com/sport/football/example-england-france-preview",
+            "https://www.bbc.com/sport/football/example-arsenal-city-preview",
             "Phil McNulty",
             DateTimeOffset.UtcNow.AddHours(-2),
             null,
             "Preview"),
         new(
             "news-004",
-            "Brazil held by Serbia in Los Angeles as both teams share the spoils",
-            "A Vinicius Jr equalizer rescued Brazil after Mitrovic's early header had given Serbia a surprise lead at SoFi Stadium.",
+            "Newcastle grind out a win as Isak stays clinical",
+            "Eddie Howe's side took the points in a tight home fixture that keeps European hopes alive.",
             "Sky Sports",
-            "https://www.skysports.com/football/news/example-brazil-serbia-draw",
+            "https://www.skysports.com/football/news/example-newcastle-villa",
             "Gerard Brand",
             DateTimeOffset.UtcNow.AddDays(-1).AddHours(-3),
             null,
             "Match Report"),
         new(
             "news-005",
-            "World Cup 2026 format explained: 48 teams, 12 groups, and the road to the final",
-            "A beginner-friendly guide to the expanded tournament across the USA, Canada, and Mexico.",
+            "Premier League 2026/27: how the title race and relegation fight work",
+            "A beginner-friendly guide to 38 matchweeks, 20 clubs, and why every pick still matters in May.",
             "The Athletic",
-            "https://www.nytimes.com/athletic/example-wc26-format-guide",
+            "https://www.nytimes.com/athletic/example-premier-league-guide",
             "Mark Ogden",
             DateTimeOffset.UtcNow.AddDays(-2),
             null,
@@ -58,9 +58,6 @@ public sealed class MockNewsProvider : INewsProvider
 
     public Task<IReadOnlyList<NewsArticleDto>> GetLatestArticlesAsync(
         int count = 10,
-        CancellationToken cancellationToken = default)
-    {
-        var take = Math.Clamp(count, 1, Articles.Count);
-        return Task.FromResult<IReadOnlyList<NewsArticleDto>>(Articles.Take(take).ToList());
-    }
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<NewsArticleDto>>(Articles.Take(count).ToList());
 }

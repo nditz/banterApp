@@ -74,7 +74,7 @@ public class FootballReferenceUpsertTests
             [new LeaderboardEntryDto("100", "10", 1, 5, null)],
             LeaderboardTypes.TopScorers,
             "api_sports",
-            "WC",
+            "PL",
             "2026");
 
         Assert.Equal(1, created);
@@ -104,7 +104,7 @@ public class FootballReferenceUpsertTests
             [new LeaderboardEntryDto("100", "10", 1, 7, null)],
             LeaderboardTypes.TopAssists,
             "api_sports",
-            "WC",
+            "PL",
             "2026");
 
         var (created, updated) = await upsert.UpsertLeaderboardAsync(
@@ -114,7 +114,7 @@ public class FootballReferenceUpsertTests
             ],
             LeaderboardTypes.TopAssists,
             "api_sports",
-            "WC",
+            "PL",
             "2026");
 
         Assert.Equal(1, created);

@@ -70,7 +70,7 @@ export function StudioPage() {
               <Sparkles className="size-5 text-gold" aria-hidden />
               Content Studio
             </h1>
-            <p className="mt-0.5 text-sm text-white/70">
+            <p className="mt-0.5 text-sm text-brand-foreground/70">
               Review your predictions · compare with your league & the pros · generate your broadcast script
             </p>
           </div>

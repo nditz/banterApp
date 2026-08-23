@@ -17,5 +17,4 @@ public class User
     public ICollection<Prediction> Predictions { get; set; } = [];
     public ICollection<LeagueMember> LeagueMemberships { get; set; } = [];
     public ICollection<GeneratedContent> GeneratedContents { get; set; } = [];
-    public ICollection<BracketPick> BracketPicks { get; set; } = [];
 }

@@ -38,10 +38,26 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "images.unsplash.com",
+        hostname: "media.api-sports.io",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "media-3.api-sports.io",
         pathname: "/**",
       },
     ],
+  },
+  async redirects() {
+    return [
+      { source: "/brackets", destination: "/matchweek", permanent: true },
+      { source: "/bonuses", destination: "/awards", permanent: true },
+      { source: "/predictions", destination: "/awards", permanent: true },
+      { source: "/predictions/make", destination: "/awards", permanent: true },
+      { source: "/predictions/best-player", destination: "/awards", permanent: true },
+      { source: "/predictions/top-scorer", destination: "/awards", permanent: true },
+      { source: "/predictions/top-assists", destination: "/awards", permanent: true },
+    ];
   },
   async rewrites() {
     return [

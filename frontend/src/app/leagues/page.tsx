@@ -14,7 +14,7 @@ import { SessionKeyNotice } from "@/components/session/SessionKeyNotice";
 export const metadata: Metadata = {
   title: "Leagues",
   description:
-    "Create private Ball Takes leagues for friends, family or the office — up to 50 players each. Share one invite link and unlock tournament bonus picks. No signup required.",
+    "Create private Ball Takes leagues for friends, family or the office — up to 50 players each. Share one invite link and compete across the Premier League season. No signup required.",
   alternates: { canonical: "/leagues" },
 };
 
@@ -22,15 +22,16 @@ export default function LeaguesPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <div>
-        <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
+        <p className="page-kicker">Beat your mates</p>
+        <h1 className="mt-3 text-2xl font-bold sm:text-3xl">
           Leagues
         </h1>
         <p className="mt-2 text-muted-foreground">
           Create private leagues for office mates, family or friends — up to 50
           players per league. You can belong to up to 3 custom leagues (5 total
           including the Global and Country leagues you join automatically).
-          Private leagues with at least 3 members unlock tournament bonus picks
-          (Player of the Tournament, Golden Boot, and more). No signup required.
+          Private leagues with at least 3 members unlock season awards
+          (league winner, Golden Boot, and more). No signup required.
         </p>
       </div>
 

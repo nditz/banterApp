@@ -122,7 +122,7 @@ export function CreateLeagueForm() {
           id="league-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Office World Cup Pool"
+          placeholder="Office Premier League pool"
           maxLength={LEAGUE_NAME_MAX}
           required
         />

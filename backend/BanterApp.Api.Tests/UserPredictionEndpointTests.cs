@@ -178,7 +178,7 @@ public class UserPredictionEndpointTests : IClassFixture<BanterAppWebApplication
             UserId = userId,
             PredictionType = UserPredictionTypes.TopGoalScorer,
             PlayerId = playerId,
-            Competition = "WC",
+            Competition = "PL",
             Season = "2026",
             IsLocked = true,
             LockedAt = DateTimeOffset.UtcNow

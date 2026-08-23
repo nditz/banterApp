@@ -7,6 +7,7 @@ import { ChevronDown, KeyRound, LogIn, LogOut, Menu, Shield, User, X } from "luc
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { TermsEntertainmentNotice } from "@/components/legal/TermsOfUseContent";
 import { SessionKeyRestore } from "@/components/session/SessionKeyRestore";
 import { TermsGate } from "@/components/session/TermsGate";
@@ -26,12 +27,12 @@ import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "/", label: "Home" },
-  { href: "/brackets", label: "Knockout bracket" },
-  { href: "/bonuses", label: "Bonuses" },
-  { href: "/predictions", label: "Predictions" },
+  { href: "/matchweek", label: "Matchweek" },
+  { href: "/table", label: "Table" },
+  { href: "/awards", label: "Awards" },
+  { href: "/leagues", label: "Leagues" },
   { href: "/studio", label: "Studio" },
   { href: "/rules", label: "Rules" },
-  { href: "/leagues", label: "Leagues" },
   { href: "/predictions/history", label: "History" },
 ];
 
@@ -166,8 +167,8 @@ export function AppShell({ children }: AppShellProps) {
                 href={link.href}
                 className={cn(
                   "rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors",
-                  pathname === link.href
-                    ? "bg-electric/15 text-electric"
+                    pathname === link.href
+                    ? "bg-white/10 text-white"
                     : "text-white/70 hover:bg-white/10 hover:text-white"
                 )}
                 aria-current={pathname === link.href ? "page" : undefined}
@@ -181,7 +182,7 @@ export function AppShell({ children }: AppShellProps) {
                 className={cn(
                   "flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors",
                   isAdminRoute
-                    ? "bg-electric/15 text-electric"
+                    ? "bg-white/10 text-white"
                     : "text-amber-300/90 hover:bg-white/10 hover:text-amber-200"
                 )}
                 aria-current={isAdminRoute ? "page" : undefined}
@@ -193,6 +194,7 @@ export function AppShell({ children }: AppShellProps) {
           </nav>
 
           <div className="flex items-center gap-2">
+            <ThemeToggle className="touch-target text-white hover:bg-white/10 hover:text-white" />
             {!isAuthenticated && (
               <>
                 <Button
@@ -328,7 +330,7 @@ export function AppShell({ children }: AppShellProps) {
                   className={cn(
                     "min-h-11 rounded-md px-3 py-2.5 text-xs font-bold uppercase tracking-wider",
                     pathname === link.href
-                      ? "bg-electric/15 text-electric"
+                      ? "bg-white/10 text-white"
                       : "text-white/75 hover:bg-white/10"
                   )}
                   aria-current={pathname === link.href ? "page" : undefined}
@@ -343,7 +345,7 @@ export function AppShell({ children }: AppShellProps) {
                   className={cn(
                     "flex min-h-11 items-center gap-2 rounded-md px-3 py-2.5 text-xs font-bold uppercase tracking-wider",
                     isAdminRoute
-                      ? "bg-electric/15 text-electric"
+                      ? "bg-white/10 text-white"
                       : "text-amber-300/90 hover:bg-white/10"
                   )}
                   aria-current={isAdminRoute ? "page" : undefined}
@@ -409,30 +411,31 @@ export function AppShell({ children }: AppShellProps) {
       {!isAuthRoute && <MobileBottomNav />}
 
       {!isAuthRoute && (
-        <footer className="site-footer relative z-[1] mt-auto border-t border-logo-green/40 py-6 text-white/65">
+        <footer className="site-footer relative z-[1] mt-auto border-t border-border py-6 text-muted-foreground">
           <div className="mx-auto max-w-[1400px] space-y-3 px-4 text-center text-xs sm:px-6">
             <Link href="/" onClick={handleLogoClick} className="mx-auto inline-flex justify-center">
-              <Image
-                src={BRAND.logoFooter}
-                alt={BRAND.name}
-                width={168}
-                height={110}
-                className="h-14 w-auto max-w-[min(220px,60vw)] object-contain opacity-90"
-                unoptimized
-              />
+              <span className="inline-flex rounded-md bg-black px-3 py-1">
+                <Image
+                  src={BRAND.logoFooter}
+                  alt={BRAND.name}
+                  width={168}
+                  height={110}
+                  className="h-14 w-auto max-w-[min(220px,60vw)] object-contain opacity-90"
+                  unoptimized
+                />
+              </span>
             </Link>
             <p>
-              {BRAND.tagline} · Fan prediction game for the World Cup · Not affiliated with FIFA or
-              any football governing body
+              {BRAND.tagline} · Premier League predictions · Not affiliated with the Premier League or any football governing body
             </p>
 
-            <TermsEntertainmentNotice className="border-logo-green/35 bg-white/5 text-white/60 [&_a]:text-logo-green [&_a]:hover:text-logo-green/80 [&_strong]:text-white/90" />
+            <TermsEntertainmentNotice className="border-border bg-muted/40 text-muted-foreground [&_a]:text-foreground [&_a]:hover:underline [&_strong]:text-foreground" />
             <p>
-              <Link href="/terms" className="font-semibold text-logo-green hover:underline">
+              <Link href="/terms" className="font-semibold text-foreground hover:underline">
                 Terms of Use
               </Link>
               {" · "}
-              <Link href="/privacy" className="font-semibold text-logo-green hover:underline">
+              <Link href="/privacy" className="font-semibold text-foreground hover:underline">
                 Privacy Policy
               </Link>
             </p>

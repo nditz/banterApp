@@ -12,7 +12,7 @@ public sealed class LiveDataResetService(AppDbContext db, ILogger<LiveDataResetS
     public async Task<LiveDataResetResult> ResetDemoDataAsync(CancellationToken cancellationToken = default)
     {
         var demoMatchIds = await db.Matches
-            .Where(m => m.Id.StartsWith("wc26-"))
+            .Where(m => m.Id.StartsWith("pl26-") || m.Id.StartsWith("wc26-"))
             .Select(m => m.Id)
             .ToListAsync(cancellationToken);
 
@@ -27,8 +27,6 @@ public sealed class LiveDataResetService(AppDbContext db, ILogger<LiveDataResetS
                 .Where(p => demoMatchIds.Contains(p.MatchId))
                 .ExecuteDeleteAsync(cancellationToken);
         }
-
-        var bracketPicksRemoved = await db.BracketPicks.ExecuteDeleteAsync(cancellationToken);
 
         var matchesRemoved = demoMatchIds.Count > 0
             ? await db.Matches.Where(m => demoMatchIds.Contains(m.Id)).ExecuteDeleteAsync(cancellationToken)
@@ -56,12 +54,11 @@ public sealed class LiveDataResetService(AppDbContext db, ILogger<LiveDataResetS
         var aiContentRemoved = await db.GeneratedContents.ExecuteDeleteAsync(cancellationToken);
 
         logger.LogWarning(
-            "Demo data reset: {Matches} matches, {News} feed items, {Pundits} pundits, {Predictions} predictions, {BracketPicks} bracket picks removed.",
+            "Demo data reset: {Matches} matches, {News} feed items, {Pundits} pundits, {Predictions} predictions removed.",
             matchesRemoved,
             newsRemoved,
             punditsRemoved,
-            predictionsRemoved,
-            bracketPicksRemoved);
+            predictionsRemoved);
 
         return new LiveDataResetResult(
             matchesRemoved,
@@ -69,8 +66,7 @@ public sealed class LiveDataResetService(AppDbContext db, ILogger<LiveDataResetS
             punditsRemoved,
             punditPredictionsRemoved,
             predictionsRemoved,
-            aiContentRemoved,
-            bracketPicksRemoved);
+            aiContentRemoved);
     }
 }
 
@@ -80,5 +76,4 @@ public sealed record LiveDataResetResult(
     int PunditsRemoved,
     int PunditPredictionsRemoved,
     int PredictionsRemoved,
-    int GeneratedContentRemoved,
-    int BracketPicksRemoved);
+    int GeneratedContentRemoved);

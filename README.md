@@ -1,6 +1,8 @@
-# BanterApp — World Cup Prediction Battle Platform
+# BanterApp — Premier League prediction game (Ball Takes)
 
-Phase 1 MVP: predictions, scoring, leagues, leaderboards, news feed, and **stubbed** AI content (no live LLM calls).
+Predict the Premier League. Beat your mates. Come back next matchweek.
+
+Matchweek picks, private leagues, season awards, and a banter feed. Guest play stays; World Cup is gone.
 
 ## Stack
 
@@ -71,19 +73,15 @@ npm run dev
 
 App: `http://localhost:3000`
 
-## Phase 1 scope
+## Current product
 
-- Match predictions (result, correct score, double chance)
-- Scoring (+3 / +7 / +2 + bonuses)
-- Leagues with invite codes
-- Leaderboards (global, league, pundits)
-- Anonymous users (cookie + recovery code)
-- Sports data integration (mock + API-Football ready)
-- News feed with attribution
-- AI endpoints return **canned/template** content (no OpenAI/Anthropic/Gemini)
+- Premier League 2026/27 matchweek predictions (result +3 / exact +7 / double chance +2)
+- Perfect matchweek bonus (+5)
+- Private leagues ranked across the season
+- Season awards (title, top four, relegation, Golden Boot, etc.)
+- Anonymous users (cookie + recovery code) with optional account claim
+- Sports data: API-Football league `39`, season `2026` (mock provider for local)
 
-## Phase 2 (deferred)
+## Deferred
 
-- Live AI provider integration
-- Token/cost analysis
-- Meme image generation, video scripts
+- Pundit leaderboard / Me vs Pundits, receipts, Stripe, premium AI, other leagues

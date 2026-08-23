@@ -40,7 +40,7 @@ export function Panel({
             {title}
           </h2>
           {subtitle && (
-            <p className="mt-0.5 text-[11px] text-brand-foreground/70">
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
               {subtitle}
             </p>
           )}

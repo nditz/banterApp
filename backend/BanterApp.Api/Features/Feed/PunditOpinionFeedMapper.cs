@@ -77,7 +77,7 @@ public static class PunditOpinionFeedMapper
             return $"{punditName} on {opinion.Team}";
         }
 
-        var topic = string.IsNullOrWhiteSpace(opinion.Topic) ? "World Cup 2026" : opinion.Topic;
+        var topic = string.IsNullOrWhiteSpace(opinion.Topic) ? "Premier League" : opinion.Topic;
         return $"{punditName} on {topic}";
     }
 

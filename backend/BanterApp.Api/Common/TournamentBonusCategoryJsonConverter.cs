@@ -12,23 +12,32 @@ public sealed class TournamentBonusCategoryJsonConverter : JsonConverter<Tournam
         {
             return Enum.IsDefined(typeof(TournamentBonusCategory), numeric)
                 ? (TournamentBonusCategory)numeric
-                : throw new JsonException($"Unknown tournament bonus category: {numeric}");
+                : throw new JsonException($"Unknown season award category: {numeric}");
         }
 
         if (reader.TokenType != JsonTokenType.String)
         {
-            throw new JsonException("Tournament bonus category must be a string or number.");
+            throw new JsonException("Season award category must be a string or number.");
         }
 
         return reader.GetString() switch
         {
-            "player_of_tournament" or "PlayerOfTournament" => TournamentBonusCategory.PlayerOfTournament,
-            "top_scorer" or "TopScorer" => TournamentBonusCategory.TopScorer,
-            "top_assist" or "TopAssist" => TournamentBonusCategory.TopAssist,
+            "player_of_the_season" or "PlayerOfTheSeason" or "player_of_tournament" or "PlayerOfTournament"
+                => TournamentBonusCategory.PlayerOfTheSeason,
+            "golden_boot" or "GoldenBoot" or "top_scorer" or "TopScorer"
+                => TournamentBonusCategory.GoldenBoot,
+            "most_assists" or "MostAssists" or "top_assist" or "TopAssist"
+                => TournamentBonusCategory.MostAssists,
             "golden_glove" or "GoldenGlove" => TournamentBonusCategory.GoldenGlove,
-            "surprise_package" or "SurprisePackage" => TournamentBonusCategory.SurprisePackage,
-            null => throw new JsonException("Tournament bonus category is required."),
-            var value => throw new JsonException($"Unknown tournament bonus category: {value}")
+            "surprise_team" or "SurpriseTeam" or "surprise_package" or "SurprisePackage"
+                => TournamentBonusCategory.SurpriseTeam,
+            "league_winner" or "LeagueWinner" => TournamentBonusCategory.LeagueWinner,
+            "top_four" or "TopFour" => TournamentBonusCategory.TopFour,
+            "relegated" or "Relegated" => TournamentBonusCategory.Relegated,
+            "young_player_of_the_season" or "YoungPlayerOfTheSeason" or "best_young_player"
+                => TournamentBonusCategory.YoungPlayerOfTheSeason,
+            null => throw new JsonException("Season award category is required."),
+            var value => throw new JsonException($"Unknown season award category: {value}")
         };
     }
 
@@ -38,10 +47,14 @@ public sealed class TournamentBonusCategoryJsonConverter : JsonConverter<Tournam
     public static string ToApiString(TournamentBonusCategory value) =>
         value switch
         {
-            TournamentBonusCategory.TopScorer => "top_scorer",
-            TournamentBonusCategory.TopAssist => "top_assist",
+            TournamentBonusCategory.GoldenBoot => "golden_boot",
+            TournamentBonusCategory.MostAssists => "most_assists",
             TournamentBonusCategory.GoldenGlove => "golden_glove",
-            TournamentBonusCategory.SurprisePackage => "surprise_package",
-            _ => "player_of_tournament"
+            TournamentBonusCategory.SurpriseTeam => "surprise_team",
+            TournamentBonusCategory.LeagueWinner => "league_winner",
+            TournamentBonusCategory.TopFour => "top_four",
+            TournamentBonusCategory.Relegated => "relegated",
+            TournamentBonusCategory.YoungPlayerOfTheSeason => "young_player_of_the_season",
+            _ => "player_of_the_season"
         };
 }

@@ -17,7 +17,7 @@ public class UserPredictionValidatorTests
             "not_a_real_type",
             null,
             null,
-            "WC",
+            "PL",
             "2026",
             null);
 
@@ -37,7 +37,7 @@ public class UserPredictionValidatorTests
             PredictionType = UserPredictionTypes.GoldenBoot,
             IsLocked = true,
             LockedAt = DateTimeOffset.UtcNow,
-            Competition = "WC",
+            Competition = "PL",
             Season = "2026"
         };
 
@@ -45,7 +45,7 @@ public class UserPredictionValidatorTests
             UserPredictionTypes.GoldenBoot,
             null,
             Guid.NewGuid(),
-            "WC",
+            "PL",
             "2026",
             existing);
 
@@ -54,48 +54,47 @@ public class UserPredictionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateCreateOrUpdateAsync_RequiresCountryForWinnerPrediction()
+    public async Task ValidateCreateOrUpdateAsync_AllowsLeagueWinnerWithoutCountry()
     {
         await using var db = TestDbContextFactory.Create();
         var validator = new UserPredictionValidator(db);
 
         var (isValid, error) = await validator.ValidateCreateOrUpdateAsync(
-            UserPredictionTypes.WinnerCountry,
+            UserPredictionTypes.LeagueWinner,
             null,
             null,
-            "WC",
+            "PL",
             "2026",
             null);
 
-        Assert.False(isValid);
-        Assert.Equal("A country is required for this prediction type.", error);
+        Assert.True(isValid);
+        Assert.Null(error);
     }
 
     [Fact]
-    public async Task ValidateCreateOrUpdateAsync_RejectsInactiveCountry()
+    public async Task ValidateCreateOrUpdateAsync_RejectsInactivePlayerForGoldenBoot()
     {
         await using var db = TestDbContextFactory.Create();
-        var countryId = Guid.NewGuid();
-        db.Countries.Add(new Country
+        var playerId = Guid.NewGuid();
+        db.Players.Add(new Player
         {
-            Id = countryId,
-            Name = "France",
-            Code = "FR",
+            Id = playerId,
+            DisplayName = "Inactive",
             IsActive = false
         });
         await db.SaveChangesAsync();
 
         var validator = new UserPredictionValidator(db);
         var (isValid, error) = await validator.ValidateCreateOrUpdateAsync(
-            UserPredictionTypes.FinalistCountry,
-            countryId,
+            UserPredictionTypes.GoldenBoot,
             null,
-            "WC",
+            playerId,
+            "PL",
             "2026",
             null);
 
         Assert.False(isValid);
-        Assert.Equal("That country is not available for selection.", error);
+        Assert.Equal("That player is not available for selection.", error);
     }
 
     [Fact]
@@ -108,7 +107,7 @@ public class UserPredictionValidatorTests
             UserPredictionTypes.GoldenBoot,
             null,
             null,
-            "WC",
+            "PL",
             "2026",
             null);
 
@@ -137,7 +136,7 @@ public class UserPredictionValidatorTests
             UserPredictionTypes.BestPlayer,
             null,
             playerId,
-            "WC",
+            "PL",
             "2026",
             null);
 

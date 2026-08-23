@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 namespace BanterApp.Api.Integrations.SportsData;
 
 /// <summary>
-/// API-Football (api-football.com) provider for World Cup fixtures and enrichment data.
+/// API-Football (api-football.com) provider for Premier League fixtures and enrichment data.
 /// Falls back to <see cref="MockSportsDataProvider"/> when the API key is missing or requests fail.
 /// </summary>
 public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrichment
@@ -30,7 +30,7 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
     public async Task<IReadOnlyList<MatchDto>> GetAllFixturesAsync(CancellationToken cancellationToken = default)
     {
         var path =
-            $"fixtures?league={_options.WorldCupLeagueId}&season={_options.WorldCupSeason}";
+            $"fixtures?league={_options.LeagueId}&season={_options.Season}";
         return await FetchFixturesOrFallbackAsync(path, null, _fallback.GetAllFixturesAsync, cancellationToken);
     }
 
@@ -38,7 +38,7 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
         CancellationToken cancellationToken = default)
     {
         var path =
-            $"fixtures?league={_options.WorldCupLeagueId}&season={_options.WorldCupSeason}&status=NS-TBD";
+            $"fixtures?league={_options.LeagueId}&season={_options.Season}&status=NS-TBD";
         return await FetchFixturesOrFallbackAsync(path, null, _fallback.GetUpcomingFixturesAsync, cancellationToken);
     }
 
@@ -46,7 +46,7 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
         CancellationToken cancellationToken = default)
     {
         var path =
-            $"fixtures?league={_options.WorldCupLeagueId}&season={_options.WorldCupSeason}&status=FT";
+            $"fixtures?league={_options.LeagueId}&season={_options.Season}&status=FT";
         return await FetchFixturesOrFallbackAsync(path, null, _fallback.GetResultsAsync, cancellationToken);
     }
 
@@ -55,7 +55,7 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
     {
         return await FetchFixturesOrFallbackAsync(
             "fixtures?live=all",
-            _options.WorldCupLeagueId,
+            _options.LeagueId,
             _fallback.GetLiveFixturesAsync,
             cancellationToken);
     }
@@ -106,7 +106,7 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
         try
         {
             using var document = await _client.GetJsonAsync(
-                $"teams?league={_options.WorldCupLeagueId}&season={_options.WorldCupSeason}",
+                $"teams?league={_options.LeagueId}&season={_options.Season}",
                 cancellationToken);
             return document is null ? [] : ApiFootballFixtureMapper.MapTeams(document.RootElement);
         }
@@ -153,7 +153,7 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
         try
         {
             using var document = await _client.GetJsonAsync(
-                $"standings?league={_options.WorldCupLeagueId}&season={_options.WorldCupSeason}",
+                $"standings?league={_options.LeagueId}&season={_options.Season}",
                 cancellationToken);
             return document is null
                 ? await BuildFallbackStandingsAsync(cancellationToken)

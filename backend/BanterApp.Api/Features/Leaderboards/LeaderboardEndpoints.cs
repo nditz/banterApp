@@ -201,7 +201,7 @@ public static class LeaderboardEndpoints
     {
         string[] names =
         [
-            "WorldCupWizard", "PenaltyProphet", "GroupStageGuru", "GoldenBootGazer",
+            "TitleChaser", "PenaltyProphet", "MatchweekMaven", "GoldenBootGazer",
             "OffsideOracle", "HatTrickHero", "VARVeteran", "CornerKickKing",
             "NutmegNinja", "ExtraTimeExpert", "StoppageSage", "TopBinTactician"
         ];

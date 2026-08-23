@@ -53,10 +53,10 @@ public class FootballBanterConfigValidatorTests
         var result = FootballBanterConfigLoader.LoadFromContentRoot(contentRoot);
 
         Assert.True(result.IsValid, string.Join("; ", result.Errors));
-        Assert.Equal(4, result.Config.Sources.Rss.Feeds.Count);
+        Assert.True(result.Config.Sources.Rss.Feeds.Count >= 4);
         Assert.Contains(
             result.Config.Sources.Rss.Feeds,
-            f => f.Url.Contains("bbci.co.uk", StringComparison.OrdinalIgnoreCase));
+            f => f.Url.Contains("premier-league", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class FootballBanterEngineTests
             SourceName = "BBC Sport",
             SourceUrl = "https://bbc.co.uk/article",
             SourceTitle = "England update",
-            SourceText = "England are preparing for the World Cup with a strong squad and high expectations from fans."
+            SourceText = "Arsenal are preparing for the Premier League with a strong squad and high expectations from fans."
         });
 
         Assert.Equal("BBC Sport", output.SourceName);

@@ -1,10 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Image from "next/image";
 import { Target, Trophy, Zap } from "lucide-react";
 import type { WelcomeSlideData } from "@/components/home/WelcomeSlideBody";
-import { cn } from "@/lib/utils";
 
 interface WelcomeHeroSlideProps {
   slide: WelcomeSlideData;
@@ -31,7 +29,7 @@ export function WelcomeHeroSlide({ slide, eyebrow, footer }: WelcomeHeroSlidePro
               const Icon = stepIcons[i % stepIcons.length];
               return (
                 <li key={item} className="welcome-hero__highlight">
-                  <Icon className="size-3 shrink-0 text-brand" aria-hidden />
+                  <Icon className="size-3 shrink-0 text-muted-foreground" aria-hidden />
                   {item}
                 </li>
               );
@@ -40,30 +38,6 @@ export function WelcomeHeroSlide({ slide, eyebrow, footer }: WelcomeHeroSlidePro
         )}
 
         {footer}
-      </div>
-
-      <div className="welcome-hero__visual" aria-hidden>
-        <div className={cn("welcome-hero__frame", `welcome-hero__frame--${slide.accent}`)}>
-          <Image
-            src={slide.backgroundImage}
-            alt=""
-            width={400}
-            height={500}
-            className="welcome-hero__image"
-            priority
-          />
-          <div className="welcome-hero__shine" />
-          {slide.stickerImage && (
-            <Image
-              src={slide.stickerImage}
-              alt=""
-              width={52}
-              height={52}
-              loading="eager"
-              className="welcome-hero__sticker"
-            />
-          )}
-        </div>
       </div>
     </div>
   );
