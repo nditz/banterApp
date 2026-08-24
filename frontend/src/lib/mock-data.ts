@@ -1,3 +1,4 @@
+import { getClubBadgeUrl } from "./club-badges";
 import type {
   FeedItem,
   LeaderboardEntry,
@@ -6,42 +7,58 @@ import type {
   Prediction,
 } from "./types";
 
+function plMatch(
+  id: string,
+  home: string,
+  homeCode: string,
+  away: string,
+  awayCode: string,
+  kickoff: string,
+  matchweekNumber: number,
+  venue: string,
+  status: Match["status"],
+  homeScore?: number,
+  awayScore?: number
+): Match {
+  return {
+    id,
+    teamA: home,
+    teamB: away,
+    teamACode: homeCode,
+    teamBCode: awayCode,
+    homeLogoUrl: getClubBadgeUrl(homeCode, home) ?? undefined,
+    awayLogoUrl: getClubBadgeUrl(awayCode, away) ?? undefined,
+    kickoffTime: kickoff,
+    matchweekNumber,
+    venue,
+    status,
+    homeScore,
+    awayScore,
+  };
+}
+
+/** Official 2026/27 Premier League matchweeks 1–2 (Premier League / BBC Sport). */
 export const mockMatches: Match[] = [
-  {
-    id: "pl26-mw2-1",
-    teamA: "Arsenal",
-    teamB: "Manchester City",
-    teamACode: "ARS",
-    teamBCode: "MCI",
-    kickoffTime: new Date(Date.now() + 86400000).toISOString(),
-    matchweekNumber: 2,
-    venue: "Emirates Stadium",
-    status: "NS",
-  },
-  {
-    id: "pl26-mw2-2",
-    teamA: "Chelsea",
-    teamB: "Liverpool",
-    teamACode: "CHE",
-    teamBCode: "LIV",
-    kickoffTime: new Date(Date.now() + 86400000 * 1.2).toISOString(),
-    matchweekNumber: 2,
-    venue: "Stamford Bridge",
-    status: "NS",
-  },
-  {
-    id: "pl26-mw1-1",
-    teamA: "Liverpool",
-    teamB: "Arsenal",
-    teamACode: "LIV",
-    teamBCode: "ARS",
-    kickoffTime: new Date(Date.now() - 86400000 * 7).toISOString(),
-    matchweekNumber: 1,
-    venue: "Anfield",
-    status: "FT",
-    homeScore: 1,
-    awayScore: 2,
-  },
+  plMatch("pl26-mw1-1", "Arsenal", "ARS", "Coventry City", "COV", "2026-08-21T20:00:00+01:00", 1, "Emirates Stadium", "FT", 3, 0),
+  plMatch("pl26-mw1-2", "Hull City", "HUL", "Manchester United", "MUN", "2026-08-22T12:30:00+01:00", 1, "MKM Stadium", "FT", 2, 0),
+  plMatch("pl26-mw1-3", "Everton", "EVE", "Crystal Palace", "CRY", "2026-08-22T15:00:00+01:00", 1, "Hill Dickinson Stadium", "FT", 2, 0),
+  plMatch("pl26-mw1-4", "Ipswich Town", "IPS", "Sunderland", "SUN", "2026-08-22T15:00:00+01:00", 1, "Portman Road", "FT", 2, 1),
+  plMatch("pl26-mw1-5", "Nottingham Forest", "NFO", "Leeds United", "LEE", "2026-08-22T15:00:00+01:00", 1, "City Ground", "FT", 0, 1),
+  plMatch("pl26-mw1-6", "Brentford", "BRE", "Tottenham Hotspur", "TOT", "2026-08-22T17:30:00+01:00", 1, "Gtech Community Stadium", "FT", 3, 0),
+  plMatch("pl26-mw1-7", "Brighton & Hove Albion", "BHA", "Aston Villa", "AVL", "2026-08-23T14:00:00+01:00", 1, "American Express Stadium", "FT", 4, 0),
+  plMatch("pl26-mw1-8", "Manchester City", "MCI", "Bournemouth", "BOU", "2026-08-23T14:00:00+01:00", 1, "Etihad Stadium", "FT", 2, 1),
+  plMatch("pl26-mw1-9", "Newcastle United", "NEW", "Liverpool", "LIV", "2026-08-23T16:30:00+01:00", 1, "St James' Park", "FT", 2, 2),
+  plMatch("pl26-mw1-10", "Fulham", "FUL", "Chelsea", "CHE", "2026-08-24T20:00:00+01:00", 1, "Craven Cottage", "NS"),
+  plMatch("pl26-mw2-1", "Crystal Palace", "CRY", "Manchester City", "MCI", "2026-08-28T20:00:00+01:00", 2, "Selhurst Park", "NS"),
+  plMatch("pl26-mw2-2", "Liverpool", "LIV", "Nottingham Forest", "NFO", "2026-08-29T12:30:00+01:00", 2, "Anfield", "NS"),
+  plMatch("pl26-mw2-3", "Bournemouth", "BOU", "Everton", "EVE", "2026-08-29T15:00:00+01:00", 2, "Vitality Stadium", "NS"),
+  plMatch("pl26-mw2-4", "Coventry City", "COV", "Hull City", "HUL", "2026-08-29T15:00:00+01:00", 2, "Coventry Building Society Arena", "NS"),
+  plMatch("pl26-mw2-5", "Tottenham Hotspur", "TOT", "Newcastle United", "NEW", "2026-08-29T17:30:00+01:00", 2, "Tottenham Hotspur Stadium", "NS"),
+  plMatch("pl26-mw2-6", "Chelsea", "CHE", "Brighton & Hove Albion", "BHA", "2026-08-30T14:00:00+01:00", 2, "Stamford Bridge", "NS"),
+  plMatch("pl26-mw2-7", "Leeds United", "LEE", "Brentford", "BRE", "2026-08-30T14:00:00+01:00", 2, "Elland Road", "NS"),
+  plMatch("pl26-mw2-8", "Sunderland", "SUN", "Fulham", "FUL", "2026-08-30T14:00:00+01:00", 2, "Stadium of Light", "NS"),
+  plMatch("pl26-mw2-9", "Manchester United", "MUN", "Ipswich Town", "IPS", "2026-08-30T16:30:00+01:00", 2, "Old Trafford", "NS"),
+  plMatch("pl26-mw2-10", "Aston Villa", "AVL", "Arsenal", "ARS", "2026-08-31T20:00:00+01:00", 2, "Villa Park", "NS"),
 ];
 
 export const mockFeedItems: FeedItem[] = [

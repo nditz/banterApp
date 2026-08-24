@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, ApiError } from "@/lib/api";
+import type { LeagueTableRow } from "@/lib/league-table";
 import { mockMatches } from "@/lib/mock-data";
 import type { Match } from "@/lib/types";
 
@@ -51,7 +52,10 @@ export function useCurrentMatchweek() {
         return await apiFetch<{ number: number; matches: Match[] }>("/api/matchweeks/current");
       } catch (error) {
         if (error instanceof ApiError) {
-          const number = mockMatches.find((m) => m.status !== "FT")?.matchweekNumber ?? 1;
+          const openWeeks = mockMatches
+            .filter((m) => m.status !== "FT" && m.matchweekNumber)
+            .map((m) => m.matchweekNumber as number);
+          const number = openWeeks.length > 0 ? Math.min(...openWeeks) : 1;
           return {
             number,
             matches: mockMatches.filter((m) => m.matchweekNumber === number),
@@ -69,22 +73,7 @@ export function useLeagueTable() {
     queryKey: ["standings"],
     queryFn: async () => {
       try {
-        return await apiFetch<
-          Array<{
-            rank: number;
-            teamCode: string;
-            teamName: string;
-            logoUrl?: string;
-            played: number;
-            won: number;
-            drawn: number;
-            lost: number;
-            goalsFor: number;
-            goalsAgainst: number;
-            goalDiff: number;
-            points: number;
-          }>
-        >("/api/standings");
+        return await apiFetch<LeagueTableRow[]>("/api/standings");
       } catch {
         return [];
       }

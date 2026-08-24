@@ -1,15 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { getFlagUrl } from "@/lib/team-flags";
+import { useMemo, useState } from "react";
+import { getClubBadgeUrl } from "@/lib/club-badges";
 import { cn } from "@/lib/utils";
 
-/** Default crest / flag width. Club crests render square; country flags stay 3:2. */
+/** Default club badge width. Crests render square. */
 export const TEAM_FLAG_WIDTH = 28;
-const FLAG_ASPECT = 2 / 3;
 
-export function teamFlagHeight(width: number = TEAM_FLAG_WIDTH, square = false): number {
-  return square ? width : Math.round(width * FLAG_ASPECT);
+export function teamFlagHeight(width: number = TEAM_FLAG_WIDTH): number {
+  return width;
 }
 
 interface TeamFlagProps {
@@ -21,17 +21,26 @@ interface TeamFlagProps {
 }
 
 export function TeamFlag({ code, name, logoUrl, size = TEAM_FLAG_WIDTH, className }: TeamFlagProps) {
-  const isCrest = Boolean(logoUrl);
-  const url = logoUrl || getFlagUrl(code, 80, name);
+  const sources = useMemo(() => {
+    const mapped = getClubBadgeUrl(code, name);
+    return [...new Set([logoUrl?.trim() || null, mapped].filter(Boolean))] as string[];
+  }, [code, name, logoUrl]);
+  const sourceKey = `${code}\0${name ?? ""}\0${logoUrl ?? ""}`;
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const [seenSourceKey, setSeenSourceKey] = useState(sourceKey);
+  if (sourceKey !== seenSourceKey) {
+    setSeenSourceKey(sourceKey);
+    setSourceIndex(0);
+  }
+  const url = sources[sourceIndex] ?? null;
   const width = size;
-  const height = teamFlagHeight(size, isCrest);
+  const height = size;
 
   if (!url) {
     return (
       <span
         className={cn(
-          "team-flag inline-flex shrink-0 items-center justify-center bg-muted font-mono text-[9px] font-bold text-muted-foreground ring-1 ring-border/60",
-          isCrest ? "rounded-full" : "rounded-md",
+          "team-flag inline-flex shrink-0 items-center justify-center rounded-md bg-muted font-mono text-[9px] font-bold text-muted-foreground ring-1 ring-border/60",
           className
         )}
         style={{ width, height, minWidth: width, minHeight: height }}
@@ -45,8 +54,7 @@ export function TeamFlag({ code, name, logoUrl, size = TEAM_FLAG_WIDTH, classNam
   return (
     <span
       className={cn(
-        "team-flag relative inline-block shrink-0 overflow-hidden ring-1 ring-white/10",
-        isCrest ? "rounded-full bg-white p-0.5" : "rounded-md",
+        "team-flag relative inline-block shrink-0 overflow-hidden rounded-md bg-white p-0.5 ring-1 ring-border/50 dark:bg-card",
         className
       )}
       style={{ width, height, minWidth: width, minHeight: height }}
@@ -54,11 +62,12 @@ export function TeamFlag({ code, name, logoUrl, size = TEAM_FLAG_WIDTH, classNam
     >
       <Image
         src={url}
-        alt={name ? `${name} crest` : `${code} crest`}
+        alt={name ? `${name} badge` : `${code} badge`}
         fill
         sizes={`${width}px`}
-        className={isCrest ? "object-contain" : "object-cover object-center"}
+        className="object-contain"
         unoptimized
+        onError={() => setSourceIndex((index) => index + 1)}
       />
     </span>
   );

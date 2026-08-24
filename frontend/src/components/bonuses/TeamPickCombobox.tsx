@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Check, ChevronsUpDown, Flag } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -11,6 +11,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { ComboboxDropdown } from "@/components/bonuses/ComboboxDropdown";
+import { TeamFlag } from "@/components/brackets/TeamFlag";
 import type { TournamentBonusTeam } from "@/hooks/useTournamentBonuses";
 import { cn } from "@/lib/utils";
 
@@ -50,9 +51,11 @@ export function TeamPickCombobox({
         )}
       >
         <span className="flex min-w-0 items-center gap-2">
-          <Flag className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          {selected ? (
+            <TeamFlag code={selected.code} name={selected.name} size={18} />
+          ) : null}
           <span className={cn("truncate", !selected && "text-muted-foreground")}>
-            {selected ? selected.name : "Search a team / country…"}
+            {selected ? selected.name : "Search a club…"}
           </span>
         </span>
         <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -73,7 +76,10 @@ export function TeamPickCombobox({
                       setOpen(false);
                     }}
                   >
-                    <span className="flex-1 truncate">{team.name}</span>
+                    <span className="flex min-w-0 flex-1 items-center gap-2">
+                      <TeamFlag code={team.code} name={team.name} size={18} />
+                      <span className="truncate">{team.name}</span>
+                    </span>
                     {team.code === value && (
                       <Check className="size-4 shrink-0 text-pitch" aria-hidden />
                     )}
