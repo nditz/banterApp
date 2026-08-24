@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BanterApp.Api", "BanterApp.Api\BanterApp.Api.csproj", "{D2651D81-CAFA-47AE-88BD-F25B419C9D78}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BanterApp.Api.Tests", "BanterApp.Api.Tests\BanterApp.Api.Tests.csproj", "{173813E7-BBA8-43F1-B089-6489584B5166}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,18 @@ Global
 		{D2651D81-CAFA-47AE-88BD-F25B419C9D78}.Release|x64.Build.0 = Release|Any CPU
 		{D2651D81-CAFA-47AE-88BD-F25B419C9D78}.Release|x86.ActiveCfg = Release|Any CPU
 		{D2651D81-CAFA-47AE-88BD-F25B419C9D78}.Release|x86.Build.0 = Release|Any CPU
+		{173813E7-BBA8-43F1-B089-6489584B5166}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{173813E7-BBA8-43F1-B089-6489584B5166}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{173813E7-BBA8-43F1-B089-6489584B5166}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{173813E7-BBA8-43F1-B089-6489584B5166}.Debug|x64.Build.0 = Debug|Any CPU
+		{173813E7-BBA8-43F1-B089-6489584B5166}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{173813E7-BBA8-43F1-B089-6489584B5166}.Debug|x86.Build.0 = Debug|Any CPU
+		{173813E7-BBA8-43F1-B089-6489584B5166}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{173813E7-BBA8-43F1-B089-6489584B5166}.Release|Any CPU.Build.0 = Release|Any CPU
+		{173813E7-BBA8-43F1-B089-6489584B5166}.Release|x64.ActiveCfg = Release|Any CPU
+		{173813E7-BBA8-43F1-B089-6489584B5166}.Release|x64.Build.0 = Release|Any CPU
+		{173813E7-BBA8-43F1-B089-6489584B5166}.Release|x86.ActiveCfg = Release|Any CPU
+		{173813E7-BBA8-43F1-B089-6489584B5166}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
