@@ -9,7 +9,7 @@ public static class MatchweekParser
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex MatchweekLabel = new(
-        @"(?:Matchweek|Gameweek|Week)\s+(\d+)",
+        @"(?:Matchweek|Matchday|Gameweek|Week)\s+(\d+)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex TrailingNumber = new(@"(\d+)\s*$", RegexOptions.Compiled);
