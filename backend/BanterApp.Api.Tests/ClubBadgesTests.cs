@@ -10,6 +10,9 @@ public class ClubBadgesTests
     [InlineData("MCI", "Manchester City", "50")]
     [InlineData("NEW", "Newcastle", "34")]
     [InlineData("SUN", "Sunderland", "746")]
+    [InlineData("COV", "Coventry City", "71")]
+    [InlineData("HUL", "Hull City", "64")]
+    [InlineData("IPS", "Ipswich Town", "57")]
     public void UrlFor_ResolvesPremierLeagueClub(string code, string name, string teamId)
     {
         var url = ClubBadges.UrlFor(code, name);

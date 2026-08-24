@@ -310,6 +310,44 @@ Local URLs: frontend `http://localhost:3000`, API `http://localhost:5000`.
 
 ---
 
+## 9. GitHub Actions
+
+Vercel and Render already deploy when GitHub receives a push. Actions here **do not replace those deploys**. They catch migration drift, bad hosting settings, and a dead production URL.
+
+| Workflow | When | What it does |
+|----------|------|----------------|
+| **Security CI** | Every push / PR | Backend tests, `dotnet ef migrations has-pending-model-changes`, Docker image build, lint/typecheck, static Vercel/Render/Supabase config checks |
+| **Apply EF migrations** | `main` when backend data files change, or **Run workflow** | `dotnet ef database update` against the Supabase **session pooler** |
+| **Deploy verify** | `main`, or **Run workflow** | Optional live inspect of Vercel/Render/Supabase settings, then curl `api.balltakes.com/health` and `balltakes.com` |
+
+Create a GitHub **Environment** named `production` (Settings → Environments) and add secrets there. Required reviewers on that environment will gate migrations.
+
+### Secrets (`production` environment)
+
+| Secret | Used by | Notes |
+|--------|---------|--------|
+| `DATABASE_URL` | Apply EF migrations | Same session pooler URI as Render (port **5432**) |
+| `VERCEL_TOKEN` | Deploy verify | Account token with project read access |
+| `VERCEL_ORG_ID` | Deploy verify | Team/org id from Vercel project settings |
+| `VERCEL_PROJECT_ID` | Deploy verify | Project id from Vercel project settings |
+| `RENDER_API_KEY` | Deploy verify | Render Account Settings → API Keys |
+| `RENDER_SERVICE_ID` | Deploy verify | Web service id (`srv-…`) |
+| `SUPABASE_URL` | Deploy verify | `https://<ref>.supabase.co` |
+| `SUPABASE_ANON_KEY` | Deploy verify | Anon/publishable key (not service role) |
+
+If a live-inspect secret is missing, that provider is skipped instead of failing the job.
+
+### Optional variables (repository or `production` environment)
+
+| Variable | Default |
+|----------|---------|
+| `API_BASE_URL` | `https://api.balltakes.com` |
+| `SITE_URL` | `https://balltakes.com` |
+
+The API still runs `Database.MigrateAsync` on startup. The migrate workflow is the explicit failure path when the database cannot be updated, and it can be run before you rely on a new Render deploy.
+
+---
+
 ## Related Documentation
 
 - [`docs/BACKEND-CONFIGURATION.md`](docs/BACKEND-CONFIGURATION.md) — backend config keys

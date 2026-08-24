@@ -1,0 +1,63 @@
+name: Apply EF migrations
+
+# Applies EF Core migrations to Supabase. Vercel/Render Git deploys stay as they are;
+# the API also migrates on startup, but this job fails the release if the database
+# cannot be updated before or just after a backend change lands on main.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - backend/BanterApp.Api/Data/**
+      - backend/BanterApp.Api/BanterApp.Api.csproj
+      - backend/.config/dotnet-tools.json
+      - .github/workflows/migrate.yml
+
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: backend/BanterApp.Api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - name: Check DATABASE_URL secret
+        id: db
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "::error::Set the production environment secret DATABASE_URL (Supabase session pooler, port 5432)."
+              exit 1
+            fi
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::DATABASE_URL is not set; skipping migrate. Add it on the GitHub production environment."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Restore .NET tools
+        if: steps.db.outputs.skip != 'true'
+        working-directory: backend
+        run: dotnet tool restore
+      - name: Restore project
+        if: steps.db.outputs.skip != 'true'
+        run: dotnet restore
+      - name: Update database
+        if: steps.db.outputs.skip != 'true'
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: dotnet ef database update

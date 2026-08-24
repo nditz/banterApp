@@ -39,7 +39,8 @@ public sealed class BotProtectionMiddleware(
         }
 
         var path = context.Request.Path.Value ?? string.Empty;
-        if (path.StartsWith("/api/health", StringComparison.OrdinalIgnoreCase) ||
+        if (path.Equals("/health", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/api/health", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase))
         {
             await next(context);

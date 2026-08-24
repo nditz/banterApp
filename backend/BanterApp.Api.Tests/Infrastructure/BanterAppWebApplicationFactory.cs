@@ -108,6 +108,25 @@ public sealed class BanterAppWebApplicationFactory : WebApplicationFactory<Progr
         return client;
     }
 
+    public async Task<HttpClient> CreateConsentedAnonymousClientAsync(string? anonymousId = null)
+    {
+        var client = CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+        client.DefaultRequestHeaders.Add("X-Anonymous-Id", anonymousId ?? Guid.NewGuid().ToString("N"));
+        await CsrfTestHelper.ApplyCsrfAsync(client);
+
+        var consent = await client.PostAsJsonAsync("/api/auth/session/consent", new
+        {
+            acceptedTerms = true,
+            turnstileToken = "dev-bypass"
+        });
+        consent.EnsureSuccessStatusCode();
+        await CsrfTestHelper.ApplyCsrfAsync(client);
+        return client;
+    }
+
     public HttpClient CreateAdminClient() =>
         CreateAuthenticatedClient(TestUsers.AdminEmail, TestUsers.AdminId);
 
