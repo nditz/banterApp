@@ -1,0 +1,67 @@
+name: Deploy verify
+
+# Does not deploy — Vercel and Render already ship from this GitHub repo.
+# After main moves (or on demand), confirm live hosting settings and health.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+concurrency:
+  group: deploy-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  live-hosting:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect Vercel, Render, and Supabase
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: python3 .github/scripts/check_live_hosting.py
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Render and Vercel health
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          set -euo pipefail
+          API_BASE_URL="${API_BASE_URL:-https://api.balltakes.com}"
+          SITE_URL="${SITE_URL:-https://balltakes.com}"
+          ua="GitHubActions-BanterApp/1.0"
+          echo "Checking $API_BASE_URL/health (retries while Render deploys)..."
+          ok=0
+          for i in $(seq 1 20); do
+            if curl -fsS -L -A "$ua" --max-time 20 "$API_BASE_URL/health" | grep -q '"status"'; then
+              echo "API /health is up."
+              ok=1
+              break
+            fi
+            echo "Attempt $i/20 failed; waiting 30s..."
+            sleep 30
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::API health check failed after retries: $API_BASE_URL/health"
+            exit 1
+          fi
+
+          echo "Checking $API_BASE_URL/api/health..."
+          curl -fsS -L -A "$ua" --max-time 30 "$API_BASE_URL/api/health"
+
+          echo "Checking $SITE_URL..."
+          curl -fsS -L -A "$ua" --max-time 30 -o /dev/null -w "frontend HTTP %{http_code}\n" "$SITE_URL"

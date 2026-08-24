@@ -11,7 +11,7 @@ import { BASE_METADATA } from "@/lib/seo.config";
 import { ADSENSE_CLIENT, ADSENSE_ENABLED, ADSENSE_SCRIPT_SRC } from "@/lib/ads";
 import "./globals.css";
 
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("ball-takes-theme");var d=t==="dark"||t==null||(t==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",!!d);}catch(e){}})();`;
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("ball-takes-theme");var d=t==="dark"||(t==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",!!d);}catch(e){}})();`;
 
 const barlow = Barlow({
   variable: "--font-barlow",

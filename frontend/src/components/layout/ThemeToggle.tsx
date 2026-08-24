@@ -49,10 +49,10 @@ export function ThemeToggle({ className }: { className?: string }) {
       title={isDark ? "Light mode" : "Dark mode"}
       disabled={!mounted}
     >
-      {mounted && !isDark ? (
-        <Moon className="size-4" aria-hidden />
-      ) : (
+      {mounted && isDark ? (
         <Sun className="size-4" aria-hidden />
+      ) : (
+        <Moon className="size-4" aria-hidden />
       )}
     </Button>
   );

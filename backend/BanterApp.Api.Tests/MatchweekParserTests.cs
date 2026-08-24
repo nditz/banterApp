@@ -10,6 +10,8 @@ public class MatchweekParserTests
     [InlineData("Regular Season - 38", 38)]
     [InlineData("Matchweek 12", 12)]
     [InlineData("Gameweek 4", 4)]
+    [InlineData("Matchday 1", 1)]
+    [InlineData("Matchday 38", 38)]
     public void TryParse_ReadsDomesticRoundLabels(string round, int expected)
     {
         Assert.Equal(expected, MatchweekParser.TryParse(round));

@@ -113,22 +113,28 @@ public static class MatchEndpoints
 
     private static async Task<IResult> GetCurrentMatchweek(AppDbContext db, ISportsDataProvider sports, CancellationToken ct)
     {
-        var number = await ResolveCurrentMatchweekNumberAsync(db, ct);
+        var dbMatches = await db.Matches
+            .Select(m => new { m.MatchweekNumber, m.Status })
+            .ToListAsync(ct);
+
+        int number;
+        if (dbMatches.Count == 0)
+        {
+            var all = await sports.GetAllFixturesAsync(ct);
+            number = CurrentMatchweek.Resolve(all.Select(m => (m.MatchweekNumber, (string?)m.Status)));
+            var fromProvider = all
+                .Where(m => m.MatchweekNumber == number)
+                .OrderBy(m => m.KickoffUtc)
+                .Select(MapFromDto)
+                .ToList();
+            return Results.Ok(new { number, matches = fromProvider });
+        }
+
+        number = CurrentMatchweek.Resolve(dbMatches.Select(m => (m.MatchweekNumber, (string?)m.Status)));
         var matches = await db.Matches
             .Where(m => m.MatchweekNumber == number)
             .OrderBy(m => m.KickoffTime)
             .ToListAsync(ct);
-
-        if (matches.Count == 0)
-        {
-            var all = await sports.GetAllFixturesAsync(ct);
-            var fromProvider = all.Where(m => m.MatchweekNumber == number).Select(MapFromDto).ToList();
-            return Results.Ok(new
-            {
-                number,
-                matches = fromProvider
-            });
-        }
 
         return Results.Ok(new
         {
@@ -140,18 +146,23 @@ public static class MatchEndpoints
     private static async Task<IResult> GetStandings(AppDbContext db, ISportsDataProvider sports, CancellationToken ct)
     {
         var rows = await db.StandingRows
-            .OrderBy(r => r.Rank)
+            .Where(r => r.GroupKey == "PL")
             .ToListAsync(ct);
 
         if (rows.Count == 0)
         {
             var standings = await sports.GetStandingsAsync("PL", ct);
-            return Results.Ok(standings.Select(r => new StandingRowResponse(
-                r.Rank, r.Team.Code, r.Team.Name, r.Team.LogoUrl, r.Played, r.Won, r.Drawn, r.Lost, r.GoalsFor, r.GoalsAgainst, r.GoalDifference, r.Points)));
+            return Results.Ok(PremierLeagueTableRanking.Rank(standings.Select(r => new StandingRowResponse(
+                r.Rank, r.Team.Code, r.Team.Name, ClubBadges.Coalesce(r.Team.LogoUrl, r.Team.Code, r.Team.Name), r.Played, r.Won, r.Drawn, r.Lost, r.GoalsFor, r.GoalsAgainst, r.GoalDifference, r.Points))));
         }
 
-        return Results.Ok(rows.Select(r => new StandingRowResponse(
-            r.Rank, r.TeamCode, r.TeamName, r.LogoUrl, r.Played, r.Won, r.Drawn, r.Lost, r.GoalsFor, r.GoalsAgainst, r.GoalDiff, r.Points)));
+        var latestByTeam = rows
+            .GroupBy(r => r.TeamCode, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.OrderByDescending(x => x.LastSyncedAt).First())
+            .Select(r => new StandingRowResponse(
+                r.Rank, r.TeamCode, r.TeamName, ClubBadges.Coalesce(r.LogoUrl, r.TeamCode, r.TeamName), r.Played, r.Won, r.Drawn, r.Lost, r.GoalsFor, r.GoalsAgainst, r.GoalDiff, r.Points));
+
+        return Results.Ok(PremierLeagueTableRanking.Rank(latestByTeam));
     }
 
     private static async Task<IResult> GetMatchById(
@@ -192,27 +203,22 @@ public static class MatchEndpoints
 
     public static async Task<int> ResolveCurrentMatchweekNumberAsync(AppDbContext db, CancellationToken ct)
     {
-        var open = await db.Matches
-            .Where(m => m.MatchweekNumber != null && m.Status != "FT")
-            .OrderBy(m => m.MatchweekNumber)
-            .Select(m => m.MatchweekNumber)
-            .FirstOrDefaultAsync(ct);
+        var rows = await db.Matches
+            .Select(m => new { m.MatchweekNumber, m.Status })
+            .ToListAsync(ct);
 
-        if (open is int openWeek)
-        {
-            return openWeek;
-        }
-
-        var latest = await db.Matches
-            .Where(m => m.MatchweekNumber != null)
-            .MaxAsync(m => (int?)m.MatchweekNumber, ct);
-
-        return latest ?? 1;
+        return CurrentMatchweek.Resolve(rows.Select(m => (m.MatchweekNumber, (string?)m.Status)));
     }
 
     private static MatchResponse MapFromEntity(Data.Entities.Match m) =>
-        new(m.Id, m.TeamA, m.TeamB, m.TeamACode, m.TeamBCode, m.HomeLogoUrl, m.AwayLogoUrl, m.KickoffTime, m.Stage, m.Group, m.MatchweekNumber, m.Venue, m.Status, m.HomeScore, m.AwayScore, MatchLockService.IsLocked(m));
+        new(m.Id, m.TeamA, m.TeamB, m.TeamACode, m.TeamBCode,
+            ClubBadges.Coalesce(m.HomeLogoUrl, m.TeamACode, m.TeamA),
+            ClubBadges.Coalesce(m.AwayLogoUrl, m.TeamBCode, m.TeamB),
+            m.KickoffTime, m.Stage, m.Group, m.MatchweekNumber, m.Venue, m.Status, m.HomeScore, m.AwayScore, MatchLockService.IsLocked(m));
 
     private static MatchResponse MapFromDto(Integrations.SportsData.Dtos.MatchDto m) =>
-        new(m.Id, m.HomeTeam.Name, m.AwayTeam.Name, m.HomeTeam.Code, m.AwayTeam.Code, m.HomeTeam.LogoUrl, m.AwayTeam.LogoUrl, m.KickoffUtc, m.Stage, m.Group, m.MatchweekNumber, m.Venue, m.Status, m.HomeScore, m.AwayScore, m.KickoffUtc <= DateTimeOffset.UtcNow || m.Status == "FT");
+        new(m.Id, m.HomeTeam.Name, m.AwayTeam.Name, m.HomeTeam.Code, m.AwayTeam.Code,
+            ClubBadges.Coalesce(m.HomeTeam.LogoUrl, m.HomeTeam.Code, m.HomeTeam.Name),
+            ClubBadges.Coalesce(m.AwayTeam.LogoUrl, m.AwayTeam.Code, m.AwayTeam.Name),
+            m.KickoffUtc, m.Stage, m.Group, m.MatchweekNumber, m.Venue, m.Status, m.HomeScore, m.AwayScore, m.KickoffUtc <= DateTimeOffset.UtcNow || m.Status == "FT");
 }

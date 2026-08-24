@@ -29,6 +29,7 @@ public static class DatabaseSeeder
             try
             {
                 await db.Database.MigrateAsync(cancellationToken);
+                await db.Database.ExecuteSqlRawAsync(PostgresPublicRls.EnableAllPublicTables, cancellationToken);
                 logger.LogInformation("Database migrations applied.");
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("PendingModelChangesWarning", StringComparison.Ordinal))

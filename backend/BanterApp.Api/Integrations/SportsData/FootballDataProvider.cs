@@ -145,7 +145,8 @@ public sealed class FootballDataProvider : ISportsDataFallbackProvider
         var tla = teamEl.TryGetProperty("tla", out var tlaEl) && !string.IsNullOrWhiteSpace(tlaEl.GetString())
             ? tlaEl.GetString()!.ToUpperInvariant()
             : name.Length >= 3 ? name[..3].ToUpperInvariant() : "TBD";
-        return new TeamDto(id, name, tla, tla);
+        var crest = teamEl.TryGetProperty("crest", out var crestEl) ? crestEl.GetString() : null;
+        return new TeamDto(id, name, tla, tla, crest);
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<StandingDto>> MapStandings(JsonElement root)

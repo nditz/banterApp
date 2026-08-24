@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "media-3.api-sports.io",
+        hostname: "crests.football-data.org",
         pathname: "/**",
       },
     ],

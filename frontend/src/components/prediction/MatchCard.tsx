@@ -25,11 +25,21 @@ function formatKickoff(iso: string): string {
 }
 
 function shortName(name: string): string {
+  if (name.startsWith("Manchester")) return name.trim().split(/\s+/)[1] ?? name;
+  if (name.startsWith("Brighton")) return "Brighton";
+  if (name.startsWith("Tottenham")) return "Spurs";
+  if (name.startsWith("Nottingham")) return "Forest";
+  if (name.startsWith("Crystal")) return "Palace";
+  if (name.startsWith("Aston")) return "Villa";
+  if (name.startsWith("Newcastle")) return "Newcastle";
+  if (name.startsWith("West ")) return name;
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return name;
-  if (name.startsWith("Manchester")) return parts[1] ?? name;
-  if (name.startsWith("West ")) return name;
-  return parts[parts.length - 1] ?? name;
+  const last = parts[parts.length - 1];
+  if (last === "United" || last === "City" || last === "Town") {
+    return parts[0];
+  }
+  return last ?? name;
 }
 
 export function MatchCard({ match }: MatchCardProps) {
