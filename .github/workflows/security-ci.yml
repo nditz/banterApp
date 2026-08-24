@@ -83,3 +83,47 @@ jobs:
       - run: npm run lint
       - run: npm audit --audit-level=high
         continue-on-error: true
+
+  # Merge gate for the Next.js app. Does not deploy — Git-connected Vercel
+  # still ships preview/production from this repo. Prefer `vercel build` so
+  # install + env match Vercel; fall back to `next build` when tokens are
+  # missing (forks / Dependabot without those secrets).
+  vercel-preview-build:
+    name: Vercel preview build
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Detect Vercel credentials
+        id: creds
+        run: |
+          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Repository Vercel secrets are missing. Running next build instead of vercel build. Add VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID as repository secrets (not only the production environment), and as Dependabot secrets if this should run on Dependabot PRs."
+          fi
+      - name: Install Vercel CLI
+        if: steps.creds.outputs.available == 'true'
+        run: npm install --global vercel@59.5.0
+      - name: Pull Vercel preview environment
+        if: steps.creds.outputs.available == 'true'
+        run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+      - name: Vercel preview build
+        if: steps.creds.outputs.available == 'true'
+        run: vercel build --token="$VERCEL_TOKEN"
+      - name: Next.js production build
+        if: steps.creds.outputs.available != 'true'
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
