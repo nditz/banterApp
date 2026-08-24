@@ -47,6 +47,13 @@ def main() -> int:
     if vercel and '"framework": "nextjs"' not in vercel:
         fail('frontend/vercel.json must set framework to "nextjs" (Vercel Root Directory is frontend/).')
 
+    security_ci = read(".github/workflows/security-ci.yml")
+    if security_ci:
+        if "vercel-preview-build" not in security_ci:
+            fail("security-ci.yml must include a vercel-preview-build job as a PR merge gate.")
+        if "vercel build" not in security_ci:
+            fail("security-ci.yml must run `vercel build` (no deploy) before merge to main.")
+
     next_config = read("frontend/next.config.ts")
     if next_config:
         if 'source: "/api-backend/:path*"' not in next_config:

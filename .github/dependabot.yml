@@ -1,5 +1,7 @@
-# Weekly version updates. Security advisories still open immediately
-# even when they are not in a group.
+# One grouped version-update PR per ecosystem, once a week on Monday.
+# Security advisories still open immediately and are not grouped or delayed.
+# Major upgrades (TypeScript 7, ESLint 10, .NET 10, Docker 10, etc.) are
+# ignored until we take them on purpose.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -7,55 +9,86 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 8
+    open-pull-requests-limit: 1
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
       - frontend
     groups:
-      frontend-minor-and-patch:
+      frontend:
         applies-to: version-updates
+        patterns:
+          - "*"
         update-types:
           - minor
           - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: nuget
     directory: /backend
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 8
+    open-pull-requests-limit: 1
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
       - backend
     groups:
-      nuget-minor-and-patch:
+      nuget:
         applies-to: version-updates
+        patterns:
+          - "*"
         update-types:
           - minor
           - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: docker
     directory: /backend
     schedule:
       interval: weekly
       day: monday
+    open-pull-requests-limit: 1
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
       - backend
     groups:
-      dotnet-runtime-images:
+      docker:
+        applies-to: version-updates
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
+    open-pull-requests-limit: 1
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
       - github-actions
     groups:
       actions:
+        applies-to: version-updates
         patterns:
           - "*"

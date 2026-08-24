@@ -316,7 +316,7 @@ Vercel and Render already deploy when GitHub receives a push. Actions here **do 
 
 | Workflow | When | What it does |
 |----------|------|----------------|
-| **Security CI** | Every push / PR | Backend tests, `dotnet ef migrations has-pending-model-changes`, Docker image build, lint/typecheck, static Vercel/Render/Supabase config checks |
+| **Security CI** | Every push / PR | Backend tests, `dotnet ef migrations has-pending-model-changes`, Docker image build, lint/typecheck, static Vercel/Render/Supabase config checks, **Vercel preview build on PRs** (`vercel pull` + `vercel build`, no deploy) |
 | **Apply EF migrations** | `main` when backend data files change, or **Run workflow** | `dotnet ef database update` against the Supabase **session pooler** |
 | **Deploy verify** | `main`, or **Run workflow** | Optional live inspect of Vercel/Render/Supabase settings, then curl `api.balltakes.com/health` and `balltakes.com` |
 
@@ -327,15 +327,17 @@ Create a GitHub **Environment** named `production` (Settings → Environments) a
 | Secret | Used by | Notes |
 |--------|---------|--------|
 | `DATABASE_URL` | Apply EF migrations | Same session pooler URI as Render (port **5432**) |
-| `VERCEL_TOKEN` | Deploy verify | Account token with project read access |
-| `VERCEL_ORG_ID` | Deploy verify | Team/org id from Vercel project settings |
-| `VERCEL_PROJECT_ID` | Deploy verify | Project id from Vercel project settings |
+| `VERCEL_TOKEN` | Deploy verify, Security CI preview build | Account token with project read access. Also add as a **repository** secret (and Dependabot secret) so PR builds can run `vercel build`. |
+| `VERCEL_ORG_ID` | Deploy verify, Security CI preview build | Team/org id from Vercel project settings |
+| `VERCEL_PROJECT_ID` | Deploy verify, Security CI preview build | Project id from Vercel project settings |
 | `RENDER_API_KEY` | Deploy verify | Render Account Settings → API Keys |
 | `RENDER_SERVICE_ID` | Deploy verify | Web service id (`srv-…`) |
 | `SUPABASE_URL` | Deploy verify | `https://<ref>.supabase.co` |
 | `SUPABASE_ANON_KEY` | Deploy verify | Anon/publishable key (not service role) |
 
 If a live-inspect secret is missing, that provider is skipped instead of failing the job.
+
+To block merges when the frontend cannot build, set **Security CI / Vercel preview build** as a required status check on `main` (Settings → Branches). That job needs `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` as **repository** secrets; environment secrets on `production` are not available to pull requests.
 
 ### Optional variables (repository or `production` environment)
 
