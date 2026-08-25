@@ -17,7 +17,7 @@ namespace BanterApp.Api.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "9.0.19")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -66,6 +66,56 @@ namespace BanterApp.Api.Data.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.ToTable("admin_audit_logs", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.AnalyticsEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AnonymousSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AppVersion")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("CountryCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Environment")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("EventName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Feature")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PropertiesJson")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.HasIndex("EventName", "OccurredAt");
+
+                    b.ToTable("analytics_events", (string)null);
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.AnonymousUser", b =>
@@ -407,6 +457,48 @@ namespace BanterApp.Api.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("competition_seasons", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.ConsentPreference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AnalyticsAllowed")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("AnonymousUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConsentVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("MarketingAllowed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnonymousUserId")
+                        .IsUnique()
+                        .HasFilter("\"AnonymousUserId\" IS NOT NULL");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("\"UserId\" IS NOT NULL");
+
+                    b.ToTable("consent_preferences", (string)null);
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.Country", b =>
@@ -2278,6 +2370,21 @@ namespace BanterApp.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Competition");
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.ConsentPreference", b =>
+                {
+                    b.HasOne("BanterApp.Api.Data.Entities.AnonymousUser", "AnonymousUser")
+                        .WithMany()
+                        .HasForeignKey("AnonymousUserId");
+
+                    b.HasOne("BanterApp.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("AnonymousUser");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.GeneratedContent", b =>

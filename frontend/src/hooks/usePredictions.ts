@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { track } from "@/lib/analytics";
 import { apiFetch } from "@/lib/api";
 import { useSession } from "@/hooks/useSession";
 import { getTurnstileToken } from "@/lib/turnstile-token";
@@ -42,7 +43,8 @@ export function usePredictions() {
         body: JSON.stringify({ ...payload, turnstileToken }),
       });
     },
-    onSuccess: () => {
+    onSuccess: (_result, payload) => {
+      track("prediction_created", { predictionType: payload.predictionType });
       queryClient.invalidateQueries({ queryKey: ["predictions"] });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
     },
@@ -60,7 +62,8 @@ export function usePredictions() {
         }),
       });
     },
-    onSuccess: () => {
+    onSuccess: (_result, payload) => {
+      track("prediction_updated", { predictionType: payload.predictionType });
       queryClient.invalidateQueries({ queryKey: ["predictions"] });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
     },

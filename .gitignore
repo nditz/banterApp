@@ -20,6 +20,8 @@ obj/
 # Backend local secrets (copy from appsettings.Development.json.example)
 appsettings.Development.json
 appsettings.Local.json
+# Saved connection strings for switching between cloud and local Postgres
+appsettings.Development.*.json
 
 # IDE
 .vs/
@@ -51,6 +53,9 @@ docs/DATA-SOURCES-INTERNAL.md
 # Internal — GitHub / Vercel / Supabase deploy settings (secrets checklist)
 docs/GITHUB-DEPLOY-SETTINGS-PRIVATE.md
 docs/RENDER-ENV-PRIVATE.md
+
+# Internal — living inventory of every setting and integration across all platforms
+docs/SETTINGS-INVENTORY-PRIVATE.md
 
 # Test / coverage
 coverage/

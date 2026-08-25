@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useConsent } from "@/hooks/useConsent";
 import { cn } from "@/lib/utils";
 import { ADSENSE_CLIENT, ADSENSE_ENABLED, resolveAdSlotId } from "@/lib/ads";
 
@@ -32,8 +33,12 @@ export function AdSlot({ placement, className, slotId, fill = false }: AdSlotPro
   const [visible, setVisible] = useState(false);
   const pushedRef = useRef(false);
 
+  const { ready: consentReady, marketingAllowed } = useConsent();
+
   const adUnitId = resolveAdSlotId(slotId);
-  const isLiveAd = ADSENSE_ENABLED && Boolean(adUnitId);
+  // Without advertising consent the AdSense script is never loaded, so pushing a unit
+  // here would only queue work that can never run.
+  const isLiveAd = ADSENSE_ENABLED && Boolean(adUnitId) && consentReady && marketingAllowed;
 
   useEffect(() => {
     const element = ref.current;
@@ -93,10 +98,13 @@ export function AdSlot({ placement, className, slotId, fill = false }: AdSlotPro
         />
       ) : visible ? (
         <div className="px-4 py-2">
-          <p className="font-medium text-muted-foreground/80">AdSense Placeholder</p>
+          <p className="font-medium text-muted-foreground/80">
+            {consentReady && !marketingAllowed ? "Ads turned off" : "AdSense Placeholder"}
+          </p>
           <p className="mt-1 text-[10px] uppercase tracking-wide">
-            {placementLabels[placement]}
-            {slotId ? ` · ${slotId}` : ""}
+            {consentReady && !marketingAllowed
+              ? "Change this in privacy settings"
+              : `${placementLabels[placement]}${slotId ? ` · ${slotId}` : ""}`}
           </p>
         </div>
       ) : (

@@ -196,3 +196,96 @@ export interface FootballLeaderboardsAdminResponse {
     sourceUpdatedAt: string | null;
   }>;
 }
+
+export type AdminIdentitySource = "supabase" | "database";
+
+export const ACCOUNT_STATUSES = [
+  "Active",
+  "PendingVerification",
+  "Suspended",
+  "Banned",
+] as const;
+
+export type AccountStatusValue = (typeof ACCOUNT_STATUSES)[number];
+
+export interface AdminUserListItem {
+  id: string;
+  email: string;
+  displayName: string;
+  countryCode: string | null;
+  accountStatus: string;
+  isPlatformAdmin: boolean;
+  emailConfirmedAt: string | null;
+  termsAcceptedAt: string | null;
+  createdAt: string;
+  predictionCount: number;
+  leagueCount: number;
+}
+
+export interface AdminUserListResponse {
+  items: AdminUserListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  identitySource: AdminIdentitySource;
+  warning: string | null;
+}
+
+export interface AdminUserIdentity {
+  createdAt: string | null;
+  lastSignInAt: string | null;
+  emailConfirmedAt: string | null;
+  providers: string[];
+  isBanned: boolean;
+}
+
+export interface AdminUserActivity {
+  predictionCount: number;
+  leagueCount: number;
+  generatedContentCount: number;
+  lastPredictionAt: string | null;
+}
+
+export interface AdminUserLeagueMembership {
+  leagueId: string;
+  name: string;
+  kind: string;
+  isLeagueAdmin: boolean;
+}
+
+export interface AdminUserDetail {
+  id: string;
+  email: string;
+  displayName: string;
+  countryCode: string | null;
+  avatar: string | null;
+  accountStatus: string;
+  isPlatformAdmin: boolean;
+  isAllowlisted: boolean;
+  emailConfirmedAt: string | null;
+  termsAcceptedAt: string | null;
+  createdAt: string;
+  identity: AdminUserIdentity | null;
+  activity: AdminUserActivity;
+  leagues: AdminUserLeagueMembership[];
+  identitySource: AdminIdentitySource;
+}
+
+export interface AdminAuditLogItem {
+  id: string;
+  adminUserId: string;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  metadataJson: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
+export interface AdminAuditLogResponse {
+  items: AdminAuditLogItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  availableActions: string[];
+}

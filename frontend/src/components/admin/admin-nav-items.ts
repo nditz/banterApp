@@ -4,6 +4,7 @@ export const adminNavItems: Array<{
   exact?: boolean;
 }> = [
   { href: "/admin", label: "Overview", exact: true },
+  { href: "/admin/users", label: "Users" },
   { href: "/admin/jobs", label: "Jobs" },
   { href: "/admin/errors", label: "Errors" },
   { href: "/admin/sources", label: "Sources" },
@@ -11,6 +12,7 @@ export const adminNavItems: Array<{
   { href: "/admin/review", label: "Review" },
   { href: "/admin/stats", label: "Stats" },
   { href: "/admin/football-data", label: "Football Data" },
+  { href: "/admin/audit", label: "Audit Log" },
   { href: "/admin/health", label: "Health" },
   { href: "/admin/launch-checklist", label: "Launch Checklist" },
 ] ;

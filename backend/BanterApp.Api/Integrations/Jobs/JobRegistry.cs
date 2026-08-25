@@ -23,6 +23,7 @@ public static class JobRegistry
         new("predictions.aggregate.refresh", "prediction-aggregate-refresh", "Prediction Aggregates", "Refresh consensus prediction aggregates.", null, true, false),
         new("failed-items.retry", "failed-items-retry", "Failed Items Retry", "Requeue failed media items for reprocessing.", null, true, false, IsStub: true),
         new("stale-content.cleanup", "stale-content-cleanup", "Stale Content Cleanup", "Archive or clean up old skipped content.", null, true, true, IsStub: true),
+        new("analytics.retention.cleanup", "analytics-retention-cleanup", "Analytics Retention Cleanup", "Delete raw analytics events past the configured retention window.", "30 3 * * *", true, true),
         new("score-sync", "score-sync", "Live Scores Sync", "Sync live match scores.", "*/15 * * * *", true, true),
         new("match-details-sync", "match-details-sync", "Match Details Sync", "Sync match events and lineups.", "*/15 * * * *", true, true),
         new("standings-sync", "standings-sync", "Standings Sync", "Sync tournament standings.", "0 */6 * * *", true, true),

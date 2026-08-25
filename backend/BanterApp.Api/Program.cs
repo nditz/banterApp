@@ -5,7 +5,9 @@ using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Features.Admin;
 using BanterApp.Api.Features.Ai;
+using BanterApp.Api.Features.Analytics;
 using BanterApp.Api.Features.Auth;
+using BanterApp.Api.Features.Privacy;
 using BanterApp.Api.Features.Feed;
 using BanterApp.Api.Features.Leaderboards;
 using BanterApp.Api.Features.Leagues;
@@ -70,11 +72,17 @@ builder.Services.AddScoped<IAuthAuditService, AuthAuditService>();
 builder.Services.AddSingleton<ProductionStartupValidator>();
 builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection(AdminOptions.SectionName));
 builder.Services.Configure<LegalOptions>(builder.Configuration.GetSection(LegalOptions.SectionName));
+builder.Services.Configure<PrivacyOptions>(builder.Configuration.GetSection(PrivacyOptions.SectionName));
+builder.Services.Configure<AnalyticsOptions>(builder.Configuration.GetSection(AnalyticsOptions.SectionName));
+builder.Services.AddScoped<IConsentService, ConsentService>();
+builder.Services.AddScoped<IAnalyticsIngestService, AnalyticsIngestService>();
+builder.Services.AddScoped<AnalyticsRetentionJob>();
 builder.Services.AddScoped<IAdminAuthorizationService, AdminAuthorizationService>();
 builder.Services.AddScoped<IAdminAuditService, AdminAuditService>();
 builder.Services.AddScoped<AdminOverviewService>();
 builder.Services.AddScoped<AdminHealthService>();
 builder.Services.AddScoped<AdminReviewService>();
+builder.Services.AddScoped<AdminUsersService>();
 builder.Services.AddScoped<FootballDataAdminService>();
 builder.Services.AddScoped<UserPredictionLockService>();
 builder.Services.AddScoped<UserPredictionValidator>();
@@ -103,6 +111,8 @@ builder.Services.AddHangfireServer(options => options.WorkerCount = 2);
 builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection("Supabase"));
 
 builder.Services.AddHttpClient<SupabaseAuthService>();
+builder.Services.AddHttpClient<ISupabaseAdminClient, SupabaseAdminClient>(client =>
+    client.Timeout = TimeSpan.FromSeconds(10));
 
 var connectionString = DatabaseConnection.Resolve(builder.Configuration);
 
@@ -238,6 +248,9 @@ builder.Services.AddRateLimiter(options =>
     AddPolicy(RateLimitPolicies.AdminJobsPauseResume, 10, 60);
     AddPolicy(RateLimitPolicies.AdminErrorsRetry, 5, 60);
     AddPolicy(RateLimitPolicies.AdminReviewUpdate, 20, 60);
+    AddPolicy(RateLimitPolicies.AdminUsersManage, 10, 60);
+    AddPolicy(RateLimitPolicies.AnalyticsIngest, 60, 60);
+    AddPolicy(RateLimitPolicies.ConsentUpdate, 20, 60);
     AddPolicy(RateLimitPolicies.RssSyncTrigger, 2, 3600);
     AddPolicy(RateLimitPolicies.YoutubeSyncTrigger, 2, 3600);
     AddPolicy(RateLimitPolicies.ClientErrorReport, 10, 60);
@@ -380,6 +393,8 @@ app.MapOpinionEndpoints();
 app.MapAiEndpoints();
 app.MapAuthEndpoints();
 app.MapClientErrorEndpoints();
+app.MapConsentEndpoints();
+app.MapAnalyticsEndpoints();
 app.MapAdminEndpoints();
 
 app.Run();

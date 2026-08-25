@@ -23,6 +23,10 @@ public static class RateLimitPolicies
     public const string AdminJobsPauseResume = "admin.jobs.pause_resume";
     public const string AdminErrorsRetry = "admin.errors.retry";
     public const string AdminReviewUpdate = "admin.review.update";
+    public const string AdminUsersManage = "admin.users.manage";
+
+    public const string AnalyticsIngest = "analytics.ingest";
+    public const string ConsentUpdate = "consent.update";
 
     public const string RssSyncTrigger = "rss.sync.trigger";
     public const string YoutubeSyncTrigger = "youtube.sync.trigger";

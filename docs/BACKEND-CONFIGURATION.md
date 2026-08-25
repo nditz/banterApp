@@ -13,6 +13,19 @@ The ASP.NET API uses the standard [.NET configuration hierarchy](https://learn.m
 
 The **frontend** (Next.js) still uses repo-root `.env` / `frontend/.env.local` for `NEXT_PUBLIC_*` variables. Backend secrets do **not** belong in those files.
 
+### Private working notes (not in git)
+
+Three gitignored files under `docs/` hold the operational detail. They are not in a fresh
+clone — recreate them from the templates listed beside each one.
+
+| File | Contents | Rebuild from |
+|------|----------|--------------|
+| `docs/SETTINGS-INVENTORY-PRIVATE.md` | Index of every setting and integration across Render, Vercel, GitHub and Supabase; consent-version rule; cloud-vs-local database switching | This file + `backend/.env.template` |
+| `docs/RENDER-ENV-PRIVATE.md` | Exhaustive Render key list with examples and defaults | `backend/.env.template` |
+| `docs/GITHUB-DEPLOY-SETTINGS-PRIVATE.md` | GitHub Actions secrets and variables, Vercel and Supabase deploy settings | `DEPLOYMENT.md` |
+
+They record key *names* and where values come from, never the values themselves.
+
 ## Local setup
 
 ```powershell

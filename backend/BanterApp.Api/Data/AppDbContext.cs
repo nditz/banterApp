@@ -47,6 +47,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PlayerStat> PlayerStats => Set<PlayerStat>();
     public DbSet<LeaderboardEntry> LeaderboardEntries => Set<LeaderboardEntry>();
     public DbSet<UserPrediction> UserPredictions => Set<UserPrediction>();
+    public DbSet<ConsentPreference> ConsentPreferences => Set<ConsentPreference>();
+    public DbSet<AnalyticsEvent> AnalyticsEvents => Set<AnalyticsEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -578,6 +580,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.MetadataJson).HasColumnType("text");
             e.HasOne(x => x.Player).WithMany(p => p.LeaderboardEntries).HasForeignKey(x => x.PlayerId);
             e.HasOne(x => x.Country).WithMany(c => c.LeaderboardEntries).HasForeignKey(x => x.CountryId);
+        });
+
+        modelBuilder.Entity<ConsentPreference>(e =>
+        {
+            e.ToTable("consent_preferences");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.UserId).IsUnique()
+                .HasFilter("\"UserId\" IS NOT NULL");
+            e.HasIndex(x => x.AnonymousUserId).IsUnique()
+                .HasFilter("\"AnonymousUserId\" IS NOT NULL");
+            e.Property(x => x.ConsentVersion).HasMaxLength(32);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
+            e.HasOne(x => x.AnonymousUser).WithMany().HasForeignKey(x => x.AnonymousUserId);
+        });
+
+        modelBuilder.Entity<AnalyticsEvent>(e =>
+        {
+            e.ToTable("analytics_events");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.EventName, x.OccurredAt });
+            e.HasIndex(x => x.OccurredAt);
+            e.Property(x => x.EventName).HasMaxLength(64);
+            e.Property(x => x.Feature).HasMaxLength(32);
+            e.Property(x => x.AppVersion).HasMaxLength(32);
+            e.Property(x => x.Environment).HasMaxLength(32);
+            e.Property(x => x.CountryCode).HasMaxLength(2);
+            e.Property(x => x.PropertiesJson).HasColumnType("text");
         });
 
         modelBuilder.Entity<UserPrediction>(e =>

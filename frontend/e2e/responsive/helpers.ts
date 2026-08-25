@@ -49,4 +49,6 @@ export const adminRoutes = [
   "/admin/review",
   "/admin/stats",
   "/admin/health",
+  "/admin/users",
+  "/admin/audit",
 ] as const;

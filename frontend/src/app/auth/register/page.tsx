@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { track } from "@/lib/analytics";
 import { getOrCreateAnonymousUser } from "@/lib/anonymous";
 import { apiFetch } from "@/lib/api";
 import { getStoredRecoveryToken } from "@/lib/session";
@@ -38,6 +39,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    track("registration_started", { method: "password" });
 
     const supabase = createClient();
     if (!supabase) {
@@ -69,6 +71,8 @@ export default function RegisterPage() {
       return;
     }
 
+    track("registration_completed", { method: "password" });
+
     try {
       await apiFetch("/api/auth/session/sync", { method: "POST" });
     } catch {
@@ -83,6 +87,7 @@ export default function RegisterPage() {
 
   const handleGoogleRegister = async () => {
     setError(null);
+    track("registration_started", { method: "google" });
     const supabase = createClient();
     if (!supabase) {
       setError("Supabase is not configured.");

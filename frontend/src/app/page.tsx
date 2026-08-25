@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TrackPageView } from "@/components/analytics/TrackPageView";
 import { BanterFeedPanel } from "@/components/home/BanterFeedPanel";
 import { HomeQuickNav } from "@/components/home/HomeQuickNav";
 import { HomeStatsBar } from "@/components/home/HomeStatsBar";
@@ -29,6 +30,7 @@ const stickyScrollSideClass = cn(
 export default function HomePage() {
   return (
     <PageWithSideAds>
+      <TrackPageView event="landing_viewed" />
       <HomeWelcomePanel />
       <HomeStatsBar />
       <HomeQuickNav />

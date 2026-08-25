@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TrackPageView } from "@/components/analytics/TrackPageView";
 import { LeagueTable } from "@/components/home/LeagueTable";
 import { PageWithSideAds } from "@/components/layout/PageWithSideAds";
 
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 export default function TablePage() {
   return (
     <PageWithSideAds>
+      <TrackPageView event="leaderboard_viewed" properties={{ scope: "competition" }} />
       <div className="mx-auto max-w-3xl space-y-5">
         <header>
           <p className="page-kicker">2026/27 standings</p>

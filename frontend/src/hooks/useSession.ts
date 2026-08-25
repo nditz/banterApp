@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { track } from "@/lib/analytics";
 import { apiFetch } from "@/lib/api";
 import { setCsrfToken } from "@/lib/csrf";
 import { getDeviceFingerprint } from "@/lib/fingerprint";
@@ -54,10 +55,13 @@ export function useAcceptTerms() {
         }),
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       markTermsAcceptedLocally();
+      track("guest_session_created", { countryCode: variables.countryCode ?? undefined });
       if (data.recoveryToken) {
         setStoredRecoveryToken(data.recoveryToken);
+        // Records that a key exists. The key value itself is never sent anywhere.
+        track("recovery_key_created");
       }
       queryClient.setQueryData(["session"], applySessionState(data));
       queryClient.invalidateQueries({ queryKey: ["matches"] });

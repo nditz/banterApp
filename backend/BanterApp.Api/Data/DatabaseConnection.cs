@@ -138,7 +138,7 @@ public static class DatabaseConnection
             Host = host,
             Port = port,
             Database = string.IsNullOrEmpty(database) ? "postgres" : database,
-            SslMode = SslMode.Require
+            SslMode = ResolveSslMode(query, host)
         };
 
         if (userInfo.Length > 0)
@@ -166,24 +166,58 @@ public static class DatabaseConnection
         return builder.ConnectionString;
     }
 
-    private static bool QueryFlag(string query, string key)
+    /// <summary>
+    /// Honors an explicit libpq-style <c>sslmode</c> query parameter so the same URI form
+    /// works against Supabase and a local server.
+    /// <para>
+    /// Without one, a loopback host gets <see cref="SslMode.Prefer"/> — a stock local
+    /// Postgres serves plaintext, and <see cref="SslMode.Require"/> would fail with an
+    /// opaque TLS error — while every remote host keeps <see cref="SslMode.Require"/> so a
+    /// managed database can never silently downgrade to plaintext.
+    /// </para>
+    /// </summary>
+    private static SslMode ResolveSslMode(string query, string host)
+    {
+        var requested = QueryValue(query, "sslmode");
+        if (!string.IsNullOrWhiteSpace(requested) &&
+            // libpq spells the verify modes with a hyphen; the enum does not.
+            Enum.TryParse<SslMode>(requested.Replace("-", string.Empty), ignoreCase: true, out var parsed) &&
+            Enum.IsDefined(parsed))
+        {
+            return parsed;
+        }
+
+        return IsLoopbackHost(host) ? SslMode.Prefer : SslMode.Require;
+    }
+
+    private static bool IsLoopbackHost(string host)
+    {
+        var value = host.Trim().Trim('[', ']');
+
+        return value.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+               value.Equals("::1", StringComparison.Ordinal) ||
+               value.StartsWith("127.", StringComparison.Ordinal);
+    }
+
+    private static bool QueryFlag(string query, string key) =>
+        string.Equals(QueryValue(query, key), "true", StringComparison.OrdinalIgnoreCase);
+
+    private static string? QueryValue(string query, string key)
     {
         if (string.IsNullOrEmpty(query))
         {
-            return false;
+            return null;
         }
 
         foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
             var kv = part.Split('=', 2);
-            if (kv.Length == 2 &&
-                string.Equals(kv[0], key, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(kv[1], "true", StringComparison.OrdinalIgnoreCase))
+            if (kv.Length == 2 && string.Equals(kv[0], key, StringComparison.OrdinalIgnoreCase))
             {
-                return true;
+                return Uri.UnescapeDataString(kv[1]);
             }
         }
 
-        return false;
+        return null;
     }
 }

@@ -11,6 +11,16 @@ public interface IAdminAuthorizationService
 {
     Task<bool> IsAdminAsync(IUserContext user, HttpContext http, CancellationToken ct = default);
     Task<bool> EnsureAdminAsync(IUserContext user, HttpContext http, CancellationToken ct = default);
+
+    /// <summary>
+    /// Checks a named capability from <see cref="AdminPermissions"/>. Unknown permission
+    /// names are denied rather than defaulting open.
+    /// </summary>
+    Task<bool> HasPermissionAsync(
+        IUserContext user,
+        HttpContext http,
+        string permission,
+        CancellationToken ct = default);
 }
 
 public sealed class AdminAuthorizationService(
@@ -47,6 +57,20 @@ public sealed class AdminAuthorizationService(
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
         return registered?.IsPlatformAdmin == true;
+    }
+
+    public async Task<bool> HasPermissionAsync(
+        IUserContext user,
+        HttpContext http,
+        string permission,
+        CancellationToken ct = default)
+    {
+        if (!AdminPermissions.IsKnown(permission))
+        {
+            return false;
+        }
+
+        return await IsAdminAsync(user, http, ct);
     }
 
     public async Task<bool> EnsureAdminAsync(IUserContext user, HttpContext http, CancellationToken ct = default)

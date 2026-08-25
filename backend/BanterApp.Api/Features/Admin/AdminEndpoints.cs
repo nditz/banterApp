@@ -66,6 +66,15 @@ public static class AdminEndpoints
         group.MapGet("/launch-checklist", async (AdminHealthService health, CancellationToken ct) =>
             Results.Ok(await health.GetLaunchChecklistAsync(ct)));
 
+        group.MapGet("/users", GetUsers);
+        group.MapGet("/users/{userId:guid}", GetUserDetail);
+        group.MapPost("/users/{userId:guid}/roles", GrantUserRole)
+            .RequireRateLimiting(RateLimitPolicies.AdminUsersManage);
+        group.MapDelete("/users/{userId:guid}/roles/{role}", RevokeUserRole)
+            .RequireRateLimiting(RateLimitPolicies.AdminUsersManage);
+        group.MapPost("/users/{userId:guid}/status", SetUserStatus)
+            .RequireRateLimiting(RateLimitPolicies.AdminUsersManage);
+
         group.MapGet("/audit-logs", GetAuditLogs);
 
         group.MapPost("/backfill/rss", BackfillRss).RequireRateLimiting(RateLimitPolicies.RssSyncTrigger);
@@ -611,12 +620,216 @@ public static class AdminEndpoints
         return Results.Ok(new { updated = id });
     }
 
-    private static async Task<IResult> GetAuditLogs(AppDbContext db, int? limit, CancellationToken ct)
+    private static async Task<IResult> GetUsers(
+        AdminUsersService users,
+        IAdminAuthorizationService adminAuth,
+        IUserContext user,
+        HttpContext http,
+        int? page,
+        int? pageSize,
+        string? search,
+        CancellationToken ct)
     {
-        var take = Math.Clamp(limit ?? 50, 1, 100);
-        var logs = await db.AdminAuditLogs.AsNoTracking()
+        if (!await adminAuth.HasPermissionAsync(user, http, AdminPermissions.UsersView, ct))
+        {
+            return Results.Forbid();
+        }
+
+        return Results.Ok(await users.ListUsersAsync(page, pageSize, search, ct));
+    }
+
+    private static async Task<IResult> GetUserDetail(
+        Guid userId,
+        AdminUsersService users,
+        IAdminAuthorizationService adminAuth,
+        IUserContext user,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        if (!await adminAuth.HasPermissionAsync(user, http, AdminPermissions.UsersView, ct))
+        {
+            return Results.Forbid();
+        }
+
+        var detail = await users.GetUserAsync(userId, ct);
+        return detail is null
+            ? Results.NotFound(new { error = "User not found." })
+            : Results.Ok(detail);
+    }
+
+    private static async Task<IResult> GrantUserRole(
+        Guid userId,
+        AdminUserRoleRequest request,
+        AdminUsersService users,
+        IAdminAuthorizationService adminAuth,
+        IUserContext user,
+        IAdminAuditService audit,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        if (!await adminAuth.HasPermissionAsync(user, http, AdminPermissions.UsersManage, ct))
+        {
+            return Results.Forbid();
+        }
+
+        if (!string.Equals(request.Role, AdminUsersService.AdminRole, StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.BadRequest(new { error = $"Unknown role '{request.Role}'." });
+        }
+
+        var result = await users.GrantAdminAsync(userId, ct);
+        if (!result.Success)
+        {
+            return MapUserActionFailure(result);
+        }
+
+        await audit.LogAsync(user, http, "user.role.grant", "user", userId.ToString(),
+            new { role = AdminUsersService.AdminRole }, ct);
+
+        return Results.Ok(new { userId, role = AdminUsersService.AdminRole, message = result.Message });
+    }
+
+    private static async Task<IResult> RevokeUserRole(
+        Guid userId,
+        string role,
+        AdminUsersService users,
+        IAdminAuthorizationService adminAuth,
+        IUserContext user,
+        IAdminAuditService audit,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        if (!await adminAuth.HasPermissionAsync(user, http, AdminPermissions.UsersManage, ct))
+        {
+            return Results.Forbid();
+        }
+
+        if (!string.Equals(role, AdminUsersService.AdminRole, StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.BadRequest(new { error = $"Unknown role '{role}'." });
+        }
+
+        if (user.UserId is null)
+        {
+            return Results.Forbid();
+        }
+
+        var result = await users.RevokeAdminAsync(userId, user.UserId.Value, ct);
+        if (!result.Success)
+        {
+            return MapUserActionFailure(result);
+        }
+
+        await audit.LogAsync(user, http, "user.role.revoke", "user", userId.ToString(),
+            new { role = AdminUsersService.AdminRole }, ct);
+
+        return Results.Ok(new { userId, role = AdminUsersService.AdminRole, message = result.Message });
+    }
+
+    private static async Task<IResult> SetUserStatus(
+        Guid userId,
+        AdminUserStatusRequest request,
+        AdminUsersService users,
+        IAdminAuthorizationService adminAuth,
+        IUserContext user,
+        IAdminAuditService audit,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        if (!await adminAuth.HasPermissionAsync(user, http, AdminPermissions.UsersManage, ct))
+        {
+            return Results.Forbid();
+        }
+
+        if (user.UserId is null)
+        {
+            return Results.Forbid();
+        }
+
+        var result = await users.SetStatusAsync(userId, request.Status ?? string.Empty, user.UserId.Value, ct);
+        if (!result.Success)
+        {
+            return MapUserActionFailure(result);
+        }
+
+        await audit.LogAsync(user, http, "user.status.change", "user", userId.ToString(),
+            new { status = request.Status }, ct);
+
+        return Results.Ok(new { userId, status = request.Status, message = result.Message });
+    }
+
+    private static IResult MapUserActionFailure(AdminUserActionResult result) => result.Outcome switch
+    {
+        AdminUserActionOutcome.NotFound => Results.NotFound(new { error = result.Message }),
+        AdminUserActionOutcome.Conflict => Results.Conflict(new { error = result.Message }),
+        _ => Results.BadRequest(new { error = result.Message })
+    };
+
+    private static async Task<IResult> GetAuditLogs(
+        AppDbContext db,
+        IAdminAuthorizationService adminAuth,
+        IUserContext user,
+        HttpContext http,
+        string? action,
+        Guid? adminUserId,
+        string? targetType,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        int? page,
+        int? pageSize,
+        int? limit,
+        CancellationToken ct)
+    {
+        if (!await adminAuth.HasPermissionAsync(user, http, AdminPermissions.AuditView, ct))
+        {
+            return Results.Forbid();
+        }
+
+        if (from.HasValue && to.HasValue && from > to)
+        {
+            return Results.BadRequest(new { error = "'from' must not be after 'to'." });
+        }
+
+        var currentPage = Math.Max(page ?? 1, 1);
+        // `limit` is the pre-existing parameter name; keep honouring it as a page size.
+        var size = Math.Clamp(pageSize ?? limit ?? 50, 1, 100);
+
+        var query = db.AdminAuditLogs.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(action))
+        {
+            var term = action.Trim();
+            query = query.Where(l => l.Action == term);
+        }
+
+        if (adminUserId.HasValue)
+        {
+            query = query.Where(l => l.AdminUserId == adminUserId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetType))
+        {
+            var term = targetType.Trim();
+            query = query.Where(l => l.TargetType == term);
+        }
+
+        if (from.HasValue)
+        {
+            query = query.Where(l => l.CreatedAt >= from.Value);
+        }
+
+        if (to.HasValue)
+        {
+            query = query.Where(l => l.CreatedAt <= to.Value);
+        }
+
+        var total = await query.CountAsync(ct);
+
+        var logs = await query
             .OrderByDescending(l => l.CreatedAt)
-            .Take(take)
+            .ThenBy(l => l.Id)
+            .Skip((currentPage - 1) * size)
+            .Take(size)
             .Select(l => new
             {
                 l.Id,
@@ -629,7 +842,22 @@ public static class AdminEndpoints
                 l.CreatedAt
             })
             .ToListAsync(ct);
-        return Results.Ok(logs);
+
+        var actions = await db.AdminAuditLogs.AsNoTracking()
+            .Select(l => l.Action)
+            .Distinct()
+            .OrderBy(a => a)
+            .Take(100)
+            .ToListAsync(ct);
+
+        return Results.Ok(new
+        {
+            items = logs,
+            page = currentPage,
+            pageSize = size,
+            total,
+            availableActions = actions
+        });
     }
 
     private static async Task<IResult> BackfillRss(
@@ -754,3 +982,7 @@ public static class AdminEndpoints
 public sealed record AdminReviewRejectRequest(string? Notes);
 
 public sealed record SetActiveRequest(bool IsActive);
+
+public sealed record AdminUserRoleRequest(string? Role);
+
+public sealed record AdminUserStatusRequest(string? Status);

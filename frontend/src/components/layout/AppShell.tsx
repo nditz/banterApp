@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { TermsEntertainmentNotice } from "@/components/legal/TermsOfUseContent";
+import { PrivacySettingsButton } from "@/components/privacy/PrivacySettingsButton";
 import { SessionKeyRestore } from "@/components/session/SessionKeyRestore";
 import { TermsGate } from "@/components/session/TermsGate";
 import { TurnstileProvider } from "@/components/security/TurnstileProvider";
@@ -438,6 +439,8 @@ export function AppShell({ children }: AppShellProps) {
               <Link href="/privacy" className="font-semibold text-foreground hover:underline">
                 Privacy Policy
               </Link>
+              {" · "}
+              <PrivacySettingsButton />
             </p>
 
             <p className="text-xs leading-relaxed">

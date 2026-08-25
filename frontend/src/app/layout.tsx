@@ -1,14 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow, Barlow_Condensed, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { AdSenseLoader } from "@/components/ads/AdSenseLoader";
+import { AnalyticsBootstrap } from "@/components/analytics/AnalyticsBootstrap";
 import { AppShell } from "@/components/layout/AppShell";
 import { ClientErrorReporter } from "@/components/ClientErrorReporter";
+import { ConsentBanner } from "@/components/privacy/ConsentBanner";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { OrganizationJsonLd, WebsiteJsonLd } from "@/components/JsonLd";
 import { BRAND } from "@/lib/brand";
 import { BASE_METADATA } from "@/lib/seo.config";
-import { ADSENSE_CLIENT, ADSENSE_ENABLED, ADSENSE_SCRIPT_SRC } from "@/lib/ads";
+import { ADSENSE_CLIENT, ADSENSE_ENABLED } from "@/lib/ads";
 import "./globals.css";
 
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("ball-takes-theme");var d=t==="dark"||(t==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",!!d);}catch(e){}})();`;
@@ -82,21 +85,15 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">
           {THEME_INIT_SCRIPT}
         </Script>
-        {ADSENSE_ENABLED ? (
-          <Script
-            id="adsense"
-            async
-            src={ADSENSE_SCRIPT_SRC}
-            crossOrigin="anonymous"
-            strategy="afterInteractive"
-          />
-        ) : null}
         <OrganizationJsonLd />
         <WebsiteJsonLd />
         <ThemeProvider>
           <QueryProvider>
             <ClientErrorReporter />
+            <AnalyticsBootstrap />
+            <AdSenseLoader />
             <AppShell>{children}</AppShell>
+            <ConsentBanner />
           </QueryProvider>
         </ThemeProvider>
       </body>

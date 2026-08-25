@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PrivacySettingsButton } from "@/components/privacy/PrivacySettingsButton";
 import { BRAND } from "@/lib/brand";
 
 export const metadata = {
@@ -22,6 +23,32 @@ export default function PrivacyPage() {
         <li>Admin audit and auth audit logs retain IP address and user agent for security.</li>
         <li>AI and ingestion jobs process public sports content with source attribution.</li>
       </ul>
+
+      <h2 className="mt-8 text-lg font-semibold">Optional categories</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Strictly necessary storage keeps you signed in and remembers your predictions, and
+        cannot be turned off. Two categories are optional, off by default, and can be changed
+        at any time:
+      </p>
+      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+        <li>
+          <strong className="text-foreground">Product analytics.</strong> First-party,
+          aggregated usage events stored on our own infrastructure. No third-party analytics
+          provider is used, and no IP address, referrer or free-form text is recorded.
+        </li>
+        <li>
+          <strong className="text-foreground">Advertising.</strong> Allows Google AdSense to
+          load. Declining means the script is never requested and no advertising cookies are
+          set.
+        </li>
+      </ul>
+      <p className="mt-4 text-sm text-muted-foreground">
+        Declining either category leaves every feature of Ball Takes fully working.
+      </p>
+      <p className="mt-4 text-sm">
+        <PrivacySettingsButton className="text-primary" />
+      </p>
+
       <p className="mt-6 text-sm text-muted-foreground">
         For takedown requests or privacy questions, contact{" "}
         <a href="mailto:privacy@balltakes.com" className="text-primary hover:underline">

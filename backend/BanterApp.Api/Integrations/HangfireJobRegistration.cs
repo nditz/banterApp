@@ -1,5 +1,6 @@
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Analytics;
 using BanterApp.Api.Integrations.Ai;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.News;
@@ -33,7 +34,8 @@ public static class HangfireJobRegistration
         FootballPlayerStatsSyncJob.JobId,
         FootballTopScorersSyncJob.JobId,
         FootballTopAssistsSyncJob.JobId,
-        FootballReferenceFullSyncJob.JobId
+        FootballReferenceFullSyncJob.JobId,
+        AnalyticsRetentionJob.JobId
     ];
 
     public static void RegisterRecurringJobs(WebApplication app)
@@ -233,6 +235,14 @@ public static class HangfireJobRegistration
             FootballReferenceFullSyncJob.JobId,
             job => job.SyncAsync(CancellationToken.None),
             Cron.Never());
+
+        if (!IsPaused(pausedOrDisabled, "analytics.retention.cleanup"))
+        {
+            recurring.AddOrUpdate<AnalyticsRetentionJob>(
+                AnalyticsRetentionJob.JobId,
+                job => job.CleanupAsync(CancellationToken.None),
+                "30 3 * * *");
+        }
     }
 
     private static void RegisterJobById(IRecurringJobManager recurring, string hangfireJobId, BackgroundJobsOptions jobs)
@@ -303,6 +313,9 @@ public static class HangfireJobRegistration
                 break;
             case FootballReferenceFullSyncJob.JobId:
                 recurring.AddOrUpdate<FootballReferenceFullSyncJob>(FootballReferenceFullSyncJob.JobId, j => j.SyncAsync(CancellationToken.None), Cron.Never());
+                break;
+            case AnalyticsRetentionJob.JobId:
+                recurring.AddOrUpdate<AnalyticsRetentionJob>(AnalyticsRetentionJob.JobId, j => j.CleanupAsync(CancellationToken.None), "30 3 * * *");
                 break;
         }
     }

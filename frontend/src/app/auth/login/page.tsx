@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { track } from "@/lib/analytics";
 import { apiFetch } from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
 import { getOAuthRedirectUrl } from "@/lib/supabase/oauth";
@@ -58,6 +59,8 @@ export default function LoginPage() {
       setError(authError.message);
       return;
     }
+
+    track("login_completed", { method: "password" });
 
     try {
       await apiFetch("/api/auth/session/sync", { method: "POST" });

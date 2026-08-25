@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TrackPageView } from "@/components/analytics/TrackPageView";
 import { MatchweekBoard } from "@/components/home/MatchweekBoard";
 import { PageWithSideAds } from "@/components/layout/PageWithSideAds";
 
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function MatchweekPage() {
   return (
     <PageWithSideAds>
+      <TrackPageView event="fixture_viewed" />
       <div className="mx-auto max-w-3xl space-y-5">
         <header>
           <p className="page-kicker">Premier League 2026/27</p>

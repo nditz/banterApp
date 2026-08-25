@@ -3,12 +3,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import type {
+  AdminAuditLogResponse,
   AdminJob,
   AdminJobRun,
   AdminOverview,
   AdminReviewItem,
   AdminSource,
   AdminSourceItem,
+  AdminUserDetail,
+  AdminUserListResponse,
   OperationalErrorDetail,
   OperationalErrorItem,
   LaunchChecklistItem,
@@ -138,6 +141,86 @@ export function useAdminLaunchChecklist() {
         contentSafety: Record<string, unknown>;
         rateLimits: Record<string, unknown>;
       }>("/api/admin/launch-checklist"),
+  });
+}
+
+export function useAdminUsers(params: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}) {
+  const search = new URLSearchParams();
+  if (params.page) search.set("page", String(params.page));
+  if (params.pageSize) search.set("pageSize", String(params.pageSize));
+  if (params.search) search.set("search", params.search);
+  const qs = search.toString();
+
+  return useQuery({
+    queryKey: [...adminKey, "users", params],
+    queryFn: () => apiFetch<AdminUserListResponse>(`/api/admin/users${qs ? `?${qs}` : ""}`),
+    placeholderData: (previous) => previous,
+  });
+}
+
+export function useAdminUserDetail(userId: string) {
+  return useQuery({
+    queryKey: [...adminKey, "users", userId],
+    queryFn: () => apiFetch<AdminUserDetail>(`/api/admin/users/${userId}`),
+    enabled: Boolean(userId),
+  });
+}
+
+export function useAdminUserRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, grant }: { userId: string; grant: boolean }) =>
+      grant
+        ? apiFetch(`/api/admin/users/${userId}/roles`, {
+            method: "POST",
+            body: JSON.stringify({ role: "admin" }),
+          })
+        : apiFetch(`/api/admin/users/${userId}/roles/admin`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...adminKey, "users"] });
+    },
+  });
+}
+
+export function useAdminUserStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, status }: { userId: string; status: string }) =>
+      apiFetch(`/api/admin/users/${userId}/status`, {
+        method: "POST",
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...adminKey, "users"] });
+    },
+  });
+}
+
+export function useAdminAuditLogs(params: {
+  page?: number;
+  pageSize?: number;
+  action?: string;
+  adminUserId?: string;
+  from?: string;
+  to?: string;
+}) {
+  const search = new URLSearchParams();
+  if (params.page) search.set("page", String(params.page));
+  if (params.pageSize) search.set("pageSize", String(params.pageSize));
+  if (params.action) search.set("action", params.action);
+  if (params.adminUserId) search.set("adminUserId", params.adminUserId);
+  if (params.from) search.set("from", params.from);
+  if (params.to) search.set("to", params.to);
+  const qs = search.toString();
+
+  return useQuery({
+    queryKey: [...adminKey, "audit-logs", params],
+    queryFn: () => apiFetch<AdminAuditLogResponse>(`/api/admin/audit-logs${qs ? `?${qs}` : ""}`),
+    placeholderData: (previous) => previous,
   });
 }
 

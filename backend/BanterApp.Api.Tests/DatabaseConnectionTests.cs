@@ -139,6 +139,72 @@ public class DatabaseConnectionTests
     }
 
     [Fact]
+    public void ToNpgsqlConnectionString_LocalUri_DoesNotForceTls()
+    {
+        // A stock local Postgres serves plaintext. Forcing Require here produced an opaque
+        // TLS error and pushed local development onto the ADO.NET form unnecessarily.
+        const string uri = "postgresql://postgres:postgres@localhost:5433/banterapp";
+
+        var parsed = new NpgsqlConnectionStringBuilder(
+            DatabaseConnection.ToNpgsqlConnectionString(uri));
+
+        Assert.Equal("localhost", parsed.Host);
+        Assert.Equal(5433, parsed.Port);
+        Assert.Equal("banterapp", parsed.Database);
+        Assert.Equal(SslMode.Prefer, parsed.SslMode);
+    }
+
+    [Theory]
+    [InlineData("127.0.0.1")]
+    [InlineData("[::1]")]
+    public void ToNpgsqlConnectionString_LoopbackAddresses_UsePrefer(string host)
+    {
+        var parsed = new NpgsqlConnectionStringBuilder(
+            DatabaseConnection.ToNpgsqlConnectionString(
+                $"postgresql://postgres:postgres@{host}:54322/postgres"));
+
+        Assert.Equal(SslMode.Prefer, parsed.SslMode);
+    }
+
+    [Fact]
+    public void ToNpgsqlConnectionString_RemoteHostWithoutSslMode_StillRequiresTls()
+    {
+        // The guard that matters: a managed database must never silently downgrade.
+        const string uri =
+            "postgresql://postgres.ref:secret@aws-0-eu-west-1.pooler.supabase.com:5432/postgres";
+
+        var parsed = new NpgsqlConnectionStringBuilder(
+            DatabaseConnection.ToNpgsqlConnectionString(uri));
+
+        Assert.Equal(SslMode.Require, parsed.SslMode);
+    }
+
+    [Theory]
+    [InlineData("disable", SslMode.Disable)]
+    [InlineData("prefer", SslMode.Prefer)]
+    [InlineData("require", SslMode.Require)]
+    [InlineData("verify-full", SslMode.VerifyFull)]
+    [InlineData("VERIFY-CA", SslMode.VerifyCA)]
+    public void ToNpgsqlConnectionString_HonorsExplicitSslMode(string sslMode, SslMode expected)
+    {
+        var parsed = new NpgsqlConnectionStringBuilder(
+            DatabaseConnection.ToNpgsqlConnectionString(
+                $"postgresql://postgres:postgres@localhost:5433/banterapp?sslmode={sslMode}"));
+
+        Assert.Equal(expected, parsed.SslMode);
+    }
+
+    [Fact]
+    public void ToNpgsqlConnectionString_UnrecognizedSslMode_FallsBackToHostDefault()
+    {
+        var parsed = new NpgsqlConnectionStringBuilder(
+            DatabaseConnection.ToNpgsqlConnectionString(
+                "postgresql://postgres.ref:secret@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=nonsense"));
+
+        Assert.Equal(SslMode.Require, parsed.SslMode);
+    }
+
+    [Fact]
     public void ToNpgsqlConnectionString_NonUri_ReturnsAsIs()
     {
         const string ado = "Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=secret";
