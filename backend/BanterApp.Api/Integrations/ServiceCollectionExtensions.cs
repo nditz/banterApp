@@ -34,7 +34,6 @@ public static class ServiceCollectionExtensions
             configuration.GetSection(SportsDataOptions.SectionName));
         services.Configure<SportmonksOptions>(
             configuration.GetSection(SportmonksOptions.SectionName));
-        services.Configure<OpenFootballOptions>(configuration.GetSection(OpenFootballOptions.SectionName));
         services.Configure<FootballDataOptions>(
             configuration.GetSection(FootballDataOptions.SectionName));
         services.Configure<FootballReferenceDataOptions>(
@@ -93,7 +92,6 @@ public static class ServiceCollectionExtensions
 
         services.AddHttpClient<ISportsDataFallbackProvider, SportmonksProvider>();
         services.AddHttpClient<ISportsDataFallbackProvider, FootballDataProvider>();
-        services.AddHttpClient<ISportsDataFallbackProvider, OpenFootballProvider>();
 
         services.AddHttpClient<ApiFootballHttpClient>();
         services.AddScoped<ApiSportsReferenceProvider>();

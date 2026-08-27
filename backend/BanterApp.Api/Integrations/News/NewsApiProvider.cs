@@ -42,7 +42,7 @@ public sealed class NewsApiProvider : INewsProvider
         try
         {
             var url =
-                $"{BaseUrl}/everything?q=World+Cup+2026&language=en&sortBy=publishedAt&pageSize={Math.Clamp(count, 1, 100)}";
+                $"{BaseUrl}/everything?q=Premier+League&language=en&sortBy=publishedAt&pageSize={Math.Clamp(count, 1, 100)}";
 
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add("X-Api-Key", _apiKey);

@@ -8,7 +8,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { OrganizationJsonLd, WebsiteJsonLd } from "@/components/JsonLd";
 import { BRAND } from "@/lib/brand";
 import { BASE_METADATA } from "@/lib/seo.config";
-import { ADSENSE_CLIENT, ADSENSE_ENABLED, ADSENSE_SCRIPT_SRC } from "@/lib/ads";
+import { ADSENSE_CLIENT, ADSENSE_ENABLED } from "@/lib/ads";
 import "./globals.css";
 
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("ball-takes-theme");var d=t==="dark"||(t==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",!!d);}catch(e){}})();`;
@@ -82,15 +82,6 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">
           {THEME_INIT_SCRIPT}
         </Script>
-        {ADSENSE_ENABLED ? (
-          <Script
-            id="adsense"
-            async
-            src={ADSENSE_SCRIPT_SRC}
-            crossOrigin="anonymous"
-            strategy="afterInteractive"
-          />
-        ) : null}
         <OrganizationJsonLd />
         <WebsiteJsonLd />
         <ThemeProvider>

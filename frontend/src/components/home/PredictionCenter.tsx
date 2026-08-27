@@ -35,7 +35,11 @@ export function PredictionCenter() {
 
   const openMatches = useMemo(() => {
     const matches = weekMatches && weekMatches.length > 0 ? weekMatches : upcoming ?? [];
-    return matches.filter((match) => !isMatchLocked(match));
+    const unlocked = matches.filter((match) => !isMatchLocked(match));
+    if (unlocked.length > 0) {
+      return unlocked;
+    }
+    return (upcoming ?? []).filter((match) => !isMatchLocked(match));
   }, [weekMatches, upcoming]);
 
   const pages = useMemo(

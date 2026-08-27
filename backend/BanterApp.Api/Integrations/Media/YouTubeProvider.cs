@@ -62,7 +62,7 @@ public sealed class YouTubeProvider : IYouTubeProvider
         {
             var searchUrl =
                 $"{_options.BaseUrl.TrimEnd('/')}/search?part=snippet&channelId={Uri.EscapeDataString(channelId)}" +
-                "&q=World+Cup+prediction&type=video&order=date&maxResults=" +
+                "&q=Premier+League+prediction&type=video&order=date&maxResults=" +
                 $"{Math.Clamp(maxResults, 1, 25)}&key={_options.ApiKey}";
 
             using var searchResponse = await _httpClient.GetAsync(searchUrl, cancellationToken);

@@ -55,13 +55,26 @@ export const TURNSTILE_CSP = [
 
 /**
  * Maps internal AdSlot `slotId` values to AdSense numeric ad-unit ids.
- * Fill these in once the units exist in the AdSense dashboard.
+ * Prefer env vars so units can be wired without a code change.
  */
+function slotFromEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
+}
+
 export const AD_SLOT_IDS: Record<string, string> = {
-  // "rail-left": "1234567890",
-  // "rail-right": "1234567890",
-  // "sidebar-main": "1234567890",
-  // "feed-0": "1234567890",
+  ...(slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_LEFT")
+    ? { "rail-left": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_LEFT")! }
+    : {}),
+  ...(slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_RIGHT")
+    ? { "rail-right": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_RIGHT")! }
+    : {}),
+  ...(slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR")
+    ? { "sidebar-main": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR")! }
+    : {}),
+  ...(slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_FEED")
+    ? { "feed-0": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_FEED")! }
+    : {}),
 };
 
 export function resolveAdSlotId(slotKey?: string): string | undefined {

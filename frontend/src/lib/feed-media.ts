@@ -60,15 +60,9 @@ export function getBanterMediaForReaction(
   return { type: "image", url: assetUrl, alt: "Banter reaction" };
 }
 
-/** Local sticker used to replace any retired external Giphy URL. */
-const GIPHY_FALLBACK_STICKER = "/reactions/against-grain.svg";
-
-/**
- * Neutralizes retired Giphy links (which 404) that may still live on persisted feed items,
- * so the browser never requests a dead URL. Returns a local sticker in their place.
- */
+/** Pass-through. Dead remote GIFs are handled by <img onError> in FeedMedia. */
 export function sanitizeMediaUrl(url: string): string {
-  return /giphy\.com/i.test(url) ? GIPHY_FALLBACK_STICKER : url;
+  return url;
 }
 
 export function resolveFeedMedia(item: {

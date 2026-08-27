@@ -12,7 +12,7 @@ public sealed class LiveDataResetService(AppDbContext db, ILogger<LiveDataResetS
     public async Task<LiveDataResetResult> ResetDemoDataAsync(CancellationToken cancellationToken = default)
     {
         var demoMatchIds = await db.Matches
-            .Where(m => m.Id.StartsWith("pl26-") || m.Id.StartsWith("wc26-"))
+            .Where(m => m.Id.StartsWith("pl26-") || m.Id.StartsWith("wc26-") || m.Id.StartsWith("of26-"))
             .Select(m => m.Id)
             .ToListAsync(cancellationToken);
 

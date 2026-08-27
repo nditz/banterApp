@@ -22,15 +22,15 @@
     "Provider": "mock",
     "ApiKey": "",
     "BaseUrl": "https://v3.football.api-sports.io",
-    "WorldCupLeagueId": 1,
-    "WorldCupSeason": 2026,
+    "LeagueId": 39,
+    "Season": 2026,
     "SyncIntervalMinutes": 15
   },
   "Sportmonks": {
     "BaseUrl": "https://api.sportmonks.com/v3/football",
     "Token": "",
-    "WorldCupLeagueId": 732,
-    "WorldCupSeasonId": 26618
+    "LeagueId": 0,
+    "SeasonId": 0
   },
   "FootballData": {
     "Token": ""
@@ -39,10 +39,11 @@
     "BaseUrl": "https://www.googleapis.com/youtube/v3",
     "ApiKey": "",
     "DefaultSearchTerms": [
-      "World Cup predictions",
-      "World Cup preview",
-      "World Cup score prediction",
-      "World Cup group predictions"
+      "Premier League",
+      "Premier League highlights",
+      "Premier League predictions",
+      "Premier League preview",
+      "Premier League score prediction"
     ]
   },
   "ReactionGif": {
@@ -56,9 +57,9 @@
   "News": {
     "ApiKey": "",
     "RssFeedUrls": [
-      "https://feeds.bbci.co.uk/sport/football/world-cup/rss.xml",
+      "https://feeds.bbci.co.uk/sport/football/premier-league/rss.xml",
       "https://www.espn.com/espn/rss/soccer/news",
-      "https://www.theguardian.com/football/world-cup-2026/rss",
+      "https://www.theguardian.com/football/premierleague/rss",
       "https://www.skysports.com/rss/12040"
     ]
   },
@@ -89,17 +90,17 @@
   "PunditIngest": {
     "Enabled": true,
     "YouTubeSearchQueries": [
-      "World Cup 2026 predictions pundits",
+      "Premier League predictions pundits",
       "football pundits predictions",
-      "BBC Sport World Cup predictions",
-      "Sky Sports World Cup predictions",
+      "BBC Sport Premier League predictions",
+      "Sky Sports Premier League predictions",
       "ESPN FC predictions",
-      "Guardian Football World Cup analysis"
+      "Guardian Football Premier League analysis"
     ],
     "RssFeedUrls": [
-      "https://feeds.bbci.co.uk/sport/football/world-cup/rss.xml",
+      "https://feeds.bbci.co.uk/sport/football/premier-league/rss.xml",
       "https://www.espn.com/espn/rss/soccer/news",
-      "https://www.theguardian.com/football/world-cup-2026/rss",
+      "https://www.theguardian.com/football/premierleague/rss",
       "https://www.skysports.com/rss/12040"
     ],
     "MaxItemsPerSource": 25,
@@ -188,10 +189,10 @@
     ],
     "WebsiteSources": [
       {
-        "Name": "BBC Sport World Cup",
+        "Name": "BBC Sport Premier League",
         "Type": "website",
-        "RssUrl": "https://feeds.bbci.co.uk/sport/football/world-cup/rss.xml",
-        "BaseUrl": "https://www.bbc.co.uk/sport/football/world-cup",
+        "RssUrl": "https://feeds.bbci.co.uk/sport/football/premier-league/rss.xml",
+        "BaseUrl": "https://www.bbc.co.uk/sport/football/premier-league",
         "CrawlAllowed": true,
         "ExtractPredictions": true
       },

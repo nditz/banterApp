@@ -1,6 +1,6 @@
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
-using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 using Hangfire;
@@ -46,27 +46,42 @@ public sealed class StandingsSyncJob
         try
         {
             var standings = await _enrichment.GetAllStandingsAsync(cancellationToken);
-            if (standings.Count == 0)
+            if (!standings.ContainsKey("PL") || standings["PL"].Count == 0)
             {
                 foreach (var fallback in _fallbacks.Where(f => f.IsConfigured))
                 {
-                    standings = await fallback.GetStandingsAsync(cancellationToken);
-                    if (standings.Count > 0)
+                    var fallbackStandings = await fallback.GetStandingsAsync(cancellationToken);
+                    if (fallbackStandings.TryGetValue("PL", out var plRows) && plRows.Count > 0)
                     {
-                        await _tracker.LogErrorAsync(
-                            Provider,
-                            JobId,
-                            "standings",
-                            $"Canonical standings empty; used fallback provider {fallback.ProviderName}.",
-                            run.Id,
-                            ct: cancellationToken);
+                        standings = fallbackStandings;
                         break;
                     }
                 }
             }
 
+            if (!standings.ContainsKey("PL") || standings["PL"].Count == 0)
+            {
+                var plMatches = await _db.Matches.WherePremierLeague().ToListAsync(cancellationToken);
+                var computed = PremierLeagueStandingsCalculator.FromMatches(plMatches);
+                if (computed.Count > 0)
+                {
+                    standings = new Dictionary<string, IReadOnlyList<StandingDto>>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["PL"] = computed.Select(r => new StandingDto(
+                            r.Rank,
+                            new TeamDto(r.TeamCode, r.TeamName, r.TeamCode, r.TeamCode, r.LogoUrl),
+                            r.Played, r.Won, r.Drawn, r.Lost, r.GoalsFor, r.GoalsAgainst, r.GoalDiff, r.Points)).ToList()
+                    };
+                }
+            }
+
             foreach (var (groupKey, rows) in standings)
             {
+                if (!string.Equals(groupKey, "PL", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 foreach (var row in rows)
                 {
                     var existing = await _db.StandingRows.FirstOrDefaultAsync(

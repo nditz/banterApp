@@ -1,6 +1,7 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using BanterApp.Api.Integrations.FootballReference.Dtos;
 using BanterApp.Api.Integrations.SportsData;
+using BanterApp.Api.Integrations.SportsData.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -88,70 +89,56 @@ public sealed class ApiSportsReferenceProvider : IFootballReferenceDataProvider
 
         var leagueId = parameters?.LeagueId ?? _options.LeagueId;
         var season = parameters?.Season ?? _options.Season;
-        var path = $"players/squads?league={leagueId}&season={season}";
-
-        using var doc = await _client.GetJsonAsync(path, cancellationToken);
-        if (doc is null)
+        using var teamsDoc = await _client.GetJsonAsync(
+            $"teams?league={leagueId}&season={season}",
+            cancellationToken);
+        if (teamsDoc is null)
         {
             return [];
         }
 
+        var teams = ApiFootballFixtureMapper.MapTeams(teamsDoc.RootElement);
         var results = new List<PlayerDto>();
-        if (!doc.RootElement.TryGetProperty("response", out var response) ||
-            response.ValueKind != JsonValueKind.Array)
-        {
-            return results;
-        }
 
-        foreach (var teamBlock in response.EnumerateArray())
+        foreach (var team in teams)
         {
-            var teamExternalId = teamBlock.TryGetProperty("team", out var teamEl) &&
-                                 teamEl.TryGetProperty("id", out var teamIdEl)
-                ? teamIdEl.GetRawText()
-                : null;
-            var teamName = teamEl.TryGetProperty("name", out var teamNameEl)
-                ? teamNameEl.GetString()
-                : null;
-
-            if (!teamBlock.TryGetProperty("players", out var players) ||
-                players.ValueKind != JsonValueKind.Array)
+            using var squadDoc = await _client.GetJsonAsync(
+                $"players/squads?team={team.Id}",
+                cancellationToken);
+            if (squadDoc is null)
             {
                 continue;
             }
 
-            foreach (var player in players.EnumerateArray())
+            var squad = ApiFootballFixtureMapper.MapSquad(squadDoc.RootElement, team.Id);
+            if (squad is null)
             {
-                var externalId = player.TryGetProperty("id", out var idEl) ? idEl.GetRawText() : null;
-                var displayName = player.TryGetProperty("name", out var nameEl)
-                    ? nameEl.GetString()
-                    : null;
-                if (string.IsNullOrWhiteSpace(externalId) || string.IsNullOrWhiteSpace(displayName))
-                {
-                    continue;
-                }
+                continue;
+            }
 
-                var age = player.TryGetProperty("age", out var ageEl) && ageEl.TryGetInt32(out var ageVal)
-                    ? ageVal
-                    : (int?)null;
-                var position = player.TryGetProperty("position", out var posEl) ? posEl.GetString() : null;
-                var photo = player.TryGetProperty("photo", out var photoEl) ? photoEl.GetString() : null;
-
+            foreach (var player in squad.Players)
+            {
                 results.Add(new PlayerDto(
-                    externalId,
-                    teamExternalId,
+                    player.ProviderPlayerId,
                     null,
                     null,
-                    displayName,
+                    null,
+                    player.Name,
                     null,
                     null,
-                    age,
-                    position,
-                    photo,
                     null,
-                    teamName,
-                    player.GetRawText()));
+                    player.Position,
+                    null,
+                    team.Name,
+                    null,
+                    null));
             }
         }
+
+        _logger.LogInformation(
+            "API-Sports player sync loaded {Players} players across {Teams} clubs.",
+            results.Count,
+            teams.Count);
 
         return results;
     }

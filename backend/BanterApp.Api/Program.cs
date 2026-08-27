@@ -57,7 +57,6 @@ builder.Services.AddSingleton<TournamentBonusScoringService>();
 builder.Services.AddScoped<CompetitionCatalogService>();
 builder.Services.AddScoped<PredictionRescoreService>();
 builder.Services.AddScoped<MatchweekBonusService>();
-builder.Services.AddSingleton<PlayerDirectory>();
 builder.Services.AddSingleton<SessionTokenService>();
 builder.Services.AddScoped<TurnstileService>();
 builder.Services.AddScoped<OpinionQueryService>();
