@@ -1,4 +1,5 @@
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.News;
 using BanterApp.Api.Integrations.SportsData;
 using Microsoft.EntityFrameworkCore;
@@ -47,7 +48,9 @@ public static class DatabaseSeeder
             await db.Database.EnsureCreatedAsync(cancellationToken);
         }
 
-        if (!await db.Matches.AnyAsync(cancellationToken))
+        await WorldCupLegacyPurge.ExecuteAsync(db, logger, cancellationToken);
+
+        if (!await db.Matches.WherePremierLeague().AnyAsync(cancellationToken))
         {
             await catalog.EnsureCurrentPremierLeagueAsync(cancellationToken);
             await SeedMatchesAsync(db, sports, cancellationToken);

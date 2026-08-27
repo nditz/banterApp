@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, KeyRound, LogIn, LogOut, Menu, Shield, User, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { AdSenseLoader } from "@/components/ads/AdSenseLoader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { TermsEntertainmentNotice } from "@/components/legal/TermsOfUseContent";
@@ -127,6 +128,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="stadium-bg flex min-h-screen flex-col">
+      <AdSenseLoader />
       <header
         className="safe-area-top sticky top-0 z-50 text-white"
         style={{ backgroundColor: BRAND.headerBackground }}

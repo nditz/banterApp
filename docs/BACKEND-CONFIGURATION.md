@@ -53,7 +53,7 @@ Optional **`Database:TransactionUrl`** (port 6543) is documented for reference; 
 | `SportsData:Provider` | SportsData | `mock` or `apifootball` |
 | `SportsData:ApiKey` | SportsData | API-Football key |
 | `FootballReferenceData:Provider` | FootballReferenceData | `api_sports`, `sportmonks`, or `googleapis` |
-| `FootballReferenceData:CompetitionCode` | FootballReferenceData | e.g. `WC` |
+| `FootballReferenceData:CompetitionCode` | FootballReferenceData | e.g. `PL` |
 | `FootballReferenceData:Season` | FootballReferenceData | e.g. `2026` |
 | `FootballReferenceData:PredictionLockDeadline` | FootballReferenceData | ISO datetime when user predictions lock |
 | `Sportmonks:Token` | Sportmonks | Sportmonks fallback/validation |

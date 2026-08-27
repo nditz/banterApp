@@ -26,6 +26,20 @@ public class CurrentMatchweekTests
     }
 
     [Fact]
+    public void Resolve_SkipsPastUnfinishedWeeksWhenKickoffIsKnown()
+    {
+        var now = new DateTimeOffset(2026, 8, 27, 12, 0, 0, TimeSpan.Zero);
+        var week = CurrentMatchweek.Resolve(
+        [
+            (1, "FT", now.AddDays(-6)),
+            (1, "NS", now.AddDays(-3)),
+            (2, "NS", now.AddDays(1)),
+        ], now);
+
+        Assert.Equal(2, week);
+    }
+
+    [Fact]
     public void Resolve_AfterEveryFixtureIsFinished_UsesTheLatestRound()
     {
         var week = CurrentMatchweek.Resolve(

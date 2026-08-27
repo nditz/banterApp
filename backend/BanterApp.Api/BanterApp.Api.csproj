@@ -8,7 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Update="Data\tournament-squads.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="config\football-banter.config.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="prompts\football-banter-system-prompt.md" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="prompts\pundit-script-system-prompt.md" CopyToOutputDirectory="PreserveNewest" />

@@ -27,7 +27,10 @@ public static class MatchEndpoints
 
     private static async Task<IResult> GetAllMatches(AppDbContext db, ISportsDataProvider sports, CancellationToken ct)
     {
-        var matches = await db.Matches.OrderBy(m => m.KickoffTime).ToListAsync(ct);
+        var matches = await db.Matches
+            .WherePremierLeague()
+            .OrderBy(m => m.KickoffTime)
+            .ToListAsync(ct);
         if (matches.Count == 0)
         {
             var upcoming = await sports.GetUpcomingFixturesAsync(ct);
@@ -40,8 +43,11 @@ public static class MatchEndpoints
 
     private static async Task<IResult> GetUpcomingMatches(AppDbContext db, ISportsDataProvider sports, CancellationToken ct)
     {
+        var cutoff = DateTimeOffset.UtcNow.AddHours(-3);
         var matches = await db.Matches
+            .WherePremierLeague()
             .Where(m => m.Status == "NS" || m.Status == "TBD" || m.Status == "Scheduled")
+            .Where(m => m.KickoffTime > cutoff)
             .OrderBy(m => m.KickoffTime)
             .ToListAsync(ct);
 
@@ -57,7 +63,8 @@ public static class MatchEndpoints
     private static async Task<IResult> GetMatchResults(AppDbContext db, ISportsDataProvider sports, CancellationToken ct)
     {
         var matches = await db.Matches
-            .Where(m => m.Status == "FT")
+            .WherePremierLeague()
+            .Where(m => m.Status == "FT" || m.Status == "AET" || m.Status == "PEN")
             .OrderByDescending(m => m.KickoffTime)
             .ToListAsync(ct);
 
@@ -77,6 +84,7 @@ public static class MatchEndpoints
         CancellationToken ct)
     {
         var matches = await db.Matches
+            .WherePremierLeague()
             .Where(m => m.MatchweekNumber == number)
             .OrderBy(m => m.KickoffTime)
             .ToListAsync(ct);
@@ -93,20 +101,25 @@ public static class MatchEndpoints
     private static async Task<IResult> GetMatchweeks(AppDbContext db, CancellationToken ct)
     {
         var current = await ResolveCurrentMatchweekNumberAsync(db, ct);
-        var weeks = await db.Matches
+        var rows = await db.Matches
+            .WherePremierLeague()
             .Where(m => m.MatchweekNumber != null)
+            .Select(m => new { m.MatchweekNumber, m.Status, m.KickoffTime })
+            .ToListAsync(ct);
+
+        var weeks = rows
             .GroupBy(m => m.MatchweekNumber!.Value)
             .Select(g => new MatchweekResponse(
                 g.Key,
                 $"Matchweek {g.Key}",
-                g.All(m => m.Status == "FT") ? "complete" : "open",
+                g.All(m => CurrentMatchweek.IsFinished(m.Status)) ? "complete" : "open",
                 g.Min(m => m.KickoffTime),
                 g.Max(m => m.KickoffTime),
                 g.Count(),
                 0,
                 g.Key == current))
             .OrderBy(w => w.Number)
-            .ToListAsync(ct);
+            .ToList();
 
         return Results.Ok(weeks);
     }
@@ -114,14 +127,17 @@ public static class MatchEndpoints
     private static async Task<IResult> GetCurrentMatchweek(AppDbContext db, ISportsDataProvider sports, CancellationToken ct)
     {
         var dbMatches = await db.Matches
-            .Select(m => new { m.MatchweekNumber, m.Status })
+            .WherePremierLeague()
+            .Select(m => new { m.MatchweekNumber, m.Status, m.KickoffTime })
             .ToListAsync(ct);
 
         int number;
         if (dbMatches.Count == 0)
         {
             var all = await sports.GetAllFixturesAsync(ct);
-            number = CurrentMatchweek.Resolve(all.Select(m => (m.MatchweekNumber, (string?)m.Status)));
+            number = CurrentMatchweek.Resolve(
+                all.Select(m => (m.MatchweekNumber, (string?)m.Status, (DateTimeOffset?)m.KickoffUtc)),
+                DateTimeOffset.UtcNow);
             var fromProvider = all
                 .Where(m => m.MatchweekNumber == number)
                 .OrderBy(m => m.KickoffUtc)
@@ -130,8 +146,11 @@ public static class MatchEndpoints
             return Results.Ok(new { number, matches = fromProvider });
         }
 
-        number = CurrentMatchweek.Resolve(dbMatches.Select(m => (m.MatchweekNumber, (string?)m.Status)));
+        number = CurrentMatchweek.Resolve(
+            dbMatches.Select(m => (m.MatchweekNumber, (string?)m.Status, (DateTimeOffset?)m.KickoffTime)),
+            DateTimeOffset.UtcNow);
         var matches = await db.Matches
+            .WherePremierLeague()
             .Where(m => m.MatchweekNumber == number)
             .OrderBy(m => m.KickoffTime)
             .ToListAsync(ct);
@@ -145,6 +164,13 @@ public static class MatchEndpoints
 
     private static async Task<IResult> GetStandings(AppDbContext db, ISportsDataProvider sports, CancellationToken ct)
     {
+        var plMatches = await db.Matches.WherePremierLeague().ToListAsync(ct);
+        var computed = PremierLeagueStandingsCalculator.FromMatches(plMatches);
+        if (computed.Count > 0 && computed.Any(r => r.Played > 0))
+        {
+            return Results.Ok(computed);
+        }
+
         var rows = await db.StandingRows
             .Where(r => r.GroupKey == "PL")
             .ToListAsync(ct);
@@ -177,7 +203,7 @@ public static class MatchEndpoints
         }
 
         var entity = await db.Matches.FindAsync([matchId], ct);
-        if (entity is not null)
+        if (entity is not null && PremierLeagueMatchScope.IsPremierLeague(entity))
         {
             return Results.Ok(MapFromEntity(entity));
         }
@@ -204,10 +230,13 @@ public static class MatchEndpoints
     public static async Task<int> ResolveCurrentMatchweekNumberAsync(AppDbContext db, CancellationToken ct)
     {
         var rows = await db.Matches
-            .Select(m => new { m.MatchweekNumber, m.Status })
+            .WherePremierLeague()
+            .Select(m => new { m.MatchweekNumber, m.Status, m.KickoffTime })
             .ToListAsync(ct);
 
-        return CurrentMatchweek.Resolve(rows.Select(m => (m.MatchweekNumber, (string?)m.Status)));
+        return CurrentMatchweek.Resolve(
+            rows.Select(m => (m.MatchweekNumber, (string?)m.Status, (DateTimeOffset?)m.KickoffTime)),
+            DateTimeOffset.UtcNow);
     }
 
     private static MatchResponse MapFromEntity(Data.Entities.Match m) =>

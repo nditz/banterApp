@@ -1,7 +1,10 @@
 using BanterApp.Api.Data;
+using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Services;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 
 namespace BanterApp.Api.Integrations.SportsData;
 
@@ -76,6 +79,22 @@ public sealed class ScoreSyncJob
                 }
             }
 
+            if (all.Count == 0)
+            {
+                var hasPremierLeague = await _db.Matches.WherePremierLeague().AnyAsync(cancellationToken);
+                if (!hasPremierLeague)
+                {
+                    all = await new MockSportsDataProvider().GetAllFixturesAsync(cancellationToken);
+                    await _tracker.LogErrorAsync(
+                        Provider,
+                        JobId,
+                        "fixture",
+                        "Canonical fixtures empty; seeded mock Premier League fixtures.",
+                        run.Id,
+                        ct: cancellationToken);
+                }
+            }
+
             var merged = all
                 .Concat(live)
                 .GroupBy(d => d.Id)
@@ -84,6 +103,11 @@ public sealed class ScoreSyncJob
 
             foreach (var dto in merged)
             {
+                if (PremierLeagueMatchScope.IsWorldCupLegacyId(dto.Id))
+                {
+                    continue;
+                }
+
                 var match = await _db.Matches.FindAsync([dto.Id], cancellationToken);
                 if (match is null)
                 {
@@ -124,6 +148,7 @@ public sealed class ScoreSyncJob
             }
 
             await _db.SaveChangesAsync(cancellationToken);
+            await PersistComputedStandingsAsync(cancellationToken);
             var rescored = await _rescore.RescoreFinishedMatchesAsync(cancellationToken);
             var bonuses = await _matchweekBonuses.AwardFinishedMatchweeksAsync(cancellationToken);
 
@@ -142,5 +167,64 @@ public sealed class ScoreSyncJob
             _logger.LogError(ex, "Score sync job failed.");
             await _tracker.FailAsync(run, added, updated, ex, cancellationToken);
         }
+    }
+
+    private async Task PersistComputedStandingsAsync(CancellationToken cancellationToken)
+    {
+        var plMatches = await _db.Matches.WherePremierLeague().ToListAsync(cancellationToken);
+        var computed = PremierLeagueStandingsCalculator.FromMatches(plMatches);
+        if (computed.Count == 0)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var row in computed)
+        {
+            var existing = await _db.StandingRows.FirstOrDefaultAsync(
+                x => x.GroupKey == "PL" && x.TeamCode == row.TeamCode && x.Provider == Provider,
+                cancellationToken);
+
+            if (existing is null)
+            {
+                _db.StandingRows.Add(new StandingRow
+                {
+                    Id = Guid.NewGuid(),
+                    CompetitionSeasonId = PremierLeagueCatalog.SeasonId,
+                    GroupKey = "PL",
+                    Rank = row.Rank,
+                    TeamCode = row.TeamCode,
+                    TeamName = row.TeamName,
+                    LogoUrl = row.LogoUrl,
+                    Played = row.Played,
+                    Won = row.Won,
+                    Drawn = row.Drawn,
+                    Lost = row.Lost,
+                    GoalsFor = row.GoalsFor,
+                    GoalsAgainst = row.GoalsAgainst,
+                    GoalDiff = row.GoalDiff,
+                    Points = row.Points,
+                    Provider = Provider,
+                    LastSyncedAt = now
+                });
+            }
+            else
+            {
+                existing.Rank = row.Rank;
+                existing.TeamName = row.TeamName;
+                existing.LogoUrl = row.LogoUrl ?? existing.LogoUrl;
+                existing.Played = row.Played;
+                existing.Won = row.Won;
+                existing.Drawn = row.Drawn;
+                existing.Lost = row.Lost;
+                existing.GoalsFor = row.GoalsFor;
+                existing.GoalsAgainst = row.GoalsAgainst;
+                existing.GoalDiff = row.GoalDiff;
+                existing.Points = row.Points;
+                existing.LastSyncedAt = now;
+            }
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
     }
 }

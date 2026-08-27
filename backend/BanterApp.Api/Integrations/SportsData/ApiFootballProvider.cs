@@ -37,8 +37,8 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
     public async Task<IReadOnlyList<MatchDto>> GetUpcomingFixturesAsync(
         CancellationToken cancellationToken = default)
     {
-        var path =
-            $"fixtures?league={_options.LeagueId}&season={_options.Season}&status=NS-TBD";
+            var path =
+                $"fixtures?league={_options.LeagueId}&season={_options.Season}&status=NS";
         return await FetchFixturesOrFallbackAsync(path, null, _fallback.GetUpcomingFixturesAsync, cancellationToken);
     }
 
@@ -226,17 +226,24 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
             using var document = await _client.GetJsonAsync(path, cancellationToken);
             if (document is null)
             {
-                return [];
+                _logger.LogWarning("API-Football returned no document for {Path}; using mock fixtures.", path);
+                return await fallback(cancellationToken);
             }
 
             var fixtures = ApiFootballFixtureMapper.MapFixtures(document.RootElement, leagueIdFilter);
             LogApiErrors(document.RootElement);
+            if (fixtures.Count == 0)
+            {
+                _logger.LogWarning("API-Football returned 0 fixtures for {Path}; using mock fixtures.", path);
+                return await fallback(cancellationToken);
+            }
+
             return fixtures;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "API-Football fixtures request failed for {Path}.", path);
-            return [];
+            _logger.LogWarning(ex, "API-Football fixtures request failed for {Path}; using mock fixtures.", path);
+            return await fallback(cancellationToken);
         }
     }
 
@@ -259,7 +266,7 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
     private async Task<IReadOnlyDictionary<string, IReadOnlyList<StandingDto>>> BuildFallbackStandingsAsync(
         CancellationToken cancellationToken)
     {
-        var groups = new[] { "A", "B", "C", "D", "E", "F", "G", "H" };
+        var groups = new[] { "PL" };
         var result = new Dictionary<string, IReadOnlyList<StandingDto>>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in groups)
         {

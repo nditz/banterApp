@@ -63,12 +63,15 @@ export function AdSlot({ placement, className, slotId, fill = false }: AdSlotPro
     }
   }, [visible, isLiveAd]);
 
+  if (!isLiveAd) {
+    return null;
+  }
+
   return (
     <div
       ref={ref}
       className={cn(
         "flex items-center justify-center rounded-lg text-center text-xs text-muted-foreground",
-        !isLiveAd && "border border-dashed border-border bg-muted/40",
         !fill && "min-h-[90px]",
         placement === "sidebar" && !fill && "min-h-[250px]",
         placement === "skyscraper" && !fill && "min-h-[600px]",
@@ -82,7 +85,7 @@ export function AdSlot({ placement, className, slotId, fill = false }: AdSlotPro
       data-ad-slot={slotId ?? `banter-${placement}`}
       data-ad-loaded={visible ? "true" : "false"}
     >
-      {isLiveAd && visible ? (
+      {visible ? (
         <ins
           className="adsbygoogle"
           style={{ display: "block", width: "100%", height: "100%" }}
@@ -91,14 +94,6 @@ export function AdSlot({ placement, className, slotId, fill = false }: AdSlotPro
           data-ad-format="auto"
           data-full-width-responsive="true"
         />
-      ) : visible ? (
-        <div className="px-4 py-2">
-          <p className="font-medium text-muted-foreground/80">AdSense Placeholder</p>
-          <p className="mt-1 text-[10px] uppercase tracking-wide">
-            {placementLabels[placement]}
-            {slotId ? ` · ${slotId}` : ""}
-          </p>
-        </div>
       ) : (
         <span className="sr-only">Loading advertisement</span>
       )}

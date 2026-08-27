@@ -39,12 +39,14 @@ public sealed class GiphyGifProvider : IReactionGifProvider
         }
 
         var normalized = query.Trim();
-        if (!_cache.TryGetValue(normalized, out var urls))
+        var offset = (int)((uint)seed % 25);
+        var cacheKey = $"{normalized}|{offset}";
+        if (!_cache.TryGetValue(cacheKey, out var urls))
         {
-            urls = await FetchAsync(normalized, cancellationToken);
+            urls = await FetchAsync(normalized, offset, cancellationToken);
             if (urls.Length > 0 && _cache.Count < MaxCacheEntries)
             {
-                _cache.TryAdd(normalized, urls);
+                _cache.TryAdd(cacheKey, urls);
             }
         }
 
@@ -57,7 +59,7 @@ public sealed class GiphyGifProvider : IReactionGifProvider
         return urls[index];
     }
 
-    private async Task<string[]> FetchAsync(string query, CancellationToken cancellationToken)
+    private async Task<string[]> FetchAsync(string query, int offset, CancellationToken cancellationToken)
     {
         var limit = Math.Clamp(_options.SearchLimit, 1, 50);
         var rating = string.IsNullOrWhiteSpace(_options.ContentRating) ? "pg" : _options.ContentRating;
@@ -66,6 +68,7 @@ public sealed class GiphyGifProvider : IReactionGifProvider
             $"?api_key={Uri.EscapeDataString(_options.ApiKey!)}" +
             $"&q={Uri.EscapeDataString(query)}" +
             $"&limit={limit}" +
+            $"&offset={offset}" +
             $"&rating={Uri.EscapeDataString(rating)}" +
             "&lang=en";
 

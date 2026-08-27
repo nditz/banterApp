@@ -25,7 +25,6 @@ public static class TournamentBonusEndpoints
     private static async Task<IResult> SearchPlayers(
         AppDbContext db,
         IUserContext user,
-        PlayerDirectory directory,
         HttpContext http,
         string? query,
         string? teamCode,
@@ -44,13 +43,11 @@ public static class TournamentBonusEndpoints
             : teamCode.Trim().ToUpperInvariant();
         var trimmedQuery = query?.Trim() ?? string.Empty;
 
-        // Synced players table (primary), merged with directory + lineup fallbacks.
-        var syncedQuery = db.Players.AsNoTracking().Where(p => p.IsActive);
+        var syncedQuery = db.Players.AsNoTracking().Where(p => p.IsActive && p.ClubName != null);
         if (normalizedTeam is not null)
         {
             syncedQuery = syncedQuery.Where(p =>
-                (p.ClubName != null && p.ClubName.ToLower().Contains(normalizedTeam.ToLower())) ||
-                (p.Country != null && p.Country.Code == normalizedTeam));
+                p.ClubName != null && p.ClubName.ToLower().Contains(normalizedTeam.ToLower()));
         }
 
         if (trimmedQuery.Length > 0)
@@ -101,23 +98,13 @@ public static class TournamentBonusEndpoints
 
         foreach (var player in syncedPlayers)
         {
-            var syncedTeamCode = string.IsNullOrEmpty(player.TeamCode) ? "UNK" : player.TeamCode;
-            var teamName = teamNameMap.GetValueOrDefault(syncedTeamCode) ?? player.TeamName ?? syncedTeamCode;
-            var key = $"{TournamentBonusScoringService.NormalizePlayerName(player.DisplayName)}|{syncedTeamCode}";
+            var clubName = player.ClubName ?? player.TeamName ?? "Premier League";
+            var syncedTeamCode = string.IsNullOrWhiteSpace(player.TeamCode) ? "PL" : player.TeamCode;
+            var key = $"{TournamentBonusScoringService.NormalizePlayerName(player.DisplayName)}|{clubName}";
             if (seen.Add(key))
             {
                 results.Add(new TournamentBonusPlayerOption(
-                    player.DisplayName, syncedTeamCode, teamName, player.Id, player.PhotoUrl, player.ClubName));
-            }
-        }
-
-        foreach (var player in directory.Search(trimmedQuery, normalizedTeam, take))
-        {
-            var teamName = teamNameMap.GetValueOrDefault(player.TeamCode) ?? player.TeamName;
-            var key = $"{TournamentBonusScoringService.NormalizePlayerName(player.PlayerName)}|{player.TeamCode}";
-            if (seen.Add(key))
-            {
-                results.Add(new TournamentBonusPlayerOption(player.PlayerName, player.TeamCode, teamName));
+                    player.DisplayName, syncedTeamCode, clubName, player.Id, player.PhotoUrl, player.ClubName));
             }
         }
 
@@ -128,13 +115,11 @@ public static class TournamentBonusEndpoints
             if (seen.Add(key))
             {
                 var teamName = teamNameMap.GetValueOrDefault(lineupTeamCode)
-                    ?? directory.GetTeamName(lineupTeamCode)
                     ?? lineupTeamCode;
                 results.Add(new TournamentBonusPlayerOption(player.PlayerName, lineupTeamCode, teamName));
             }
         }
 
-        // Directory (relevance-ranked) already leads; live-only players follow. Cap the merged set.
         var ordered = results.Take(take).ToList();
 
         return Results.Ok(new TournamentBonusPlayerSearchResponse(ordered));

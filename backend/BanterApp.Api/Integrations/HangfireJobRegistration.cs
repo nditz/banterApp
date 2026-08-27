@@ -57,6 +57,7 @@ public static class HangfireJobRegistration
 
         recurring.Trigger(ScoreSyncJob.JobId);
         recurring.Trigger(StandingsSyncJob.JobId);
+        recurring.Trigger(FootballPlayersSyncJob.JobId);
         recurring.Trigger(NewsIngestJob.JobId);
         recurring.Trigger(MediaIngestJob.JobId);
         recurring.Trigger(AiReactionJob.JobId);
