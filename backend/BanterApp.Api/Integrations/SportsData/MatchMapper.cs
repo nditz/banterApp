@@ -1,3 +1,4 @@
+using BanterApp.Api.Common;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 using BanterApp.Api.Services;
@@ -16,8 +17,8 @@ internal static class MatchMapper
             TeamBCode = dto.AwayTeam.Code,
             HomeLogoUrl = dto.HomeTeam.LogoUrl,
             AwayLogoUrl = dto.AwayTeam.LogoUrl,
-            KickoffTime = dto.KickoffUtc,
-            PredictionLockAtUtc = dto.KickoffUtc,
+            KickoffTime = PostgresUtc.Normalize(dto.KickoffUtc),
+            PredictionLockAtUtc = PostgresUtc.Normalize(dto.KickoffUtc),
             Stage = dto.Stage,
             Group = string.Empty,
             Venue = dto.Venue,
@@ -46,8 +47,9 @@ internal static class MatchMapper
             match.AwayLogoUrl = dto.AwayTeam.LogoUrl;
             changed = true;
         }
-        if (match.KickoffTime != dto.KickoffUtc) { match.KickoffTime = dto.KickoffUtc; changed = true; }
-        if (match.PredictionLockAtUtc != dto.KickoffUtc) { match.PredictionLockAtUtc = dto.KickoffUtc; changed = true; }
+        var kickoffUtc = PostgresUtc.Normalize(dto.KickoffUtc);
+        if (match.KickoffTime != kickoffUtc) { match.KickoffTime = kickoffUtc; changed = true; }
+        if (match.PredictionLockAtUtc != kickoffUtc) { match.PredictionLockAtUtc = kickoffUtc; changed = true; }
         if (match.Stage != dto.Stage) { match.Stage = dto.Stage; changed = true; }
         if (!string.IsNullOrEmpty(match.Group)) { match.Group = string.Empty; changed = true; }
         if (match.Venue != dto.Venue) { match.Venue = dto.Venue; changed = true; }

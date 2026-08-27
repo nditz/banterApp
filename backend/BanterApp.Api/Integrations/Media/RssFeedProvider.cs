@@ -195,7 +195,7 @@ public sealed class RssFeedProvider : IRssFeedProvider
         DateTimeOffset? publishedAt = null;
         if (!string.IsNullOrWhiteSpace(pubDate) && DateTimeOffset.TryParse(pubDate, out var parsed))
         {
-            publishedAt = parsed;
+            publishedAt = parsed.ToUniversalTime();
         }
 
         var fullText = includeFullContent
@@ -237,7 +237,7 @@ public sealed class RssFeedProvider : IRssFeedProvider
         DateTimeOffset? publishedAt = null;
         if (!string.IsNullOrWhiteSpace(updated) && DateTimeOffset.TryParse(updated, out var parsed))
         {
-            publishedAt = parsed;
+            publishedAt = parsed.ToUniversalTime();
         }
 
         var fullText = includeFullContent ? content ?? summary : null;

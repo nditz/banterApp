@@ -1,4 +1,5 @@
 using System.Text.Json;
+using BanterApp.Api.Common;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -154,7 +155,7 @@ public sealed class SportmonksProvider : ISportsDataFallbackProvider
 
         var kickoff = item.TryGetProperty("starting_at", out var startEl) &&
                       DateTimeOffset.TryParse(startEl.GetString(), out var parsed)
-            ? parsed
+            ? PostgresUtc.Normalize(parsed)
             : DateTimeOffset.UtcNow;
 
         int? homeScore = null;

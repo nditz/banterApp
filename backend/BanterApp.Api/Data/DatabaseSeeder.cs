@@ -1,3 +1,4 @@
+using BanterApp.Api.Common;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.News;
@@ -70,7 +71,7 @@ public static class DatabaseSeeder
                     Url = article.Url,
                     Author = article.Author,
                     Category = article.Category,
-                    PublishedAt = article.PublishedAt,
+                    PublishedAt = PostgresUtc.Normalize(article.PublishedAt),
                     ViewCount = Random.Shared.Next(50, 5000)
                 });
             }

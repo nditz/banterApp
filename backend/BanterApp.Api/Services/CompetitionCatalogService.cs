@@ -1,3 +1,4 @@
+using BanterApp.Api.Common;
 using BanterApp.Api.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -64,6 +65,7 @@ public sealed class CompetitionCatalogService(AppDbContext db)
         DateTimeOffset kickoff,
         CancellationToken cancellationToken)
     {
+        var utcKickoff = PostgresUtc.Normalize(kickoff);
         var week = await db.Matchweeks.FirstOrDefaultAsync(
             w => w.CompetitionSeasonId == season.Id && w.Number == number,
             cancellationToken);
@@ -76,8 +78,8 @@ public sealed class CompetitionCatalogService(AppDbContext db)
                 CompetitionSeasonId = season.Id,
                 Number = number,
                 Name = $"Matchweek {number}",
-                StartDate = kickoff,
-                EndDate = kickoff,
+                StartDate = utcKickoff,
+                EndDate = utcKickoff,
                 Status = "scheduled"
             };
             db.Matchweeks.Add(week);
@@ -85,14 +87,14 @@ public sealed class CompetitionCatalogService(AppDbContext db)
             return week;
         }
 
-        if (week.StartDate is null || kickoff < week.StartDate)
+        if (week.StartDate is null || utcKickoff < week.StartDate)
         {
-            week.StartDate = kickoff;
+            week.StartDate = utcKickoff;
         }
 
-        if (week.EndDate is null || kickoff > week.EndDate)
+        if (week.EndDate is null || utcKickoff > week.EndDate)
         {
-            week.EndDate = kickoff;
+            week.EndDate = utcKickoff;
         }
 
         week.UpdatedAt = DateTimeOffset.UtcNow;

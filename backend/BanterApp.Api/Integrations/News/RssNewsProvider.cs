@@ -1,3 +1,4 @@
+using BanterApp.Api.Common;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.Media.Dtos;
 using Microsoft.Extensions.Options;
@@ -57,7 +58,7 @@ public sealed class RssNewsProvider
             SourceName: sourceName,
             SourceUrl: item.SourceUrl,
             Author: null,
-            PublishedAt: item.PublishedAt ?? DateTimeOffset.UtcNow,
+            PublishedAt: PostgresUtc.Normalize(item.PublishedAt ?? DateTimeOffset.UtcNow),
             ImageUrl: null,
             Category: "sports_news");
     }

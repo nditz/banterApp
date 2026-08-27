@@ -1,4 +1,5 @@
 using System.Text.Json;
+using BanterApp.Api.Common;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -106,7 +107,7 @@ public sealed class FootballDataProvider : ISportsDataFallbackProvider
             var away = MapTeam(match.GetProperty("awayTeam"));
             var kickoff = match.TryGetProperty("utcDate", out var dateEl) &&
                           DateTimeOffset.TryParse(dateEl.GetString(), out var parsed)
-                ? parsed
+                ? PostgresUtc.Normalize(parsed)
                 : DateTimeOffset.UtcNow;
             var status = match.TryGetProperty("status", out var statusEl) ? statusEl.GetString() ?? "NS" : "NS";
             int? homeScore = match.TryGetProperty("score", out var score) &&

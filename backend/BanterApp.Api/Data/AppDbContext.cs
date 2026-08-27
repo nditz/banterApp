@@ -595,4 +595,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.Player).WithMany(p => p.UserPredictions).HasForeignKey(x => x.PlayerId);
         });
     }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        PostgresUtc.NormalizeTrackedEntities(ChangeTracker);
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        PostgresUtc.NormalizeTrackedEntities(ChangeTracker);
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
 }

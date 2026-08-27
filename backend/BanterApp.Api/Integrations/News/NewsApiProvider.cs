@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using BanterApp.Api.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -99,7 +100,7 @@ public sealed class NewsApiProvider : INewsProvider
             if (article.TryGetProperty("publishedAt", out var pubEl) &&
                 DateTimeOffset.TryParse(pubEl.GetString(), out var parsed))
             {
-                publishedAt = parsed;
+                publishedAt = PostgresUtc.Normalize(parsed);
             }
 
             results.Add(new NewsArticleDto(
