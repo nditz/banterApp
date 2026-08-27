@@ -1,4 +1,5 @@
 using System.Text.Json;
+using BanterApp.Api.Common;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 using BanterApp.Api.Services;
 
@@ -188,7 +189,7 @@ public static class ApiFootballFixtureMapper
         var away = MapTeam(teams.GetProperty("away"));
         var kickoff = fixture.TryGetProperty("date", out var dateEl) &&
                         DateTimeOffset.TryParse(dateEl.GetString(), out var kickoffUtc)
-            ? kickoffUtc
+            ? PostgresUtc.Normalize(kickoffUtc)
             : DateTimeOffset.UtcNow;
 
         var status = fixture.TryGetProperty("status", out var statusEl) &&

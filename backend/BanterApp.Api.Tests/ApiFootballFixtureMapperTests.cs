@@ -38,6 +38,32 @@ public class ApiFootballFixtureMapperTests
     }
 
     [Fact]
+    public void MapFixtures_NormalizesNonUtcKickoffToOffsetZero()
+    {
+        const string json = """
+            {
+              "response": [
+                {
+                  "fixture": { "id": 77, "date": "2026-08-21T20:00:00+01:00", "status": { "short": "NS" }, "venue": { "name": "Emirates Stadium" } },
+                  "league": { "id": 39, "round": "Regular Season - 1" },
+                  "teams": {
+                    "home": { "id": 42, "name": "Arsenal", "code": "ARS" },
+                    "away": { "id": 54, "name": "Coventry City", "code": "COV" }
+                  },
+                  "goals": { "home": null, "away": null }
+                }
+              ]
+            }
+            """;
+
+        using var document = JsonDocument.Parse(json);
+        var match = Assert.Single(ApiFootballFixtureMapper.MapFixtures(document.RootElement));
+
+        Assert.Equal(TimeSpan.Zero, match.KickoffUtc.Offset);
+        Assert.Equal(new DateTimeOffset(2026, 8, 21, 19, 0, 0, TimeSpan.Zero), match.KickoffUtc);
+    }
+
+    [Fact]
     public void MapFixtures_ParsesPremierLeagueMatchweek()
     {
         const string json = """
@@ -140,6 +166,18 @@ public class MockSportsDataProviderTests
         var fixtures = await provider.GetAllFixturesAsync();
         Assert.True(fixtures.Count >= 12);
         Assert.All(fixtures, f => Assert.Equal("PL", f.Group));
+    }
+
+    [Fact]
+    public async Task GetAllFixtures_StoresKickoffsAsUtc()
+    {
+        var provider = new MockSportsDataProvider();
+        var fixtures = await provider.GetAllFixturesAsync();
+
+        Assert.All(fixtures, f => Assert.Equal(TimeSpan.Zero, f.KickoffUtc.Offset));
+
+        var opener = fixtures.Single(m => m.Id == "pl26-mw1-1");
+        Assert.Equal(new DateTimeOffset(2026, 8, 21, 19, 0, 0, TimeSpan.Zero), opener.KickoffUtc);
     }
 
     [Fact]

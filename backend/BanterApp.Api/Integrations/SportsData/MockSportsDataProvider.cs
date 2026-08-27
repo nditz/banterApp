@@ -4,6 +4,11 @@ namespace BanterApp.Api.Integrations.SportsData;
 
 public sealed class MockSportsDataProvider : ISportsDataProvider, ISportsDataEnrichment
 {
+    private static readonly TimeZoneInfo UkTimeZone =
+        TimeZoneInfo.TryFindSystemTimeZoneById("Europe/London", out var london)
+            ? london
+            : TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time");
+
     private static readonly IReadOnlyList<MatchDto> AllFixtures = BuildFixtures();
 
     private static readonly Dictionary<string, MatchStatisticsDto> Statistics = new()
@@ -198,9 +203,16 @@ public sealed class MockSportsDataProvider : ISportsDataProvider, ISportsDataEnr
         return fixtures;
     }
 
-    /// <summary>Premier League kickoffs are published in UK local time (BST in August).</summary>
-    private static DateTimeOffset KickoffUk(int year, int month, int day, int hour, int minute) =>
-        new(year, month, day, hour, minute, 0, TimeSpan.FromHours(1));
+    /// <summary>
+    /// Premier League kickoffs are published in UK local time. Npgsql requires UTC
+    /// (offset 0) for PostgreSQL timestamptz, so convert before the DTO is stored.
+    /// </summary>
+    private static DateTimeOffset KickoffUk(int year, int month, int day, int hour, int minute)
+    {
+        var local = new DateTime(year, month, day, hour, minute, 0, DateTimeKind.Unspecified);
+        var utc = TimeZoneInfo.ConvertTimeToUtc(local, UkTimeZone);
+        return new DateTimeOffset(utc, TimeSpan.Zero);
+    }
 
     private static MatchDto Finished(
         string id,

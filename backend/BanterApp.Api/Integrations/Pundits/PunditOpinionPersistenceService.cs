@@ -213,7 +213,7 @@ public sealed class PunditOpinionPersistenceService
                 PunditId = pundit.Id,
                 MatchId = opinion.MatchId!,
                 Prediction = opinion.Prediction ?? opinion.Opinion,
-                PublishedAt = item.PublishedAt ?? opinion.CreatedAt,
+                PublishedAt = PostgresUtc.Normalize(item.PublishedAt ?? opinion.CreatedAt),
                 SourceType = item.MediaSource?.SourceType,
                 SourceUrl = item.SourceUrl,
                 Author = pundit.Name,
@@ -229,7 +229,7 @@ public sealed class PunditOpinionPersistenceService
         }
 
         existing.Prediction = opinion.Prediction ?? opinion.Opinion;
-        existing.PublishedAt = item.PublishedAt ?? opinion.CreatedAt;
+        existing.PublishedAt = PostgresUtc.Normalize(item.PublishedAt ?? opinion.CreatedAt);
         existing.SourceUrl = item.SourceUrl;
         existing.PredictedTeam = predictedTeam;
         existing.PredictedScore = predictedScore;
@@ -335,7 +335,7 @@ public sealed class PunditOpinionPersistenceService
         existing.Summary = feedItem.Summary;
         existing.Url = feedItem.Url;
         existing.Category = feedItem.Category;
-        existing.PublishedAt = feedItem.PublishedAt;
+        existing.PublishedAt = PostgresUtc.Normalize(feedItem.PublishedAt);
         existing.ImageUrl = feedItem.ImageUrl;
         existing.MediaType = feedItem.MediaType;
         existing.MatchId = feedItem.MatchId;

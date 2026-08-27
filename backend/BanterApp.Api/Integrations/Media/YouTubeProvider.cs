@@ -229,7 +229,7 @@ public sealed class YouTubeProvider : IYouTubeProvider
         if (snippet.TryGetProperty("publishedAt", out var pubEl) &&
             DateTimeOffset.TryParse(pubEl.GetString(), out var parsed))
         {
-            publishedAt = parsed;
+            publishedAt = PostgresUtc.Normalize(parsed);
         }
 
         var channel = channelTitle

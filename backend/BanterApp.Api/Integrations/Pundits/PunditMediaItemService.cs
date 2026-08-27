@@ -102,7 +102,7 @@ public sealed class PunditMediaItemService
                 Description = item.Description,
                 SourceUrl = StringLimits.Truncate(item.SourceUrl, 512) ?? string.Empty,
                 AudioUrl = StringLimits.Truncate(item.AudioUrl, 512),
-                PublishedAt = item.PublishedAt,
+                PublishedAt = PostgresUtc.Normalize(item.PublishedAt),
                 Author = StringLimits.Truncate(item.Author, StringLimits.MediaAuthor),
                 Publication = StringLimits.Truncate(item.Publication ?? source.Name, StringLimits.MediaPublication),
                 RawSummary = rawSummary,
@@ -129,7 +129,7 @@ public sealed class PunditMediaItemService
             existing.Description = item.Description;
             existing.SourceUrl = StringLimits.Truncate(item.SourceUrl, 512) ?? string.Empty;
             existing.AudioUrl = StringLimits.Truncate(item.AudioUrl, 512);
-            existing.PublishedAt = item.PublishedAt;
+            existing.PublishedAt = PostgresUtc.Normalize(item.PublishedAt);
             existing.Author = StringLimits.Truncate(item.Author, StringLimits.MediaAuthor);
             existing.Publication = StringLimits.Truncate(item.Publication ?? source.Name, StringLimits.MediaPublication);
             existing.RawSummary = rawSummary;

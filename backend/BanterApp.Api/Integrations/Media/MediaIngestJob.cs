@@ -316,7 +316,7 @@ public sealed class MediaIngestJob
                 Description = item.Description,
                 SourceUrl = StringLimits.Truncate(item.SourceUrl, 512) ?? string.Empty,
                 AudioUrl = StringLimits.Truncate(item.AudioUrl, 512),
-                PublishedAt = item.PublishedAt,
+                PublishedAt = PostgresUtc.Normalize(item.PublishedAt),
                 TranscriptSnippet = Truncate(item.Description, 280),
                 LastSyncedAt = DateTimeOffset.UtcNow
             });
@@ -333,7 +333,7 @@ public sealed class MediaIngestJob
             existing.Description = item.Description;
             existing.SourceUrl = StringLimits.Truncate(item.SourceUrl, 512) ?? string.Empty;
             existing.AudioUrl = StringLimits.Truncate(item.AudioUrl, 512);
-            existing.PublishedAt = item.PublishedAt;
+            existing.PublishedAt = PostgresUtc.Normalize(item.PublishedAt);
             existing.TranscriptSnippet = Truncate(item.Description, 280);
             existing.LastSyncedAt = DateTimeOffset.UtcNow;
             return (0, 1, 0);

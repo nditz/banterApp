@@ -1,3 +1,4 @@
+using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Feed;
@@ -142,7 +143,7 @@ public sealed class NewsIngestJob
                 Url = article.SourceUrl,
                 ImageUrl = article.ImageUrl,
                 Category = "sports_news",
-                PublishedAt = article.PublishedAt,
+                PublishedAt = PostgresUtc.Normalize(article.PublishedAt),
                 ViewCount = 0
             });
             return (1, 0);
@@ -156,7 +157,7 @@ public sealed class NewsIngestJob
             existing.Title = article.Title;
             existing.Summary = article.Summary;
             existing.ImageUrl = article.ImageUrl;
-            existing.PublishedAt = article.PublishedAt;
+            existing.PublishedAt = PostgresUtc.Normalize(article.PublishedAt);
             return (0, 1);
         }
 
@@ -186,7 +187,7 @@ public sealed class NewsIngestJob
                 Category = category,
                 MatchId = matchId,
                 PredictionSummary = punditSummary,
-                PublishedAt = publishedAt,
+                PublishedAt = PostgresUtc.Normalize(publishedAt),
                 ViewCount = 0
             });
             return (1, 0);
@@ -200,7 +201,7 @@ public sealed class NewsIngestJob
         {
             existing.Title = title;
             existing.Summary = summary;
-            existing.PublishedAt = publishedAt;
+            existing.PublishedAt = PostgresUtc.Normalize(publishedAt);
             existing.MatchId = matchId;
             existing.PredictionSummary = punditSummary;
             return (0, 1);
