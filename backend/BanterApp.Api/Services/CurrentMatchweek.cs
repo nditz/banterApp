@@ -44,11 +44,13 @@ public static class CurrentMatchweek
             return playable.Min();
         }
 
-        var open = numbered
+        var unfinished = numbered
             .Where(m => !IsFinished(m.Status))
             .Select(m => m.Number)
             .ToList();
 
-        return open.Count > 0 ? open.Min() : numbered.Max(m => m.Number);
+        // Kickoffs are all in the past but results never landed: stay on the latest
+        // open round instead of jumping back to an earlier unfinished week.
+        return unfinished.Count > 0 ? unfinished.Max() : numbered.Max(m => m.Number);
     }
 }
