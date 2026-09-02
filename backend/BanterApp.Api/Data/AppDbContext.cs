@@ -23,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<GeneratedContent> GeneratedContents => Set<GeneratedContent>();
     public DbSet<NewsFeedItem> NewsFeedItems => Set<NewsFeedItem>();
     public DbSet<ReactionGifUse> ReactionGifUses => Set<ReactionGifUse>();
+    public DbSet<BanterContentHistory> BanterContentHistories => Set<BanterContentHistory>();
     public DbSet<TournamentBonusPick> TournamentBonusPicks => Set<TournamentBonusPick>();
     public DbSet<TournamentAwardResult> TournamentAwardResults => Set<TournamentAwardResult>();
     public DbSet<ExternalId> ExternalIds => Set<ExternalId>();
@@ -246,6 +247,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(x => new { x.WindowId, x.Seed })
                 .IsUnique()
                 .HasFilter("\"Seed\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<BanterContentHistory>(e =>
+        {
+            e.ToTable("banter_content_history");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.MatchId).HasMaxLength(BanterContentHistoryLimits.MatchId);
+            e.Property(x => x.TeamId).HasMaxLength(BanterContentHistoryLimits.TeamId);
+            e.Property(x => x.ScenarioType).HasMaxLength(BanterContentHistoryLimits.ScenarioType);
+            e.Property(x => x.ContentType).HasMaxLength(BanterContentHistoryLimits.ContentType);
+            e.Property(x => x.Provider).HasMaxLength(BanterContentHistoryLimits.Provider);
+            e.Property(x => x.ProviderContentId).HasMaxLength(BanterContentHistoryLimits.ProviderContentId);
+            e.Property(x => x.SearchPhrase).HasMaxLength(BanterContentHistoryLimits.SearchPhrase);
+            e.Property(x => x.MemeTemplateId).HasMaxLength(BanterContentHistoryLimits.MemeTemplateId);
+            e.Property(x => x.CaptionHash).HasMaxLength(BanterContentHistoryLimits.CaptionHash);
+            e.HasIndex(x => new { x.UserId, x.UsedAtUtc });
+            e.HasIndex(x => new { x.TeamId, x.UsedAtUtc });
+            e.HasIndex(x => new { x.Provider, x.ProviderContentId });
+            e.HasIndex(x => new { x.MemeTemplateId, x.UsedAtUtc });
+            e.HasIndex(x => new { x.ScenarioType, x.UsedAtUtc });
         });
 
         modelBuilder.Entity<TournamentBonusPick>(e =>

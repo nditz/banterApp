@@ -1,6 +1,7 @@
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -69,7 +70,7 @@ public static class PersonalizedFeedService
             .Include(p => p.Match)
             .Where(p => p.UserId == user.UserId && p.Match != null)
             .OrderByDescending(p => p.Match!.KickoffTime)
-            .Take(maxItems * 2)
+            .Take(maxItems * 4)
             .ToListAsync(ct);
 
         var items = new List<FeedItemResponse>();
@@ -77,6 +78,11 @@ public static class PersonalizedFeedService
         foreach (var prediction in predictions)
         {
             var match = prediction.Match!;
+            if (!PremierLeagueMatchScope.IsPremierLeague(match))
+            {
+                continue;
+            }
+
             var pickLabel = MatchOutcomeHelper.FormatUserPick(prediction, match);
             var finished = MatchOutcomeHelper.IsFinished(match);
 

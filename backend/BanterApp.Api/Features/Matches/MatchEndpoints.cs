@@ -35,7 +35,9 @@ public static class MatchEndpoints
         {
             var upcoming = await sports.GetUpcomingFixturesAsync(ct);
             var results = await sports.GetResultsAsync(ct);
-            return Results.Ok(upcoming.Concat(results).Select(MapFromDto).OrderBy(m => m.KickoffTime));
+            return Results.Ok(FilterPremierLeagueDtos(upcoming.Concat(results))
+                .Select(MapFromDto)
+                .OrderBy(m => m.KickoffTime));
         }
 
         return Results.Ok(matches.Select(MapFromEntity));
@@ -54,7 +56,7 @@ public static class MatchEndpoints
         if (matches.Count == 0)
         {
             var upcoming = await sports.GetUpcomingFixturesAsync(ct);
-            return Results.Ok(upcoming.Select(MapFromDto));
+            return Results.Ok(FilterPremierLeagueDtos(upcoming).Select(MapFromDto));
         }
 
         return Results.Ok(matches.Select(MapFromEntity));
@@ -71,7 +73,7 @@ public static class MatchEndpoints
         if (matches.Count == 0)
         {
             var results = await sports.GetResultsAsync(ct);
-            return Results.Ok(results.Select(MapFromDto));
+            return Results.Ok(FilterPremierLeagueDtos(results).Select(MapFromDto));
         }
 
         return Results.Ok(matches.Select(MapFromEntity));
@@ -92,7 +94,9 @@ public static class MatchEndpoints
         if (matches.Count == 0)
         {
             var all = await sports.GetAllFixturesAsync(ct);
-            return Results.Ok(all.Where(m => m.MatchweekNumber == number).Select(MapFromDto));
+            return Results.Ok(FilterPremierLeagueDtos(all)
+                .Where(m => m.MatchweekNumber == number)
+                .Select(MapFromDto));
         }
 
         return Results.Ok(matches.Select(MapFromEntity));
@@ -134,7 +138,7 @@ public static class MatchEndpoints
         int number;
         if (dbMatches.Count == 0)
         {
-            var all = await sports.GetAllFixturesAsync(ct);
+            var all = FilterPremierLeagueDtos(await sports.GetAllFixturesAsync(ct)).ToList();
             number = CurrentMatchweek.Resolve(
                 all.Select(m => (m.MatchweekNumber, (string?)m.Status, (DateTimeOffset?)m.KickoffUtc)),
                 DateTimeOffset.UtcNow);
@@ -208,7 +212,7 @@ public static class MatchEndpoints
             return Results.Ok(MapFromEntity(entity));
         }
 
-        var upcoming = await sports.GetUpcomingFixturesAsync(ct);
+        var upcoming = FilterPremierLeagueDtos(await sports.GetUpcomingFixturesAsync(ct));
         var match = upcoming.FirstOrDefault(m =>
             string.Equals(m.Id, matchId, StringComparison.OrdinalIgnoreCase));
         if (match is not null)
@@ -216,7 +220,7 @@ public static class MatchEndpoints
             return Results.Ok(MapFromDto(match));
         }
 
-        var results = await sports.GetResultsAsync(ct);
+        var results = FilterPremierLeagueDtos(await sports.GetResultsAsync(ct));
         match = results.FirstOrDefault(m =>
             string.Equals(m.Id, matchId, StringComparison.OrdinalIgnoreCase));
         if (match is not null)
@@ -226,6 +230,10 @@ public static class MatchEndpoints
 
         return Results.NotFound(new { error = "Match not found." });
     }
+
+    private static IEnumerable<Integrations.SportsData.Dtos.MatchDto> FilterPremierLeagueDtos(
+        IEnumerable<Integrations.SportsData.Dtos.MatchDto> fixtures) =>
+        fixtures.Where(PremierLeagueMatchScope.IsPremierLeagueDto);
 
     public static async Task<int> ResolveCurrentMatchweekNumberAsync(AppDbContext db, CancellationToken ct)
     {

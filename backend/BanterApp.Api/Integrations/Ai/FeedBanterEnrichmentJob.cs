@@ -2,9 +2,9 @@ using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Feed;
 using BanterApp.Api.Features.UserPredictions;
+using BanterApp.Api.Integrations.Banter;
 using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.FootballBanter;
-using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Services;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
@@ -36,7 +36,7 @@ public sealed class FeedBanterEnrichmentJob
     private readonly AppDbContext _db;
     private readonly IFootballBanterEngine _banterEngine;
     private readonly BanterContextEnricher _banterContext;
-    private readonly ReactionMediaResolver _reactionMedia;
+    private readonly IBanterGenerator _banterGenerator;
     private readonly FeedReactionMediaService _feedReactionMedia;
     private readonly FeedRelevanceScorer _relevanceScorer;
     private readonly AiOptions _aiOptions;
@@ -49,7 +49,7 @@ public sealed class FeedBanterEnrichmentJob
         AppDbContext db,
         IFootballBanterEngine banterEngine,
         BanterContextEnricher banterContext,
-        ReactionMediaResolver reactionMedia,
+        IBanterGenerator banterGenerator,
         FeedReactionMediaService feedReactionMedia,
         FeedRelevanceScorer relevanceScorer,
         IOptions<AiOptions> aiOptions,
@@ -61,7 +61,7 @@ public sealed class FeedBanterEnrichmentJob
         _db = db;
         _banterEngine = banterEngine;
         _banterContext = banterContext;
-        _reactionMedia = reactionMedia;
+        _banterGenerator = banterGenerator;
         _feedReactionMedia = feedReactionMedia;
         _relevanceScorer = relevanceScorer;
         _aiOptions = aiOptions.Value;
@@ -195,13 +195,21 @@ public sealed class FeedBanterEnrichmentJob
                 output.BanterSummary,
                 output.PunditName,
                 item.Category);
-            var media = await _reactionMedia.ResolveAsync(
-                output.GifSuggestions.Concat(textQueries),
-                mood,
-                item.Id.GetHashCode(),
+            var banterContext = BanterContextFactory.FromFeedItem(
+                item.MatchId,
+                output.Headline,
+                output.BanterSummary,
+                item.Category,
+                mood);
+            var media = await _banterGenerator.GenerateAsync(
+                BanterContextFactory.CreateRequest(
+                    banterContext,
+                    output.GifSuggestions.Concat(textQueries),
+                    mood,
+                    item.Id.GetHashCode()),
                 cancellationToken);
             item.ImageUrl = media.Url;
-            item.MediaType = media.Type;
+            item.MediaType = media.MediaType;
             item.QualityScore = Math.Max(item.QualityScore ?? 0, relevance.Score);
             processed++;
         }

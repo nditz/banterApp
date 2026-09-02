@@ -138,10 +138,11 @@ public static class DatabaseSeeder
     {
         var all = await sports.GetAllFixturesAsync(cancellationToken);
 
-        foreach (var dto in all)
+        foreach (var dto in all.Where(PremierLeagueMatchScope.IsPremierLeagueDto))
         {
             var match = MatchMapper.FromDto(dto);
             match.CompetitionSeasonId = PremierLeagueCatalog.SeasonId;
+            match.Group = "PL";
             db.Matches.Add(match);
         }
     }

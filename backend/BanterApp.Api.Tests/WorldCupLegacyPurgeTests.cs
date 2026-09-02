@@ -80,4 +80,64 @@ public class WorldCupLegacyPurgeTests
         Assert.False(await db.StandingRows.AnyAsync(s => s.GroupKey != "PL"));
         Assert.False((await db.Players.SingleAsync()).IsActive);
     }
+
+    [Fact]
+    public async Task RemovesMisStampedApiFootballWorldCupRows()
+    {
+        await using var db = TestDbContextFactory.Create();
+        db.Matches.AddRange(
+            new Match
+            {
+                Id = "apifb-999",
+                TeamA = "England",
+                TeamB = "Brazil",
+                TeamACode = "ENG",
+                TeamBCode = "BRA",
+                KickoffTime = DateTimeOffset.UtcNow.AddDays(-2),
+                Stage = "Group A - 1",
+                Group = "A",
+                Venue = "MetLife",
+                Status = "FT",
+                HomeScore = 1,
+                AwayScore = 0,
+                CompetitionSeasonId = PremierLeagueCatalog.SeasonId
+            },
+            new Match
+            {
+                Id = "apifb-bare",
+                TeamA = "Some Club",
+                TeamB = "Other Club",
+                TeamACode = "SOM",
+                TeamBCode = "OTH",
+                KickoffTime = DateTimeOffset.UtcNow.AddDays(1),
+                Stage = "Unknown",
+                Group = "",
+                Venue = "Somewhere",
+                Status = "NS"
+            },
+            new Match
+            {
+                Id = "pl26-mw1-1",
+                TeamA = "Arsenal",
+                TeamB = "Coventry City",
+                TeamACode = "ARS",
+                TeamBCode = "COV",
+                KickoffTime = DateTimeOffset.UtcNow.AddDays(-6),
+                Stage = "Premier League",
+                Group = "PL",
+                Venue = "Emirates Stadium",
+                Status = "FT",
+                HomeScore = 3,
+                AwayScore = 0,
+                MatchweekNumber = 1,
+                CompetitionSeasonId = PremierLeagueCatalog.SeasonId
+            });
+        await db.SaveChangesAsync();
+
+        var removed = await WorldCupLegacyPurge.ExecuteAsync(db);
+
+        Assert.Equal(2, removed);
+        Assert.True(await db.Matches.AnyAsync(m => m.Id == "pl26-mw1-1"));
+        Assert.False(await db.Matches.AnyAsync(m => m.Id.StartsWith("apifb-")));
+    }
 }
