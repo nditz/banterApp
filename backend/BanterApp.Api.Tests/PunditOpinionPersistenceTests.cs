@@ -6,6 +6,7 @@ using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.Pundits;
 using BanterApp.Api.Integrations.Pundits.Dtos;
+using BanterApp.Api.Integrations.Rss;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -181,19 +182,20 @@ public sealed class PunditOpinionPersistenceTests
             AutoApproveConfidence = 0.55,
             MinSourceTextLength = 200
         }));
-        var media = Options.Create(new MediaIngestOptions());
         var processing = Options.Create(new ProcessingOptions());
+        var rssSeed = new StaticRssFeedCatalogSeed();
         var resolver = new ReactionMediaResolver(
             new NullReactionGifProvider(),
+            new InMemoryReactionGifLedger(),
             NullLogger<ReactionMediaResolver>.Instance);
         return new PunditOpinionPersistenceService(
             db,
             review,
             resolver,
             new MatchResolutionService(db),
-            new FeedRelevanceScorer(processing, Options.Create(new SourceWeightsOptions()), media),
+            new FeedRelevanceScorer(processing, Options.Create(new SourceWeightsOptions()), rssSeed),
             processing,
-            media);
+            rssSeed);
     }
 
     private static AppDbContext CreateDb()

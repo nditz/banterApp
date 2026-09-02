@@ -17,7 +17,7 @@ namespace BanterApp.Api.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "9.0.19")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -1241,6 +1241,8 @@ namespace BanterApp.Api.Data.Migrations
 
                     b.HasIndex("MatchId");
 
+                    b.HasIndex("PublishedAt");
+
                     b.HasIndex("QualityScore");
 
                     b.ToTable("news_feed_items", (string)null);
@@ -1883,6 +1885,120 @@ namespace BanterApp.Api.Data.Migrations
                     b.HasIndex("PunditId");
 
                     b.ToTable("pundit_predictions", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.ReactionGifUse", b =>
+                {
+                    b.Property<string>("WindowId")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("GifId")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int?>("Seed")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTimeOffset>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("WindowId", "GifId");
+
+                    b.HasIndex("WindowId", "Seed")
+                        .IsUnique()
+                        .HasFilter("\"Seed\" IS NOT NULL");
+
+                    b.ToTable("reaction_gif_uses", (string)null);
+                });
+
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.RssFeed", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("ApplePodcastId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("ConsecutiveFailures")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("ExtractPredictions")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("LastCheckedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("LastHttpStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RssUrl")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("SiteUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("StyleSlug")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("UseForMediaIngest")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("UseForNews")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("UseForPundit")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplePodcastId")
+                        .IsUnique()
+                        .HasFilter("\"ApplePodcastId\" IS NOT NULL");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.HasIndex("IsActive", "Priority");
+
+                    b.ToTable("rss_feeds", (string)null);
                 });
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.SeasonTeam", b =>

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
+import { withSignedInQuery } from "@/lib/auth-redirect";
+import { getSupabaseAvatarUrl } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
 
 function resolveApiUrl(): string {
@@ -37,16 +39,18 @@ export async function GET(request: Request) {
   }
 
   try {
+    const avatarUrl = data.user ? getSupabaseAvatarUrl(data.user) : undefined;
     await fetch(`${resolveApiUrl()}/api/auth/session/sync`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${data.session.access_token}`,
         "Content-Type": "application/json",
       },
+      body: JSON.stringify(avatarUrl ? { avatarUrl } : {}),
     });
   } catch {
     // Session cookies are set — backend sync can retry on next API call.
   }
 
-  return NextResponse.redirect(`${origin}${safeNext}`);
+  return NextResponse.redirect(`${origin}${withSignedInQuery(safeNext)}`);
 }

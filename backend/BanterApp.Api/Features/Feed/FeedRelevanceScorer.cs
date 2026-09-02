@@ -1,7 +1,7 @@
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.Common;
-using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.Pundits;
+using BanterApp.Api.Integrations.Rss;
 using Microsoft.Extensions.Options;
 
 namespace BanterApp.Api.Features.Feed;
@@ -10,16 +10,16 @@ public sealed class FeedRelevanceScorer
 {
     private readonly ProcessingOptions _processing;
     private readonly SourceWeightsOptions _sourceWeights;
-    private readonly MediaIngestOptions _mediaIngest;
+    private readonly IRssFeedCatalogSeed _rssSeed;
 
     public FeedRelevanceScorer(
         IOptions<ProcessingOptions> processing,
         IOptions<SourceWeightsOptions> sourceWeights,
-        IOptions<MediaIngestOptions> mediaIngest)
+        IRssFeedCatalogSeed rssSeed)
     {
         _processing = processing.Value;
         _sourceWeights = sourceWeights.Value;
-        _mediaIngest = mediaIngest.Value;
+        _rssSeed = rssSeed;
     }
 
     public FeedRelevanceResult Score(
@@ -72,7 +72,7 @@ public sealed class FeedRelevanceScorer
         var weight = 1.0;
         if (mediaSource is not null)
         {
-            weight = ConfidenceScoringHelper.ResolveSourceWeight(mediaSource, _mediaIngest);
+            weight = ConfidenceScoringHelper.ResolveSourceWeight(mediaSource, _rssSeed);
         }
         else if (_sourceWeights.DefaultWeights.TryGetValue(item.Category ?? "website", out var defaultWeight))
         {

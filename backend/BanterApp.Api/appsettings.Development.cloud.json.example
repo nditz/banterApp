@@ -1,0 +1,13 @@
+{
+  "_comment": [
+    "Cloud Supabase database connection strings, saved before switching to local Postgres.",
+    "This file is NOT loaded by the application. Copy to appsettings.Development.cloud.json (gitignored).",
+    "To go back to cloud, copy both values below into appsettings.Development.json."
+  ],
+  "ConnectionStrings": {
+    "DefaultConnection": "postgresql://postgres.PROJECT_REF:[URL-ENCODED-PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:5432/postgres"
+  },
+  "Database": {
+    "TransactionUrl": "postgresql://postgres.PROJECT_REF:[URL-ENCODED-PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+  }
+}

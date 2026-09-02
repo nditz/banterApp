@@ -7,7 +7,11 @@ public interface ISafeHttpClient
     Task<SafeHttpResponse?> GetStringAsync(string url, CancellationToken ct = default);
 }
 
-public sealed record SafeHttpResponse(string Content, string ContentType, HttpStatusCode StatusCode);
+public sealed record SafeHttpResponse(
+    string Content,
+    string ContentType,
+    HttpStatusCode StatusCode,
+    string? FinalUrl = null);
 
 public sealed class SafeHttpClient(
     IHttpClientFactory httpClientFactory,
@@ -71,7 +75,8 @@ public sealed class SafeHttpClient(
                 return new SafeHttpResponse(
                     string.Empty,
                     response.Content.Headers.ContentType?.MediaType ?? "text/plain",
-                    response.StatusCode);
+                    response.StatusCode,
+                    currentUrl);
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync(ct);
@@ -101,7 +106,7 @@ public sealed class SafeHttpClient(
             reader.Position = 0;
             using var textReader = new StreamReader(reader);
             var body = await textReader.ReadToEndAsync(ct);
-            return new SafeHttpResponse(body, contentType, response.StatusCode);
+            return new SafeHttpResponse(body, contentType, response.StatusCode, currentUrl);
         }
 
         logger.LogWarning("Too many redirects for {Url}.", url);

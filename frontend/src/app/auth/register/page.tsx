@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { AvatarPicker } from "@/components/session/AvatarPicker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -14,7 +15,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getOrCreateAnonymousUser } from "@/lib/anonymous";
-import { apiFetch } from "@/lib/api";
+import { markJustSignedIn, withSignedInQuery } from "@/lib/auth-redirect";
+import { prepareAvatarPreview, stashPendingAvatarDataUrl, syncAuthSession } from "@/lib/avatar-upload";
 import { getStoredRecoveryToken } from "@/lib/session";
 import { createClient } from "@/lib/supabase/client";
 import { getOAuthRedirectUrl } from "@/lib/supabase/oauth";
@@ -28,11 +30,28 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const [recoveryCode] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     getOrCreateAnonymousUser();
     return getStoredRecoveryToken();
   });
+
+  const handleAvatarChosen = async (file: File) => {
+    setAvatarError(null);
+    setAvatarBusy(true);
+    try {
+      const preview = await prepareAvatarPreview(file);
+      setAvatarPreview(preview);
+      stashPendingAvatarDataUrl(preview);
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : "Couldn't read that photo.");
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,14 +89,15 @@ export default function RegisterPage() {
     }
 
     try {
-      await apiFetch("/api/auth/session/sync", { method: "POST" });
+      await syncAuthSession();
     } catch {
       // Non-blocking — session cookies are set.
     }
 
     await queryClient.invalidateQueries({ queryKey: ["session"] });
 
-    router.push("/");
+    markJustSignedIn();
+    router.push(withSignedInQuery("/"));
     router.refresh();
   };
 
@@ -108,6 +128,7 @@ export default function RegisterPage() {
           <CardTitle className="text-lg">Create account</CardTitle>
           <CardDescription>
             Register to unlock leagues, unlimited AI content, and full stats.
+            Google sign-up uses your Google photo; email sign-up can add one below.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -119,6 +140,9 @@ export default function RegisterPage() {
                   We sent a confirmation link to{" "}
                   <span className="font-medium text-foreground">{email}</span>. Click the
                   link to activate your account, then log in.
+                  {avatarPreview
+                    ? " We'll add your photo as soon as you're signed in."
+                    : ""}
                 </p>
               </div>
               <Link
@@ -165,6 +189,13 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={handleRegister} className="space-y-4">
+            <AvatarPicker
+              displayName={email.trim() || "You"}
+              previewUrl={avatarPreview ?? undefined}
+              busy={avatarBusy}
+              error={avatarError}
+              onFileChosen={handleAvatarChosen}
+            />
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
                 Email

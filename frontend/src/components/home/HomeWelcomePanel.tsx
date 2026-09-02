@@ -8,6 +8,7 @@ import { WelcomeSlideBody } from "@/components/home/WelcomeSlideBody";
 import { WelcomeSlidePanel } from "@/components/home/WelcomeSlidePanel";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { BRAND } from "@/lib/brand";
 import { HOME_WELCOME_SLIDES } from "@/lib/scoring-rules";
 import { cn } from "@/lib/utils";
@@ -53,7 +54,22 @@ export function HomeWelcomePanel() {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
-  const slides = HOME_WELCOME_SLIDES;
+  const { isSignedIn, displayName, email } = useSupabaseUser();
+  const greeting = (displayName || email?.split("@")[0] || "").slice(0, 24);
+  const slides = useMemo(() => {
+    if (!isSignedIn || !greeting) return HOME_WELCOME_SLIDES;
+    return HOME_WELCOME_SLIDES.map((s) =>
+      s.id === "welcome"
+        ? {
+            ...s,
+            subtitle: "You're in",
+            title: `Welcome back, ${greeting}.`,
+            body: "Lock your picks, climb the board, and come back next matchweek.",
+            highlights: ["Signed in", "Picks saved to your account"],
+          }
+        : s
+    );
+  }, [greeting, isSignedIn]);
   const total = slides.length;
   const slide = slides[index];
 
@@ -144,6 +160,7 @@ export function HomeWelcomePanel() {
                 <WelcomeSlideBody
                   slide={s}
                   variant={s.id === "welcome" ? "hero" : "compact"}
+                  active={i === index}
                   eyebrow={s.id === "welcome" ? <WelcomeHeroEyebrow /> : undefined}
                   footer={
                     <>

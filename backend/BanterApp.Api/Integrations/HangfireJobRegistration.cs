@@ -4,6 +4,7 @@ using BanterApp.Api.Integrations.Ai;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.News;
 using BanterApp.Api.Integrations.Pundits;
+using BanterApp.Api.Integrations.Rss;
 using BanterApp.Api.Integrations.FootballReference.Jobs;
 using BanterApp.Api.Integrations.SportsData;
 using Hangfire;
@@ -21,6 +22,7 @@ public static class HangfireJobRegistration
         StandingsSyncJob.JobId,
         AiReactionJob.JobId,
         NewsIngestJob.JobId,
+        RssFeedResolveJob.JobId,
         MediaIngestJob.JobId,
         RssOpinionSyncJob.JobId,
         YouTubeSearchSyncJob.JobId,
@@ -59,6 +61,7 @@ public static class HangfireJobRegistration
         recurring.Trigger(StandingsSyncJob.JobId);
         recurring.Trigger(FootballPlayersSyncJob.JobId);
         recurring.Trigger(NewsIngestJob.JobId);
+        recurring.Trigger(RssFeedResolveJob.JobId);
         recurring.Trigger(MediaIngestJob.JobId);
         recurring.Trigger(AiReactionJob.JobId);
         recurring.Trigger(FeedBanterEnrichmentJob.JobId);
@@ -123,6 +126,16 @@ public static class HangfireJobRegistration
                 NewsIngestJob.JobId,
                 job => job.IngestAsync(CancellationToken.None),
                 newsCron);
+        }
+
+        if (!IsPaused(pausedOrDisabled, "rss.feed.resolve"))
+        {
+            var resolveInterval = Math.Clamp(jobs.RssFeedResolveIntervalMinutes, 60, 1440);
+            var resolveCron = BuildStaggeredCron(resolveInterval, jobs.RssFeedResolveStartMinute);
+            recurring.AddOrUpdate<RssFeedResolveJob>(
+                RssFeedResolveJob.JobId,
+                job => job.ResolveAsync(CancellationToken.None),
+                resolveCron);
         }
 
         if (!IsPaused(pausedOrDisabled, "youtube.metadata.sync"))
@@ -259,6 +272,10 @@ public static class HangfireJobRegistration
             case NewsIngestJob.JobId:
                 recurring.AddOrUpdate<NewsIngestJob>(NewsIngestJob.JobId, j => j.IngestAsync(CancellationToken.None),
                     BuildStaggeredCron(Math.Clamp(jobs.NewsIngestIntervalMinutes, 30, 1440), jobs.NewsIngestStartMinute));
+                break;
+            case RssFeedResolveJob.JobId:
+                recurring.AddOrUpdate<RssFeedResolveJob>(RssFeedResolveJob.JobId, j => j.ResolveAsync(CancellationToken.None),
+                    BuildStaggeredCron(Math.Clamp(jobs.RssFeedResolveIntervalMinutes, 60, 1440), jobs.RssFeedResolveStartMinute));
                 break;
             case MediaIngestJob.JobId:
                 recurring.AddOrUpdate<MediaIngestJob>(MediaIngestJob.JobId, j => j.IngestAsync(CancellationToken.None),

@@ -60,7 +60,8 @@ export default function AdminSourcesPage() {
       <div>
         <h2 className="text-xl font-semibold sm:text-2xl">Sources</h2>
         <p className="text-sm text-zinc-500">
-          RSS, YouTube, and media sources. Edit RSS URLs in repo config.
+          RSS URLs live in the database and are refreshed by the RSS Feed Resolve job.
+          Higher-priority channels are fetched first.
         </p>
       </div>
 
@@ -72,7 +73,10 @@ export default function AdminSourcesPage() {
               <StatusBadge status={s.enabled ? "idle" : "disabled"} />
             </div>
             <p className="mb-3 break-anywhere text-xs text-zinc-500">{s.url}</p>
-            <AdminMobileCardRow label="Type">{s.type}</AdminMobileCardRow>
+            <AdminMobileCardRow label="Type">
+              {s.type}
+              {s.lastHttpStatus != null ? ` · HTTP ${s.lastHttpStatus}` : ""}
+            </AdminMobileCardRow>
             <AdminMobileCardRow label="Items / Failures">
               {s.itemsIngested} / {s.failureCount}
             </AdminMobileCardRow>
@@ -99,7 +103,10 @@ export default function AdminSourcesPage() {
                 <p className="font-medium">{s.name}</p>
                 <p className="max-w-xs break-anywhere text-xs text-zinc-500">{s.url}</p>
               </td>
-              <td className="hidden px-4 py-3 sm:table-cell">{s.type}</td>
+              <td className="hidden px-4 py-3 sm:table-cell">
+                {s.type}
+                {s.lastHttpStatus != null ? ` · ${s.lastHttpStatus}` : ""}
+              </td>
               <td className="px-4 py-3">
                 <StatusBadge status={s.enabled ? "idle" : "disabled"} />
               </td>

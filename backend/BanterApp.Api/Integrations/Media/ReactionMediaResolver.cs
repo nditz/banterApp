@@ -5,28 +5,30 @@ namespace BanterApp.Api.Integrations.Media;
 public sealed record ReactionMedia(string Type, string Url);
 
 /// <summary>
-/// Resolves the visual for a feed reaction. Prefers a live GIF from the reaction-GIF provider
-/// (Giphy) using AI-suggested search phrases, and falls back to the bundled local reaction
-/// sticker repository (<see cref="FeedGifCatalog"/>) when the provider is disabled or has no match.
+/// Resolves the visual for a feed reaction or meme. Prefers a live Giphy GIF, then a
+/// bundled sticker that has not already been shown in the Friday–Monday window.
 /// </summary>
 public sealed class ReactionMediaResolver
 {
     private readonly IReactionGifProvider _gifProvider;
+    private readonly IReactionGifLedger _ledger;
     private readonly ILogger<ReactionMediaResolver> _logger;
 
     public ReactionMediaResolver(
         IReactionGifProvider gifProvider,
+        IReactionGifLedger ledger,
         ILogger<ReactionMediaResolver> logger)
     {
         _gifProvider = gifProvider;
+        _ledger = ledger;
         _logger = logger;
     }
 
     /// <summary>
-    /// Resolves a reaction GIF. <paramref name="aiQueries"/> are AI-suggested search phrases
-    /// (best first); <paramref name="mood"/> is used both to derive a fallback query and to
-    /// pick a local sticker if the provider yields nothing. <paramref name="seed"/> keeps a
-    /// given card stable while varying across cards.
+    /// Resolves a reaction GIF or meme sticker. <paramref name="aiQueries"/> are AI-suggested
+    /// search phrases (best first); <paramref name="mood"/> is used both to derive a fallback
+    /// query and to pick a local sticker if the provider yields nothing. <paramref name="seed"/>
+    /// keeps a given card on the first unique visual assigned in the current Friday–Monday window.
     /// </summary>
     public async Task<ReactionMedia> ResolveAsync(
         IEnumerable<string?>? aiQueries,
@@ -34,9 +36,16 @@ public sealed class ReactionMediaResolver
         int seed,
         CancellationToken cancellationToken = default)
     {
+        var assigned = await _ledger.GetAssignedUrlAsync(seed, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(assigned))
+        {
+            return new ReactionMedia(MediaTypeFor(assigned), assigned);
+        }
+
         if (_gifProvider.IsEnabled)
         {
-            foreach (var query in BuildQueries(aiQueries, mood))
+            var queries = BuildQueries(aiQueries, mood).ToList();
+            foreach (var query in Rotate(queries, seed))
             {
                 try
                 {
@@ -53,9 +62,25 @@ public sealed class ReactionMediaResolver
             }
         }
 
-        // Fallback: bundled local reaction sticker repository.
-        return new ReactionMedia("gif", FeedGifCatalog.ResolveGifUrl(mood, seed));
+        foreach (var sticker in FeedGifCatalog.Candidates(mood, seed))
+        {
+            var id = ReactionMediaIdentity.FromUrl(sticker);
+            if (await _ledger.TryClaimAsync(seed, id, sticker, cancellationToken))
+            {
+                return new ReactionMedia("gif", sticker);
+            }
+        }
+
+        var fallback = FeedGifCatalog.ResolveGifUrl(mood, seed);
+        await _ledger.TryClaimAsync(seed, ReactionMediaIdentity.FromUrl(fallback), fallback, cancellationToken);
+        return new ReactionMedia("gif", fallback);
     }
+
+    private static string MediaTypeFor(string url) =>
+        url.Contains("giphy.com", StringComparison.OrdinalIgnoreCase) ||
+        FeedGifCatalog.IsBundledSticker(url)
+            ? "gif"
+            : "image";
 
     private static IEnumerable<string> BuildQueries(IEnumerable<string?>? aiQueries, string? mood)
     {
@@ -80,6 +105,24 @@ public sealed class ReactionMediaResolver
         }
     }
 
+    /// <summary>
+    /// Starts at a seed-derived query so cards with the same AI phrase list do not all
+    /// lock onto the first successful Giphy search.
+    /// </summary>
+    private static IEnumerable<string> Rotate(IReadOnlyList<string> queries, int seed)
+    {
+        if (queries.Count == 0)
+        {
+            yield break;
+        }
+
+        var start = (int)((uint)seed % (uint)queries.Count);
+        for (var i = 0; i < queries.Count; i++)
+        {
+            yield return queries[(start + i) % queries.Count];
+        }
+    }
+
     private static string? Clean(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -88,14 +131,14 @@ public sealed class ReactionMediaResolver
         }
 
         var trimmed = value.Trim();
-        // Bias generic phrases toward football/soccer reaction GIFs.
         if (trimmed.Length < 40 &&
             !trimmed.Contains("football", StringComparison.OrdinalIgnoreCase) &&
             !trimmed.Contains("soccer", StringComparison.OrdinalIgnoreCase) &&
             !trimmed.Contains("goal", StringComparison.OrdinalIgnoreCase) &&
-            !trimmed.Contains("celebration", StringComparison.OrdinalIgnoreCase))
+            !trimmed.Contains("celebration", StringComparison.OrdinalIgnoreCase) &&
+            !trimmed.Contains("meme", StringComparison.OrdinalIgnoreCase))
         {
-            return $"{trimmed} football reaction";
+            return $"{trimmed} football meme";
         }
 
         return trimmed;
@@ -104,22 +147,23 @@ public sealed class ReactionMediaResolver
     private static string MoodToQuery(string? mood) =>
         (mood?.Trim().ToLowerInvariant()) switch
         {
-            "celebrate" => "soccer celebration",
+            "celebrate" => "soccer celebration meme",
             "win" => "football win celebration",
-            "hype" => "football hype crowd",
-            "debate" => "sports argument reaction",
-            "shock" => "shocked football fan",
+            "hype" => "football hype meme",
+            "debate" => "sports argument meme",
+            "shock" => "shocked football fan meme",
             "chaos" => "chaotic celebration soccer",
-            "facepalm" => "facepalm reaction",
-            "miss" => "disappointed football fan",
-            "roast" => "laughing pointing reaction",
+            "facepalm" => "facepalm football meme",
+            "miss" => "disappointed football fan meme",
+            "roast" => "football roast meme",
             "trophy" => "trophy celebration football",
-            "news" => "breaking news reaction",
-            "pundit" => "sports pundit talking",
-            "cooked" => "cooked reaction",
-            "ratio" => "laughing reaction",
-            "delulu" => "delusional reaction",
+            "news" => "breaking news reaction meme",
+            "pundit" => "sports pundit meme",
+            "cooked" => "cooked reaction meme",
+            "ratio" => "laughing football meme",
+            "delulu" => "delusional football meme",
             "maincharacter" => "confident walk soccer",
-            _ => "football reaction",
+            "meme" => "football meme",
+            _ => "football meme",
         };
 }

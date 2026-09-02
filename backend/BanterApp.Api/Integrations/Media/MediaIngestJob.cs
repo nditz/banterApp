@@ -2,6 +2,7 @@ using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.Common;
+using BanterApp.Api.Integrations.Rss;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -18,6 +19,7 @@ public sealed class MediaIngestJob
 
     private readonly IYouTubeProvider _youtube;
     private readonly IRssFeedProvider _rss;
+    private readonly IRssFeedCatalog _catalog;
     private readonly AppDbContext _db;
     private readonly MediaIngestOptions _options;
     private readonly SyncRunTracker _tracker;
@@ -26,6 +28,7 @@ public sealed class MediaIngestJob
     public MediaIngestJob(
         IYouTubeProvider youtube,
         IRssFeedProvider rss,
+        IRssFeedCatalog catalog,
         AppDbContext db,
         IOptions<MediaIngestOptions> options,
         SyncRunTracker tracker,
@@ -33,6 +36,7 @@ public sealed class MediaIngestJob
     {
         _youtube = youtube;
         _rss = rss;
+        _catalog = catalog;
         _db = db;
         _options = options.Value;
         _tracker = tracker;
@@ -83,7 +87,7 @@ public sealed class MediaIngestJob
                 }
             }
 
-            foreach (var podcast in ResolvePodcastSources())
+            foreach (var podcast in await ResolvePodcastSourcesAsync(cancellationToken))
             {
                 if (!podcast.ExtractPredictions)
                 {
@@ -112,23 +116,18 @@ public sealed class MediaIngestJob
                 }
             }
 
-            foreach (var website in _options.WebsiteSources.Where(w => !string.IsNullOrWhiteSpace(w.RssUrl)))
+            foreach (var website in await ResolveWebsiteSourcesAsync(cancellationToken))
             {
-                if (website.CrawlAllowed == false)
-                {
-                    continue;
-                }
-
                 var source = await EnsureSourceAsync(
                     website.Name,
                     website.Type,
-                    website.RssUrl ?? website.Name,
+                    website.ExternalId,
                     rssUrl: website.RssUrl,
-                    siteUrl: website.BaseUrl,
+                    siteUrl: website.SiteUrl,
                     ct: cancellationToken);
 
                 var articles = await _rss.FetchFeedAsync(
-                    website.RssUrl!,
+                    website.RssUrl,
                     _options.MaxItemsPerSource,
                     cancellationToken);
 
@@ -197,8 +196,55 @@ public sealed class MediaIngestJob
         }
     }
 
+    private async Task<IReadOnlyList<(string Name, string ExternalId, string RssUrl, string? SiteUrl, bool ExtractPredictions)>>
+        ResolvePodcastSourcesAsync(CancellationToken ct)
+    {
+        var catalog = (await _catalog.GetActiveForMediaIngestAsync(ct))
+            .Where(f => f.Kind == RssFeedKind.Podcast)
+            .ToList();
+
+        if (catalog.Count > 0)
+        {
+            return catalog
+                .Select(f => (
+                    f.Name,
+                    ExternalId: f.ApplePodcastId is > 0 ? $"apple:{f.ApplePodcastId}" : f.Slug,
+                    f.RssUrl,
+                    f.SiteUrl,
+                    f.ExtractPredictions))
+                .ToList();
+        }
+
+        return ResolvePodcastSourcesFromConfig().ToList();
+    }
+
+    private async Task<IReadOnlyList<(string Name, string Type, string ExternalId, string RssUrl, string? SiteUrl)>>
+        ResolveWebsiteSourcesAsync(CancellationToken ct)
+    {
+        var catalog = (await _catalog.GetActiveForMediaIngestAsync(ct))
+            .Where(f => f.Kind == RssFeedKind.Website)
+            .ToList();
+
+        if (catalog.Count > 0)
+        {
+            return catalog
+                .Select(f => (f.Name, Type: "website", ExternalId: f.Slug, f.RssUrl, f.SiteUrl))
+                .ToList();
+        }
+
+        return _options.WebsiteSources
+            .Where(w => !string.IsNullOrWhiteSpace(w.RssUrl) && w.CrawlAllowed != false)
+            .Select(w => (
+                w.Name,
+                Type: string.IsNullOrWhiteSpace(w.Type) ? "website" : w.Type,
+                ExternalId: w.RssUrl!,
+                RssUrl: w.RssUrl!,
+                SiteUrl: w.BaseUrl))
+            .ToList();
+    }
+
     private IEnumerable<(string Name, string ExternalId, string RssUrl, string? SiteUrl, bool ExtractPredictions)>
-        ResolvePodcastSources()
+        ResolvePodcastSourcesFromConfig()
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -239,6 +285,13 @@ public sealed class MediaIngestJob
             x => x.SourceType == sourceType && x.ExternalId == normalizedExternalId,
             ct);
 
+        if (existing is null && !string.IsNullOrWhiteSpace(rssUrl))
+        {
+            existing = await _db.MediaSources.FirstOrDefaultAsync(
+                x => x.SourceType == sourceType && x.RssUrl == rssUrl,
+                ct);
+        }
+
         if (existing is not null)
         {
             var displayName = StringLimits.Truncate(name, 120) ?? name;
@@ -249,6 +302,10 @@ public sealed class MediaIngestJob
 
             existing.SiteUrl = StringLimits.Truncate(siteUrl, 512) ?? existing.SiteUrl;
             existing.RssUrl = StringLimits.Truncate(rssUrl, 512) ?? existing.RssUrl;
+            if (!string.Equals(existing.ExternalId, normalizedExternalId, StringComparison.Ordinal))
+            {
+                existing.ExternalId = normalizedExternalId;
+            }
             return existing;
         }
 

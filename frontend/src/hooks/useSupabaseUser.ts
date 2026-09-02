@@ -1,18 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getSupabaseAvatarUrl, getSupabaseDisplayName } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/client";
 
-interface SupabaseUserInfo {
+export interface SupabaseUserInfo {
   email: string | null;
+  displayName: string | null;
+  avatarUrl: string | undefined;
+  userId: string | null;
+  isSignedIn: boolean;
 }
 
+const signedOut: SupabaseUserInfo = {
+  email: null,
+  displayName: null,
+  avatarUrl: undefined,
+  userId: null,
+  isSignedIn: false,
+};
+
 /**
- * Exposes the current Supabase user's email for display in the UI. Stays in
- * sync with sign-in / sign-out / token refresh via onAuthStateChange.
+ * Current Supabase user for header/account UI. Stays in sync with sign-in,
+ * sign-out, and token refresh via onAuthStateChange.
  */
 export function useSupabaseUser(): SupabaseUserInfo {
-  const [email, setEmail] = useState<string | null>(null);
+  const [user, setUser] = useState<SupabaseUserInfo>(signedOut);
 
   useEffect(() => {
     const supabase = createClient();
@@ -20,14 +33,32 @@ export function useSupabaseUser(): SupabaseUserInfo {
 
     let active = true;
 
-    void supabase.auth.getUser().then(({ data }) => {
-      if (active) setEmail(data.user?.email ?? null);
-    });
+    const apply = (next: {
+      id: string;
+      email?: string | null;
+      user_metadata?: Record<string, unknown> | null;
+      identities?: Array<{ identity_data?: Record<string, unknown> | null }> | null;
+    } | null) => {
+      if (!active) return;
+      if (!next) {
+        setUser(signedOut);
+        return;
+      }
+      setUser({
+        email: next.email ?? null,
+        displayName: getSupabaseDisplayName(next),
+        avatarUrl: getSupabaseAvatarUrl(next),
+        userId: next.id,
+        isSignedIn: true,
+      });
+    };
+
+    void supabase.auth.getUser().then(({ data }) => apply(data.user));
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setEmail(session?.user?.email ?? null);
+      apply(session?.user ?? null);
     });
 
     return () => {
@@ -36,5 +67,5 @@ export function useSupabaseUser(): SupabaseUserInfo {
     };
   }, []);
 
-  return { email };
+  return user;
 }

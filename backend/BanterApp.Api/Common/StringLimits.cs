@@ -27,6 +27,11 @@ public static class StringLimits
     public const int OpinionTeam = 80;
     public const int OpinionPlayer = 120;
     public const int OpinionMatchName = 200;
+    public const int RssFeedSlug = 80;
+    public const int RssFeedStyleSlug = 64;
+    public const int ReactionGifWindowId = 16;
+    public const int ReactionGifId = 512;
+    public const int ReactionGifUrl = 512;
 
     public static string? Truncate(string? value, int maxLength)
     {

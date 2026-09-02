@@ -55,28 +55,104 @@ public static class FeedGifCatalog
         url.StartsWith("/reactions/", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Given a URL already used in the feed, returns a different URL from the same mood
-    /// pool that is not in <paramref name="usedUrls"/>. Falls back to the original URL.
+    /// Given a URL already used in the feed, returns a different sticker from the full
+    /// catalog that is not in <paramref name="usedUrls"/>. Falls back to the original URL.
     /// </summary>
     public static string ResolveAlternate(string currentUrl, ISet<string> usedUrls)
     {
-        foreach (var pool in MoodToUrls.Values)
+        foreach (var candidate in DistinctUrlsStartingAt(currentUrl))
         {
-            if (Array.IndexOf(pool, currentUrl) < 0)
+            if (!usedUrls.Contains(candidate))
             {
-                continue;
-            }
-
-            foreach (var candidate in pool)
-            {
-                if (!usedUrls.Contains(candidate))
-                {
-                    return candidate;
-                }
+                return candidate;
             }
         }
 
         return currentUrl;
+    }
+
+    /// <summary>
+    /// Mood pool first, then the rest of the sticker catalog, so memes/stickers can vary
+    /// across the whole set instead of repeating 2–3 assets per mood.
+    /// </summary>
+    public static IEnumerable<string> Candidates(string? mood, int seed)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var url in Rotated(GetPool(mood, FallbackMood), seed))
+        {
+            if (seen.Add(url))
+            {
+                yield return url;
+            }
+        }
+
+        foreach (var url in Rotated(AllDistinctUrls(), seed))
+        {
+            if (seen.Add(url))
+            {
+                yield return url;
+            }
+        }
+    }
+
+    public static IReadOnlyList<string> AllDistinctUrls()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var urls = new List<string>();
+        foreach (var pool in MoodToUrls.Values)
+        {
+            foreach (var url in pool)
+            {
+                if (seen.Add(url))
+                {
+                    urls.Add(url);
+                }
+            }
+        }
+
+        return urls;
+    }
+
+    private static IEnumerable<string> DistinctUrlsStartingAt(string currentUrl)
+    {
+        var all = AllDistinctUrls();
+        var start = -1;
+        for (var i = 0; i < all.Count; i++)
+        {
+            if (string.Equals(all[i], currentUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                start = i;
+                break;
+            }
+        }
+        if (start < 0)
+        {
+            foreach (var url in all)
+            {
+                yield return url;
+            }
+
+            yield break;
+        }
+
+        for (var i = 1; i < all.Count; i++)
+        {
+            yield return all[(start + i) % all.Count];
+        }
+    }
+
+    private static IEnumerable<string> Rotated(IReadOnlyList<string> urls, int seed)
+    {
+        if (urls.Count == 0)
+        {
+            yield break;
+        }
+
+        var start = (int)((uint)seed % (uint)urls.Count);
+        for (var i = 0; i < urls.Count; i++)
+        {
+            yield return urls[(start + i) % urls.Count];
+        }
     }
 
     private static string[] GetPool(string? mood, string fallbackMood)

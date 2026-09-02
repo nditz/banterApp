@@ -1,7 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { WelcomeHeroSlide } from "@/components/home/WelcomeHeroSlide";
+import { motionEase } from "@/lib/motionConfig";
 import { cn } from "@/lib/utils";
 
 export type WelcomeAccent = "gold" | "pitch" | "flare" | "brand";
@@ -29,6 +31,7 @@ interface WelcomeSlideBodyProps {
   variant?: "hero" | "compact";
   footer?: ReactNode;
   eyebrow?: ReactNode;
+  active?: boolean;
 }
 
 export function WelcomeSlideBody({
@@ -36,15 +39,31 @@ export function WelcomeSlideBody({
   variant = "compact",
   footer,
   eyebrow,
+  active = true,
 }: WelcomeSlideBodyProps) {
   const isHero = variant === "hero";
+  const reduceMotion = useReducedMotion();
 
   if (isHero) {
-    return <WelcomeHeroSlide slide={slide} eyebrow={eyebrow} footer={footer} />;
+    return (
+      <WelcomeHeroSlide
+        slide={slide}
+        eyebrow={eyebrow}
+        footer={footer}
+        active={active}
+      />
+    );
   }
 
   return (
-    <div className="flex h-full min-w-0 flex-col justify-center space-y-2.5 sm:space-y-3">
+    <motion.div
+      className="flex h-full min-w-0 flex-col justify-center space-y-2.5 sm:space-y-3"
+      initial={false}
+      animate={
+        reduceMotion || active ? { opacity: 1, y: 0 } : { opacity: 0.55, y: 10 }
+      }
+      transition={{ duration: 0.45, ease: motionEase }}
+    >
         <span
           className={cn(
             "inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em]",
@@ -77,6 +96,6 @@ export function WelcomeSlideBody({
         )}
 
         {footer}
-    </div>
+    </motion.div>
   );
 }

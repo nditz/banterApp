@@ -99,6 +99,9 @@ export interface AdminSource {
   lastErrorAt: string | null;
   itemsIngested: number;
   failureCount: number;
+  lastHttpStatus?: number | null;
+  priority?: number;
+  applePodcastId?: number | null;
 }
 
 export interface AdminSourceItem {

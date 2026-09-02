@@ -2,6 +2,7 @@ using BanterApp.Api.Common;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.News;
+using BanterApp.Api.Integrations.Rss;
 using BanterApp.Api.Integrations.SportsData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -50,6 +51,9 @@ public static class DatabaseSeeder
         }
 
         await WorldCupLegacyPurge.ExecuteAsync(db, logger, cancellationToken);
+
+        var rssCatalog = scope.ServiceProvider.GetRequiredService<IRssFeedCatalog>();
+        await rssCatalog.SeedAsync(cancellationToken);
 
         if (!await db.Matches.WherePremierLeague().AnyAsync(cancellationToken))
         {

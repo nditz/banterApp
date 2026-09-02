@@ -88,7 +88,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new PredictionTypeJsonConverter());
     options.SerializerOptions.Converters.Add(new TournamentBonusCategoryJsonConverter());
 });
-builder.Services.AddBanterIntegrations(builder.Configuration);
+builder.Services.AddBanterIntegrations(builder.Configuration, builder.Environment);
 
 builder.Services.AddHangfire((serviceProvider, config) => config
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)

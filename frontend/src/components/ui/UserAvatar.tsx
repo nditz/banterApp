@@ -26,10 +26,12 @@ export function UserAvatar({
   className,
   highlight = false,
 }: UserAvatarProps) {
-  const [failed, setFailed] = useState(false);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const name = displayName?.trim() || "Player";
   const src = getUserAvatarUrl(userId, name, avatarUrl);
+  const failed = Boolean(src) && failedSrc === src;
   const showImage = Boolean(src) && !failed;
+  const isInlineSrc = Boolean(src?.startsWith("data:") || src?.startsWith("blob:"));
 
   if (!showImage) {
     return (
@@ -49,6 +51,29 @@ export function UserAvatar({
     );
   }
 
+  const imageClassName = cn(
+    "inline-block shrink-0 rounded-full object-cover ring-1 ring-border/50",
+    highlight && "ring-pitch/40",
+    className
+  );
+  const imageStyle = { width: size, height: size };
+
+  if (isInlineSrc) {
+    return (
+      // Preview from a local file picker — not a remote URL.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt=""
+        width={size}
+        height={size}
+        onError={() => setFailedSrc(src ?? null)}
+        style={imageStyle}
+        className={imageClassName}
+      />
+    );
+  }
+
   return (
     <Image
       src={src!}
@@ -56,13 +81,9 @@ export function UserAvatar({
       width={size}
       height={size}
       unoptimized
-      onError={() => setFailed(true)}
-      style={{ width: "auto", height: "auto", maxWidth: size, maxHeight: size }}
-      className={cn(
-        "inline-block shrink-0 rounded-full object-cover ring-1 ring-border/50",
-        highlight && "ring-pitch/40",
-        className
-      )}
+      onError={() => setFailedSrc(src ?? null)}
+      style={imageStyle}
+      className={imageClassName}
     />
   );
 }

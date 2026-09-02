@@ -13,7 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { apiFetch } from "@/lib/api";
+import { markJustSignedIn, withSignedInQuery } from "@/lib/auth-redirect";
+import { syncAuthSession } from "@/lib/avatar-upload";
 import { createClient } from "@/lib/supabase/client";
 import { getOAuthRedirectUrl } from "@/lib/supabase/oauth";
 import { cn } from "@/lib/utils";
@@ -60,7 +61,7 @@ export default function LoginPage() {
     }
 
     try {
-      await apiFetch("/api/auth/session/sync", { method: "POST" });
+      await syncAuthSession();
     } catch {
       // Non-blocking — session cookies are set.
     }
@@ -68,7 +69,8 @@ export default function LoginPage() {
     // Refresh the cached session so the app immediately reflects the logged-in state.
     await queryClient.invalidateQueries({ queryKey: ["session"] });
 
-    router.push(redirectTo.startsWith("/") ? redirectTo : "/");
+    markJustSignedIn();
+    router.push(withSignedInQuery(redirectTo.startsWith("/") ? redirectTo : "/"));
     router.refresh();
   };
 

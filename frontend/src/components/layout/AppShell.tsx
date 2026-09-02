@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, KeyRound, LogIn, LogOut, Menu, Shield, User, X } from "lucide-react";
+import { ChevronDown, KeyRound, LogIn, LogOut, Menu, Shield, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AdSenseLoader } from "@/components/ads/AdSenseLoader";
@@ -11,8 +11,11 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { TermsEntertainmentNotice } from "@/components/legal/TermsOfUseContent";
 import { SessionKeyRestore } from "@/components/session/SessionKeyRestore";
+import { AvatarPicker } from "@/components/session/AvatarPicker";
+import { SignedInNotice } from "@/components/session/SignedInNotice";
 import { TermsGate } from "@/components/session/TermsGate";
 import { TurnstileProvider } from "@/components/security/TurnstileProvider";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import {
   Sheet,
   SheetContent,
@@ -21,6 +24,7 @@ import {
 } from "@/components/ui/sheet";
 import { useSession } from "@/hooks/useSession";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
+import { flushPendingAvatar, uploadAvatarFile } from "@/lib/avatar-upload";
 import { BRAND } from "@/lib/brand";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -50,6 +54,8 @@ export function AppShell({ children }: AppShellProps) {
   const [restoreSheetPath, setRestoreSheetPath] = useState<string | null>(null);
   const [accountOpenPath, setAccountOpenPath] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const mobileMenuOpen = mobileMenuPath === pathname;
   const restoreOpen = restoreOpenPath === pathname;
   const restoreSheetOpen = restoreSheetPath === pathname;
@@ -57,8 +63,9 @@ export function AppShell({ children }: AppShellProps) {
   const restoreRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
-  const { email } = useSupabaseUser();
-  const isAuthenticated = session?.authenticated ?? false;
+  const supabaseUser = useSupabaseUser();
+  const isSignedIn = supabaseUser.isSignedIn || (session?.authenticated ?? false);
+  const accountLabel = supabaseUser.displayName || supabaseUser.email || "Account";
   const isAdminRoute = pathname.startsWith("/admin");
   const isAuthRoute = pathname.startsWith("/auth");
   const mobileMenuId = "app-mobile-menu";
@@ -90,6 +97,24 @@ export function AppShell({ children }: AppShellProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [restoreOpen]);
+
+  useEffect(() => {
+    if (!supabaseUser.userId) return;
+    void flushPendingAvatar(supabaseUser.userId);
+  }, [supabaseUser.userId]);
+
+  const handleAvatarFile = async (file: File) => {
+    if (!supabaseUser.userId) return;
+    setAvatarBusy(true);
+    setAvatarError(null);
+    try {
+      await uploadAvatarFile(supabaseUser.userId, file);
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : "Couldn't save that photo.");
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!accountOpen) return;
@@ -197,7 +222,7 @@ export function AppShell({ children }: AppShellProps) {
 
           <div className="flex items-center gap-2">
             <ThemeToggle className="touch-target text-white hover:bg-white/10 hover:text-white" />
-            {!isAuthenticated && (
+            {!isSignedIn && (
               <>
                 <Button
                   variant="ghost"
@@ -229,7 +254,7 @@ export function AppShell({ children }: AppShellProps) {
               </>
             )}
 
-            {isAuthenticated ? (
+            {isSignedIn ? (
               <div className="relative" ref={accountRef}>
                 <Button
                   variant="ghost"
@@ -239,14 +264,25 @@ export function AppShell({ children }: AppShellProps) {
                       current === pathname ? null : pathname
                     )
                   }
-                  className="h-8 gap-1.5 px-2 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 hover:text-white sm:px-3"
-                  aria-label="Account menu"
+                  className="h-8 cursor-pointer gap-1.5 px-1.5 text-xs font-bold tracking-wider text-white hover:bg-white/10 hover:text-white sm:px-2"
+                  aria-label={`Account menu, signed in as ${accountLabel}`}
                   aria-expanded={accountOpen}
                   aria-haspopup="menu"
                 >
-                  <User className="size-4" aria-hidden />
-                  <span className="hidden max-w-[10rem] truncate normal-case tracking-normal sm:inline">
-                    {email ?? "Account"}
+                  <span className="relative inline-flex">
+                    <UserAvatar
+                      userId={supabaseUser.userId ?? "account"}
+                      displayName={accountLabel}
+                      avatarUrl={supabaseUser.avatarUrl}
+                      size={28}
+                    />
+                    <span
+                      className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-pitch ring-2 ring-black"
+                      aria-hidden
+                    />
+                  </span>
+                  <span className="hidden max-w-[9rem] truncate normal-case sm:inline">
+                    {accountLabel}
                   </span>
                   <ChevronDown className="hidden size-3.5 sm:inline" aria-hidden />
                 </Button>
@@ -255,20 +291,36 @@ export function AppShell({ children }: AppShellProps) {
                     role="menu"
                     className="absolute right-0 top-full z-50 mt-1.5 w-[min(16rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg"
                   >
-                    <div className="border-b border-border px-3 py-2.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Signed in as
+                    <div className="border-b border-border px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-pitch">
+                        Signed in
                       </p>
                       <p className="mt-0.5 truncate text-sm font-medium">
-                        {email ?? "Your account"}
+                        {accountLabel}
                       </p>
+                      {supabaseUser.email && supabaseUser.email !== accountLabel ? (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {supabaseUser.email}
+                        </p>
+                      ) : null}
+                      <div className="mt-3">
+                        <AvatarPicker
+                          userId={supabaseUser.userId ?? "account"}
+                          displayName={accountLabel}
+                          previewUrl={supabaseUser.avatarUrl}
+                          busy={avatarBusy}
+                          error={avatarError}
+                          size={64}
+                          onFileChosen={handleAvatarFile}
+                        />
+                      </div>
                     </div>
                     {session?.isPlatformAdmin && (
                       <Link
                         href="/admin"
                         role="menuitem"
                         onClick={() => setAccountOpenPath(null)}
-                        className="flex w-full items-center gap-2 px-3 py-2.5 text-sm font-medium text-amber-600 hover:bg-muted"
+                        className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-medium text-amber-600 hover:bg-muted"
                       >
                         <Shield className="size-4" aria-hidden />
                         Admin
@@ -279,7 +331,7 @@ export function AppShell({ children }: AppShellProps) {
                       role="menuitem"
                       onClick={handleLogout}
                       disabled={loggingOut}
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-sm font-medium hover:bg-muted disabled:opacity-60"
+                      className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-medium hover:bg-muted disabled:opacity-60"
                     >
                       <LogOut className="size-4" aria-hidden />
                       {loggingOut ? "Logging out..." : "Log out"}
@@ -356,7 +408,7 @@ export function AppShell({ children }: AppShellProps) {
                   Admin
                 </Link>
               )}
-              {!isAuthenticated ? (
+              {!isSignedIn ? (
                 <div className="mt-2 border-t border-white/10 pt-2">
                   {restoreOpen ? (
                     <SessionKeyRestore
@@ -378,11 +430,22 @@ export function AppShell({ children }: AppShellProps) {
                 </div>
               ) : (
                 <div className="mt-2 border-t border-white/10 pt-2">
-                  {email && (
-                    <p className="truncate px-3 pb-1.5 text-[11px] font-medium normal-case tracking-normal text-white/60">
-                      {email}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-2 px-3 pb-2">
+                    <UserAvatar
+                      userId={supabaseUser.userId ?? "account"}
+                      displayName={accountLabel}
+                      avatarUrl={supabaseUser.avatarUrl}
+                      size={28}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-pitch">
+                        Signed in
+                      </p>
+                      <p className="truncate text-[11px] font-medium normal-case tracking-normal text-white/80">
+                        {accountLabel}
+                      </p>
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -406,6 +469,7 @@ export function AppShell({ children }: AppShellProps) {
         )}
       >
         <TurnstileProvider />
+        <SignedInNotice />
         {!isAuthRoute && <TermsGate />}
         {children}
       </main>

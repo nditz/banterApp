@@ -2,6 +2,7 @@ using BanterApp.Api.Data;
 using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.FootballBanter;
 using BanterApp.Api.Integrations.Media;
+using BanterApp.Api.Integrations.Rss;
 using Hangfire;
 using Microsoft.Extensions.Options;
 
@@ -14,6 +15,7 @@ public sealed class RssOpinionSyncJob
 
     private readonly AppDbContext _db;
     private readonly IRssFeedProvider _rss;
+    private readonly IRssFeedCatalog _catalog;
     private readonly PunditMediaItemService _mediaItems;
     private readonly PunditIngestOptions _options;
     private readonly IFootballBanterConfigProvider _banterConfig;
@@ -23,6 +25,7 @@ public sealed class RssOpinionSyncJob
     public RssOpinionSyncJob(
         AppDbContext db,
         IRssFeedProvider rss,
+        IRssFeedCatalog catalog,
         PunditMediaItemService mediaItems,
         IOptions<PunditIngestOptions> options,
         IFootballBanterConfigProvider banterConfig,
@@ -31,6 +34,7 @@ public sealed class RssOpinionSyncJob
     {
         _db = db;
         _rss = rss;
+        _catalog = catalog;
         _mediaItems = mediaItems;
         _options = options.Value;
         _banterConfig = banterConfig;
@@ -53,10 +57,10 @@ public sealed class RssOpinionSyncJob
 
         try
         {
-            foreach (var feedUrl in _options.RssFeedUrls.Where(u => !string.IsNullOrWhiteSpace(u)))
+            foreach (var feed in await ResolvePunditFeedsAsync(cancellationToken))
             {
-                var url = feedUrl.Trim();
-                var publication = ResolvePublicationName(url);
+                var url = feed.Url;
+                var publication = feed.Name;
                 var source = await _mediaItems.EnsureSourceAsync(
                     publication,
                     "rss",
@@ -124,6 +128,22 @@ public sealed class RssOpinionSyncJob
             _logger.LogError(ex, "RSS opinion sync failed.");
             await _tracker.FailAsync(run, created, updated, ex, cancellationToken);
         }
+    }
+
+    private async Task<IReadOnlyList<(string Name, string Url)>> ResolvePunditFeedsAsync(CancellationToken ct)
+    {
+        var catalog = await _catalog.GetActiveForPunditAsync(ct);
+        if (catalog.Count > 0)
+        {
+            return catalog
+                .Select(f => (f.Name, Url: f.RssUrl.Trim()))
+                .ToList();
+        }
+
+        return _options.RssFeedUrls
+            .Where(u => !string.IsNullOrWhiteSpace(u))
+            .Select(u => (Name: ResolvePublicationName(u.Trim()), Url: u.Trim()))
+            .ToList();
     }
 
     private string ResolvePublicationName(string feedUrl)

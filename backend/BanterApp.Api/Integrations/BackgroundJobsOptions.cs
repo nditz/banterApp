@@ -70,4 +70,9 @@ public sealed class BackgroundJobsOptions
     public int PunditContentEnrichIntervalMinutes { get; set; } = 10;
 
     public int PunditContentEnrichStartMinute { get; set; } = 10;
+
+    /// <summary>Refresh RSS URLs from Apple Podcasts and probe live feeds.</summary>
+    public int RssFeedResolveIntervalMinutes { get; set; } = 360;
+
+    public int RssFeedResolveStartMinute { get; set; } = 10;
 }

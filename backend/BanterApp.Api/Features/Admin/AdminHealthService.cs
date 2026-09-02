@@ -22,7 +22,6 @@ public sealed class AdminHealthService(
     IOptions<BackgroundJobsOptions> backgroundJobsOptions,
     IOptions<AdminOptions> adminOptions,
     IOptions<LegalOptions> legalOptions,
-    IOptions<PunditIngestOptions> punditIngestOptions,
     IOptions<NewsOptions> newsOptions,
     IOptions<ReactionGifOptions> reactionGifOptions,
     IFootballBanterConfigProvider footballBanterConfig,
@@ -43,7 +42,13 @@ public sealed class AdminHealthService(
             .Select(r => r.FinishedAt)
             .FirstOrDefaultAsync(ct);
 
-        var rssProbe = await ProbeRssAsync(newsOptions.Value.RssFeedUrls.FirstOrDefault(), ct);
+        var rssProbeUrl = await db.RssFeeds.AsNoTracking()
+            .Where(f => f.IsActive && f.UseForNews && f.RssUrl != "")
+            .OrderByDescending(f => f.Priority)
+            .Select(f => f.RssUrl)
+            .FirstOrDefaultAsync(ct)
+            ?? newsOptions.Value.RssFeedUrls.FirstOrDefault();
+        var rssProbe = await ProbeRssAsync(rssProbeUrl, ct);
         var openAiSummary = await providerUsageGuard.GetTodaySummaryAsync("openai", ct);
         var youtubeSummary = await providerUsageGuard.GetTodaySummaryAsync("youtube", ct);
         var since24h = DateTimeOffset.UtcNow.AddHours(-24);
@@ -165,8 +170,7 @@ public sealed class AdminHealthService(
         var dbConnected = await db.Database.CanConnectAsync(ct);
         var adminExists = await db.Users.AnyAsync(u => u.IsPlatformAdmin, ct)
             || adminOptions.Value.AllowedEmails.Count > 0;
-        var rssConfigured = newsOptions.Value.RssFeedUrls.Length > 0 ||
-                            punditIngestOptions.Value.RssFeedUrls.Length > 0;
+        var rssConfigured = await db.RssFeeds.AnyAsync(f => f.IsActive && f.RssUrl != "", ct);
         var banterConfig = footballBanterConfig.Config;
         var productionChecks = env.IsProduction()
             ? await TryValidateProductionAsync(ct)

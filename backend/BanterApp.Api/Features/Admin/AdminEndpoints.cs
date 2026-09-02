@@ -3,7 +3,9 @@ using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.Jobs;
 using BanterApp.Api.Integrations.Media;
+using BanterApp.Api.Integrations.News;
 using BanterApp.Api.Integrations.Pundits;
+using BanterApp.Api.Integrations.Rss;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -462,7 +464,49 @@ public static class AdminEndpoints
 
     private static async Task<IResult> GetSources(AppDbContext db, CancellationToken ct)
     {
-        var sources = await db.MediaSources.AsNoTracking()
+        var media = await db.MediaSources.AsNoTracking().ToListAsync(ct);
+        var catalog = await db.RssFeeds.AsNoTracking()
+            .OrderByDescending(f => f.Priority)
+            .ThenBy(f => f.Name)
+            .ToListAsync(ct);
+
+        var itemCounts = await db.MediaItems.AsNoTracking()
+            .GroupBy(i => i.MediaSourceId)
+            .Select(g => new { SourceId = g.Key, Count = g.Count(), Failures = g.Count(i => i.ProcessingStatus == MediaItemProcessingStatus.Failed), LastSuccess = g.Max(i => (DateTimeOffset?)i.LastSyncedAt) })
+            .ToListAsync(ct);
+        var countsBySource = itemCounts.ToDictionary(x => x.SourceId);
+
+        var catalogWithCounts = catalog.Select(f =>
+        {
+            var related = media.Where(s =>
+                string.Equals(s.RssUrl, f.RssUrl, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(s.Name, f.Name, StringComparison.OrdinalIgnoreCase)).ToList();
+            var ingested = related.Sum(s => countsBySource.TryGetValue(s.Id, out var c) ? c.Count : 0);
+            var lastSuccess = related
+                .Select(s => countsBySource.TryGetValue(s.Id, out var c) ? c.LastSuccess : null)
+                .Where(d => d is not null)
+                .DefaultIfEmpty()
+                .Max();
+            return new
+            {
+                sourceId = f.Id,
+                type = f.Kind,
+                f.Name,
+                url = (string?)f.RssUrl,
+                enabled = f.IsActive,
+                lastSyncAt = (DateTimeOffset?)(f.LastCheckedAt ?? f.UpdatedAt),
+                lastSuccessAt = lastSuccess,
+                lastErrorAt = (DateTimeOffset?)null,
+                itemsIngested = ingested,
+                failureCount = f.ConsecutiveFailures,
+                lastHttpStatus = f.LastHttpStatus,
+                priority = f.Priority,
+                applePodcastId = f.ApplePodcastId
+            };
+        });
+
+        var youtube = media
+            .Where(s => string.Equals(s.SourceType, "youtube", StringComparison.OrdinalIgnoreCase))
             .Select(s => new
             {
                 sourceId = s.Id,
@@ -471,24 +515,62 @@ public static class AdminEndpoints
                 url = s.RssUrl ?? s.SiteUrl,
                 enabled = s.IsActive,
                 lastSyncAt = s.UpdatedAt,
-                lastSuccessAt = db.MediaItems
-                    .Where(i => i.MediaSourceId == s.Id && i.ProcessingStatus != MediaItemProcessingStatus.Failed)
-                    .Max(i => (DateTimeOffset?)i.LastSyncedAt),
-                lastErrorAt = db.MediaItems
-                    .Where(i => i.MediaSourceId == s.Id && i.ProcessingStatus == MediaItemProcessingStatus.Failed)
-                    .Max(i => (DateTimeOffset?)i.ProcessedAt),
-                itemsIngested = db.MediaItems.Count(i => i.MediaSourceId == s.Id),
-                failureCount = db.MediaItems.Count(i => i.MediaSourceId == s.Id && i.ProcessingStatus == MediaItemProcessingStatus.Failed)
-            })
-            .OrderBy(s => s.Name)
-            .ToListAsync(ct);
+                lastSuccessAt = countsBySource.TryGetValue(s.Id, out var c) ? c.LastSuccess : null,
+                lastErrorAt = (DateTimeOffset?)null,
+                itemsIngested = countsBySource.TryGetValue(s.Id, out var c2) ? c2.Count : 0,
+                failureCount = countsBySource.TryGetValue(s.Id, out var c3) ? c3.Failures : 0,
+                lastHttpStatus = (int?)null,
+                priority = 0,
+                applePodcastId = (long?)null
+            });
 
-        return Results.Ok(sources);
+        if (catalog.Count == 0)
+        {
+            var fallback = media.Select(s => new
+            {
+                sourceId = s.Id,
+                type = s.SourceType,
+                s.Name,
+                url = s.RssUrl ?? s.SiteUrl,
+                enabled = s.IsActive,
+                lastSyncAt = s.UpdatedAt,
+                lastSuccessAt = countsBySource.TryGetValue(s.Id, out var c) ? c.LastSuccess : null,
+                lastErrorAt = (DateTimeOffset?)null,
+                itemsIngested = countsBySource.TryGetValue(s.Id, out var c2) ? c2.Count : 0,
+                failureCount = countsBySource.TryGetValue(s.Id, out var c3) ? c3.Failures : 0,
+                lastHttpStatus = (int?)null,
+                priority = 0,
+                applePodcastId = (long?)null
+            });
+            return Results.Ok(fallback.OrderBy(s => s.Name).ToList());
+        }
+
+        return Results.Ok(catalogWithCounts.Concat(youtube).OrderByDescending(s => s.priority).ThenBy(s => s.Name).ToList());
     }
 
     private static async Task<IResult> SyncSource(
         Guid id, AppDbContext db, IRecurringJobManager recurring, IUserContext user, IAdminAuditService audit, HttpContext http, CancellationToken ct)
     {
+        var feed = await db.RssFeeds.FindAsync([id], ct);
+        if (feed is not null)
+        {
+            recurring.Trigger(RssFeedResolveJob.JobId);
+            if (feed.UseForPundit)
+            {
+                recurring.Trigger(RssOpinionSyncJob.JobId);
+            }
+
+            if (feed.UseForMediaIngest || feed.UseForNews)
+            {
+                recurring.Trigger(feed.UseForNews && !feed.UseForMediaIngest
+                    ? NewsIngestJob.JobId
+                    : MediaIngestJob.JobId);
+            }
+
+            await audit.LogAsync(user, http, "source.sync", "rss_feed", id.ToString(), ct: ct);
+            return Results.Ok(new { triggered = RssFeedResolveJob.JobId, sourceId = id });
+        }
+
         var source = await db.MediaSources.FindAsync([id], ct);
         if (source is null) return Results.NotFound();
 
@@ -507,6 +589,17 @@ public static class AdminEndpoints
     private static async Task<IResult> EnableSource(
         Guid id, AppDbContext db, IUserContext user, IAdminAuditService audit, HttpContext http, CancellationToken ct)
     {
+        var feed = await db.RssFeeds.FindAsync([id], ct);
+        if (feed is not null)
+        {
+            feed.IsActive = true;
+            feed.ConsecutiveFailures = 0;
+            feed.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(ct);
+            await audit.LogAsync(user, http, "source.enable", "rss_feed", id.ToString(), ct: ct);
+            return Results.Ok(new { enabled = id });
+        }
+
         var source = await db.MediaSources.FindAsync([id], ct);
         if (source is null) return Results.NotFound();
         source.IsActive = true;
@@ -519,6 +612,16 @@ public static class AdminEndpoints
     private static async Task<IResult> DisableSource(
         Guid id, AppDbContext db, IUserContext user, IAdminAuditService audit, HttpContext http, CancellationToken ct)
     {
+        var feed = await db.RssFeeds.FindAsync([id], ct);
+        if (feed is not null)
+        {
+            feed.IsActive = false;
+            feed.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(ct);
+            await audit.LogAsync(user, http, "source.disable", "rss_feed", id.ToString(), ct: ct);
+            return Results.Ok(new { disabled = id });
+        }
+
         var source = await db.MediaSources.FindAsync([id], ct);
         if (source is null) return Results.NotFound();
         source.IsActive = false;

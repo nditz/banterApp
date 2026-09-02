@@ -38,6 +38,11 @@
           "source_name": "BBC Sport"
         },
         {
+          "name": "BBC Sport Football",
+          "url": "https://feeds.bbci.co.uk/sport/football/rss.xml",
+          "source_name": "BBC Sport"
+        },
+        {
           "name": "ESPN Soccer News",
           "url": "https://www.espn.com/espn/rss/soccer/news",
           "source_name": "ESPN"
@@ -54,23 +59,38 @@
         },
         {
           "name": "Sky Sports Football",
-          "url": "https://www.skysports.com/rss/12040",
+          "url": "https://www.skysports.com/rss/11095",
           "source_name": "Sky Sports"
         },
         {
           "name": "The Athletic Soccer",
-          "url": "https://theathletic.com/feed/soccer/",
+          "url": "https://www.nytimes.com/athletic/rss/soccer/",
           "source_name": "The Athletic"
         },
         {
-          "name": "Football365",
-          "url": "https://www.football365.com/feed",
-          "source_name": "Football365"
+          "name": "Transfermarkt UK",
+          "url": "https://www.transfermarkt.co.uk/rss/news",
+          "source_name": "Transfermarkt"
         },
         {
-          "name": "Goal.com",
-          "url": "https://www.goal.com/rss/en/1",
-          "source_name": "Goal.com"
+          "name": "The Independent Premier League",
+          "url": "https://www.independent.co.uk/sport/football/premier-league/rss",
+          "source_name": "The Independent"
+        },
+        {
+          "name": "Evening Standard Football",
+          "url": "https://www.standard.co.uk/sport/football/rss",
+          "source_name": "Evening Standard"
+        },
+        {
+          "name": "Daily Mail Football",
+          "url": "https://www.dailymail.co.uk/sport/football/index.rss",
+          "source_name": "Daily Mail"
+        },
+        {
+          "name": "EPL Index",
+          "url": "https://eplindex.com/feed",
+          "source_name": "EPL Index"
         },
         {
           "name": "Football Weekly Podcast",
@@ -79,28 +99,83 @@
         },
         {
           "name": "The Rest Is Football",
-          "url": "https://feeds.acast.com/public/shows/the-rest-is-football",
+          "url": "https://feeds.megaphone.fm/GLT8847082992",
           "source_name": "Goalhanger"
         },
         {
-          "name": "Sky Sports Football Podcast",
-          "url": "https://rss.acast.com/skysportsfootball",
+          "name": "Sky Sports Premier League Podcast",
+          "url": "https://feeds.captivate.fm/sky-sports-premierleague/",
           "source_name": "Sky Sports"
         },
         {
-          "name": "The Athletic Football Podcast",
-          "url": "https://feeds.simplecast.com/BvLcK4nV",
+          "name": "The Athletic FC Podcast",
+          "url": "https://feeds.acast.com/public/shows/6818be7d1d28d62313ac8ef3",
           "source_name": "The Athletic"
         },
         {
           "name": "BBC 5 Live Football Daily",
-          "url": "https://podcasts.files.bbci.co.uk/p02nrv1w.rss",
+          "url": "https://podcasts.files.bbci.co.uk/p02nrsln.rss",
           "source_name": "BBC"
         },
         {
           "name": "The Football Ramble",
-          "url": "https://feeds.acast.com/public/shows/the-football-ramble",
+          "url": "https://feeds.acast.com/public/shows/8af0c347-5e6e-48e2-8fae-3f4e765c84ab",
           "source_name": "The Football Ramble"
+        },
+        {
+          "name": "Women's Football Weekly",
+          "url": "https://www.theguardian.com/football/series/theguardianswomensfootballweekly/podcast.xml",
+          "source_name": "The Guardian"
+        },
+        {
+          "name": "Tifo Football Podcast",
+          "url": "https://feeds.acast.com/public/shows/681cccd63e6644d7a3b3065c",
+          "source_name": "The Athletic"
+        },
+        {
+          "name": "ESPN FC Podcast",
+          "url": "https://feeds.megaphone.fm/ESP9520742908",
+          "source_name": "ESPN"
+        },
+        {
+          "name": "The Overlap",
+          "url": "https://feeds.acast.com/public/shows/d2a98018-244b-4999-9a83-9c2b9d43a1e3",
+          "source_name": "The Overlap"
+        },
+        {
+          "name": "Stick to Football",
+          "url": "https://feeds.acast.com/public/shows/65118b05e7b19e00113ac2c0",
+          "source_name": "The Overlap"
+        },
+        {
+          "name": "The Obi One Podcast",
+          "url": "https://anchor.fm/s/1120a9b4c/podcast/rss",
+          "source_name": "John Obi Mikel"
+        },
+        {
+          "name": "The Totally Football Show",
+          "url": "https://feeds.acast.com/public/shows/6818cd43eb146d8e35d312c7",
+          "source_name": "The Athletic"
+        },
+        {
+          "name": "That Peter Crouch Podcast",
+          "url": "https://feeds.acast.com/public/shows/6242e9f71c8beb00139400a6",
+          "source_name": "Tall or Nothing"
+        },
+        {
+          "name": "Rio Ferdinand Presents",
+          "url": "https://feeds.acast.com/public/shows/62e90af8d40557001270a30e",
+          "source_name": "Rio Ferdinand"
+        },
+        {
+          "name": "Fozcast",
+          "url": "https://feeds.megaphone.fm/GLT6069920566",
+          "source_name": "The Ringer"
+        },
+        {
+          "name": "Football Cliches",
+          "url": "https://feeds.megaphone.fm/GLT7974369854",
+          "source_name": "Goalhanger"
         }
       ]
     }
