@@ -52,6 +52,9 @@ public sealed class PodcastSourceConfig
 
     public string RssUrl { get; set; } = string.Empty;
 
+    /// <summary>Apple Podcasts collection ID. The resolve job uses this to refresh <see cref="RssUrl"/>.</summary>
+    public long? ApplePodcastId { get; set; }
+
     public string? SiteUrl { get; set; }
 
     public string? StyleSlug { get; set; }

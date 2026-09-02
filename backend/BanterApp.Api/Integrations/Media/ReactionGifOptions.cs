@@ -19,8 +19,11 @@ public sealed class ReactionGifOptions
     /// <summary>Giphy content rating: g | pg | pg-13 | r.</summary>
     public string ContentRating { get; set; } = "pg";
 
-    /// <summary>Candidates fetched per query; one is chosen deterministically per feed card.</summary>
-    public int SearchLimit { get; set; } = 12;
+    /// <summary>
+    /// Candidates fetched per Giphy search page when random GIFs collide with ones already
+    /// shown this Friday–Monday window.
+    /// </summary>
+    public int SearchLimit { get; set; } = 25;
 
     // Legacy Tenor settings (optional fallback provider).
     public string ClientKey { get; set; } = "banterapp";

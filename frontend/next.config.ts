@@ -43,8 +43,18 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "crests.football-data.org",
+        hostname: "lh3.googleusercontent.com",
         pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.googleusercontent.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
       },
     ],
   },

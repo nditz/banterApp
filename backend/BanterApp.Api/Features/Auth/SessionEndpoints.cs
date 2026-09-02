@@ -38,6 +38,7 @@ public static class SessionEndpoints
         IUserContext user,
         HttpContext http,
         AppDbContext db,
+        SessionSyncRequest? body,
         CancellationToken ct)
     {
         if (!user.IsAuthenticated)
@@ -49,6 +50,7 @@ public static class SessionEndpoints
         var email = http.User.FindFirstValue(ClaimTypes.Email)
                     ?? http.User.FindFirstValue("email")
                     ?? string.Empty;
+        var avatarUrl = AllowedAvatarUrl(body?.AvatarUrl);
 
         var existing = await db.Users.FindAsync([userId], ct);
         if (existing is null)
@@ -57,15 +59,24 @@ public static class SessionEndpoints
             {
                 Id = userId,
                 Email = email,
-                DisplayName = string.IsNullOrWhiteSpace(email) ? "Player" : email
+                DisplayName = string.IsNullOrWhiteSpace(email) ? "Player" : email,
+                Avatar = avatarUrl
             });
         }
-        else if (!string.IsNullOrWhiteSpace(email))
+        else
         {
-            existing.Email = email;
-            if (string.IsNullOrWhiteSpace(existing.DisplayName) || existing.DisplayName == "Player")
+            if (!string.IsNullOrWhiteSpace(email))
             {
-                existing.DisplayName = email;
+                existing.Email = email;
+                if (string.IsNullOrWhiteSpace(existing.DisplayName) || existing.DisplayName == "Player")
+                {
+                    existing.DisplayName = email;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(avatarUrl))
+            {
+                existing.Avatar = avatarUrl;
             }
         }
 
@@ -388,7 +399,28 @@ public static class SessionEndpoints
 
     private static string GenerateRecoveryCode() =>
         Convert.ToHexString(Guid.NewGuid().ToByteArray())[..12].ToUpperInvariant();
+
+    private static string? AllowedAvatarUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url) ||
+            !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            uri.Scheme != Uri.UriSchemeHttps)
+        {
+            return null;
+        }
+
+        var host = uri.Host;
+        if (host.EndsWith(".supabase.co", StringComparison.OrdinalIgnoreCase) ||
+            host.EndsWith(".googleusercontent.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return url;
+        }
+
+        return null;
+    }
 }
+
+public record SessionSyncRequest(string? AvatarUrl);
 
 public record SessionConsentRequest(
     bool AcceptedTerms,

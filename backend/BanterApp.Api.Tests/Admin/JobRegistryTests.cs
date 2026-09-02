@@ -6,6 +6,7 @@ namespace BanterApp.Api.Tests.Admin;
 public class JobRegistryTests
 {
     [Theory]
+    [InlineData("rss.feed.resolve", "rss-feed-resolve")]
     [InlineData("rss.sync", "rss-opinion-sync")]
     [InlineData("youtube.search.sync", "youtube-opinion-sync")]
     [InlineData("openai.opinion.extract", "pundit-extraction")]

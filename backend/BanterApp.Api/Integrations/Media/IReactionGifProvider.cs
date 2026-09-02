@@ -9,8 +9,9 @@ public interface IReactionGifProvider
     bool IsEnabled { get; }
 
     /// <summary>
-    /// Finds a GIF for <paramref name="query"/>. <paramref name="seed"/> deterministically selects
-    /// among candidates so a given feed card stays stable while different cards vary.
+    /// Finds a GIF for <paramref name="query"/>. <paramref name="seed"/> keeps a given feed
+    /// card on the same GIF after the first pick; new cards receive a unique GIF for the
+    /// current Friday–Monday window.
     /// </summary>
     Task<string?> FindGifUrlAsync(string query, int seed, CancellationToken cancellationToken = default);
 }

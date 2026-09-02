@@ -20,6 +20,7 @@ obj/
 # Backend local secrets (copy from appsettings.Development.json.example)
 appsettings.Development.json
 appsettings.Local.json
+appsettings.Development.*.json
 
 # IDE
 .vs/
@@ -44,6 +45,9 @@ npm-debug.log*
 
 # Supabase
 supabase/.temp/
+
+# Local-only notes (integration failure reports, scratch docs)
+docs/local_docs/
 
 # Internal — data sourcing playbook (APIs, scrapers, key notes)
 docs/DATA-SOURCES-INTERNAL.md

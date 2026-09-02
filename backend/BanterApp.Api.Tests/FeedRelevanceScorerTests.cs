@@ -1,7 +1,7 @@
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Feed;
 using BanterApp.Api.Integrations.Common;
-using BanterApp.Api.Integrations.Media;
+using BanterApp.Api.Integrations.Rss;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -95,7 +95,6 @@ public sealed class FeedRelevanceScorerTests
             }
         });
         var weights = Options.Create(new SourceWeightsOptions());
-        var media = Options.Create(new MediaIngestOptions());
-        return new FeedRelevanceScorer(processing, weights, media);
+        return new FeedRelevanceScorer(processing, weights, new StaticRssFeedCatalogSeed());
     }
 }

@@ -30,14 +30,6 @@ public sealed class FootballBanterPunditIngestPostConfigurer : IPostConfigureOpt
             return;
         }
 
-        if (rssEnabled && cfg.Sources.Rss.Feeds.Count > 0)
-        {
-            options.RssFeedUrls = cfg.Sources.Rss.Feeds
-                .Select(f => f.Url.Trim())
-                .Where(u => !string.IsNullOrWhiteSpace(u))
-                .ToArray();
-        }
-
         if (youtubeEnabled && cfg.Sources.YouTube.SearchTerms.Count > 0)
         {
             options.YouTubeSearchQueries = cfg.Sources.YouTube.SearchTerms

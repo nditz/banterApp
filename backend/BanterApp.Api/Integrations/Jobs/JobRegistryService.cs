@@ -6,6 +6,7 @@ using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.News;
 using BanterApp.Api.Integrations.FootballReference.Jobs;
 using BanterApp.Api.Integrations.Pundits;
+using BanterApp.Api.Integrations.Rss;
 using BanterApp.Api.Integrations.SportsData;
 using Hangfire;
 using Hangfire.Storage;
@@ -335,6 +336,7 @@ public sealed class JobRegistryService(
 
     private static string MapTypeToJobId(string typeName) => typeName switch
     {
+        nameof(RssFeedResolveJob) => RssFeedResolveJob.JobId,
         nameof(RssOpinionSyncJob) => RssOpinionSyncJob.JobId,
         nameof(YouTubeSearchSyncJob) => YouTubeSearchSyncJob.JobId,
         nameof(MediaIngestJob) => MediaIngestJob.JobId,

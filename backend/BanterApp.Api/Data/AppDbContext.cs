@@ -22,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PunditPrediction> PunditPredictions => Set<PunditPrediction>();
     public DbSet<GeneratedContent> GeneratedContents => Set<GeneratedContent>();
     public DbSet<NewsFeedItem> NewsFeedItems => Set<NewsFeedItem>();
+    public DbSet<ReactionGifUse> ReactionGifUses => Set<ReactionGifUse>();
     public DbSet<TournamentBonusPick> TournamentBonusPicks => Set<TournamentBonusPick>();
     public DbSet<TournamentAwardResult> TournamentAwardResults => Set<TournamentAwardResult>();
     public DbSet<ExternalId> ExternalIds => Set<ExternalId>();
@@ -31,6 +32,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<MatchEvent> MatchEvents => Set<MatchEvent>();
     public DbSet<LineupPlayer> LineupPlayers => Set<LineupPlayer>();
     public DbSet<MediaSource> MediaSources => Set<MediaSource>();
+    public DbSet<RssFeed> RssFeeds => Set<RssFeed>();
     public DbSet<MediaItem> MediaItems => Set<MediaItem>();
     public DbSet<PunditOpinion> PunditOpinions => Set<PunditOpinion>();
     public DbSet<PredictionAggregate> PredictionAggregates => Set<PredictionAggregate>();
@@ -231,6 +233,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.PredictionSummary).HasMaxLength(500);
             e.HasIndex(x => x.MatchId);
             e.HasIndex(x => x.QualityScore);
+            e.HasIndex(x => x.PublishedAt);
+        });
+
+        modelBuilder.Entity<ReactionGifUse>(e =>
+        {
+            e.ToTable("reaction_gif_uses");
+            e.HasKey(x => new { x.WindowId, x.GifId });
+            e.Property(x => x.WindowId).HasMaxLength(StringLimits.ReactionGifWindowId);
+            e.Property(x => x.GifId).HasMaxLength(StringLimits.ReactionGifId);
+            e.Property(x => x.Url).HasMaxLength(StringLimits.ReactionGifUrl);
+            e.HasIndex(x => new { x.WindowId, x.Seed })
+                .IsUnique()
+                .HasFilter("\"Seed\" IS NOT NULL");
         });
 
         modelBuilder.Entity<TournamentBonusPick>(e =>
@@ -455,6 +470,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.ExternalId).HasMaxLength(128);
             e.Property(x => x.RssUrl).HasMaxLength(512);
             e.Property(x => x.SiteUrl).HasMaxLength(512);
+        });
+
+        modelBuilder.Entity<RssFeed>(e =>
+        {
+            e.ToTable("rss_feeds");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Slug).IsUnique();
+            e.HasIndex(x => x.ApplePodcastId)
+                .IsUnique()
+                .HasFilter("\"ApplePodcastId\" IS NOT NULL");
+            e.HasIndex(x => new { x.IsActive, x.Priority });
+            e.Property(x => x.Slug).HasMaxLength(StringLimits.RssFeedSlug);
+            e.Property(x => x.Name).HasMaxLength(120);
+            e.Property(x => x.Kind).HasMaxLength(16);
+            e.Property(x => x.RssUrl).HasMaxLength(512);
+            e.Property(x => x.SiteUrl).HasMaxLength(512);
+            e.Property(x => x.StyleSlug).HasMaxLength(StringLimits.RssFeedStyleSlug);
         });
 
         modelBuilder.Entity<MediaItem>(e =>

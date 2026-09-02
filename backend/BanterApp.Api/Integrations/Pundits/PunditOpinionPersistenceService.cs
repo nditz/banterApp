@@ -6,6 +6,7 @@ using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.Pundits.Dtos;
+using BanterApp.Api.Integrations.Rss;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -28,7 +29,7 @@ public sealed class PunditOpinionPersistenceService
     private readonly MatchResolutionService _matchResolution;
     private readonly FeedRelevanceScorer _relevanceScorer;
     private readonly ProcessingOptions _processing;
-    private readonly MediaIngestOptions _mediaIngest;
+    private readonly IRssFeedCatalogSeed _rssSeed;
 
     public PunditOpinionPersistenceService(
         AppDbContext db,
@@ -37,7 +38,7 @@ public sealed class PunditOpinionPersistenceService
         MatchResolutionService matchResolution,
         FeedRelevanceScorer relevanceScorer,
         IOptions<ProcessingOptions> processing,
-        IOptions<MediaIngestOptions> mediaIngest)
+        IRssFeedCatalogSeed rssSeed)
     {
         _db = db;
         _reviewFlagger = reviewFlagger;
@@ -45,7 +46,7 @@ public sealed class PunditOpinionPersistenceService
         _matchResolution = matchResolution;
         _relevanceScorer = relevanceScorer;
         _processing = processing.Value;
-        _mediaIngest = mediaIngest.Value;
+        _rssSeed = rssSeed;
     }
 
     public async Task<int> PersistExtractionAsync(
@@ -61,7 +62,7 @@ public sealed class PunditOpinionPersistenceService
         var sourceTextLength = item.RawText?.Length ?? 0;
         var distinctPundits = extraction.Pundits.Count;
         var created = 0;
-        var confidenceScoring = ConfidenceScoringHelper.ResolveForSource(item.MediaSource!, _mediaIngest);
+        var confidenceScoring = ConfidenceScoringHelper.ResolveForSource(item.MediaSource!, _rssSeed);
         var predictionsThisSource = 0;
 
         foreach (var punditDto in extraction.Pundits)

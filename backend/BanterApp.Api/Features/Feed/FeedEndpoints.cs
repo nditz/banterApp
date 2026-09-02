@@ -137,8 +137,8 @@ public static class FeedEndpoints
 
     /// <summary>
     /// Removes duplicate feed items (same Id can be added by both the personalized
-    /// builder and the persisted news list) and, for GIFs, swaps a repeated media URL
-    /// to an alternate from the same mood pool so the feed does not show the same GIF twice.
+            /// builder and the persisted news list) and swaps a repeated GIF, meme, or sticker
+    /// URL so the feed does not show the same visual twice in one page.
     /// </summary>
     private static List<FeedItemResponse> DedupeAndVaryMedia(IEnumerable<FeedItemResponse> items)
     {
@@ -156,16 +156,14 @@ public static class FeedEndpoints
             var current = item;
             var url = current.Media?.Url;
 
-            if (!string.IsNullOrWhiteSpace(url) &&
-                string.Equals(current.Media!.Type, "gif", StringComparison.OrdinalIgnoreCase) &&
-                usedMedia.Contains(url))
+            if (!string.IsNullOrWhiteSpace(url) && usedMedia.Contains(url))
             {
                 var alternate = FeedGifCatalog.ResolveAlternate(url, usedMedia);
                 if (!string.Equals(alternate, url, StringComparison.Ordinal))
                 {
                     current = current with
                     {
-                        Media = current.Media with { Url = alternate },
+                        Media = current.Media! with { Url = alternate },
                         ImageUrl = string.Equals(current.ImageUrl, url, StringComparison.Ordinal)
                             ? alternate
                             : current.ImageUrl,

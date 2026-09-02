@@ -14,6 +14,7 @@ public static class JobRegistry
 {
     public static IReadOnlyList<JobDefinition> All { get; } =
     [
+        new("rss.feed.resolve", "rss-feed-resolve", "RSS Feed Resolve", "Refresh RSS URLs from Apple Podcasts and probe live feeds.", "10 */6 * * *", true, true),
         new("rss.sync", "rss-opinion-sync", "RSS Opinion Sync", "Ingest pundit opinions from RSS feeds.", "*/20 * * * *", true, true),
         new("youtube.search.sync", "youtube-opinion-sync", "YouTube Search Sync", "Search YouTube for pundit prediction videos.", "0 */3 * * *", true, true),
         new("youtube.metadata.sync", "media-ingest", "YouTube Metadata Sync", "Ingest YouTube channel metadata and media items.", "0 */6 * * *", true, true),

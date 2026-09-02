@@ -8,6 +8,7 @@ using BanterApp.Api.Integrations.FootballReference.Jobs;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.News;
 using BanterApp.Api.Integrations.Pundits;
+using BanterApp.Api.Integrations.Rss;
 using BanterApp.Api.Integrations.SportsData;
 using BanterApp.Api.Integrations.Jobs;
 using Microsoft.Extensions.Configuration;
@@ -22,7 +23,8 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddBanterIntegrations(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment? environment = null)
     {
         services.Configure<BackgroundJobsOptions>(
             configuration.GetSection(BackgroundJobsOptions.SectionName));
@@ -107,21 +109,22 @@ public static class ServiceCollectionExtensions
         services.AddScoped<FootballTopAssistsSyncJob>();
         services.AddScoped<FootballReferenceFullSyncJob>();
 
-        var newsApiKey = configuration["News:ApiKey"];
-        var rssFeeds = configuration.GetSection("News:RssFeedUrls").Get<string[]>() ?? [];
-        if (!string.IsNullOrWhiteSpace(newsApiKey) || rssFeeds.Length > 0)
+        if (environment?.IsEnvironment("Testing") == true)
+        {
+            services.TryAddSingleton<INewsProvider, MockNewsProvider>();
+        }
+        else
         {
             services.AddHttpClient<NewsApiProvider>();
             services.AddSingleton<RssNewsProvider>();
             services.AddSingleton<INewsProvider, CompositeNewsProvider>();
         }
-        else
-        {
-            services.TryAddSingleton<INewsProvider, MockNewsProvider>();
-        }
 
         services.AddHttpClient<IYouTubeProvider, YouTubeProvider>();
+        services.AddSingleton<IRssFeedCatalogSeed, FileRssFeedCatalogSeed>();
         services.AddSingleton<IRssFeedProvider, RssFeedProvider>();
+        services.AddScoped<IRssFeedCatalog, RssFeedCatalogService>();
+        services.AddScoped<RssFeedResolver>();
         services.AddScoped<IArticleContentFetcher, ArticleContentFetcher>();
         services.AddHttpClient<IYouTubeTranscriptProvider, YouTubeTranscriptProvider>();
 
@@ -148,6 +151,7 @@ public static class ServiceCollectionExtensions
         var reactionOpts = configuration.GetSection(ReactionGifOptions.SectionName).Get<ReactionGifOptions>()
             ?? new ReactionGifOptions();
 
+        services.AddSingleton<IReactionGifLedger, ReactionGifLedger>();
         if (reactionOpts.IsGiphyEnabled)
         {
             services.AddHttpClient<IReactionGifProvider, GiphyGifProvider>();
@@ -180,6 +184,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<FeedBanterEnrichmentJob>();
         services.AddScoped<YouTubeSearchSyncJob>();
         services.AddScoped<RssOpinionSyncJob>();
+        services.AddScoped<RssFeedResolveJob>();
         services.AddScoped<ContentEnrichmentJob>();
         services.AddScoped<PunditExtractionJob>();
         services.AddScoped<PredictionAggregateJob>();

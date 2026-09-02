@@ -1,6 +1,6 @@
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.Common;
-using BanterApp.Api.Integrations.Media;
+using BanterApp.Api.Integrations.Rss;
 
 namespace BanterApp.Api.Integrations.Pundits;
 
@@ -42,46 +42,26 @@ public static class ConfidenceScoringHelper
 
     public static ConfidenceScoringOptions? ResolveForSource(
         MediaSource source,
-        MediaIngestOptions mediaOptions)
+        IRssFeedCatalogSeed seed)
     {
-        foreach (var podcast in mediaOptions.PodcastSources)
+        foreach (var feed in seed.Feeds)
         {
-            if (string.Equals(source.Name, podcast.Name, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(source.RssUrl, podcast.RssUrl, StringComparison.OrdinalIgnoreCase))
+            if (Matches(source, feed))
             {
-                return podcast.ConfidenceScoring;
-            }
-        }
-
-        foreach (var website in mediaOptions.WebsiteSources)
-        {
-            if (string.Equals(source.Name, website.Name, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(source.RssUrl, website.RssUrl, StringComparison.OrdinalIgnoreCase))
-            {
-                return website.ConfidenceScoring;
+                return feed.ConfidenceScoring;
             }
         }
 
         return null;
     }
 
-    public static double ResolveSourceWeight(MediaSource source, MediaIngestOptions mediaOptions)
+    public static double ResolveSourceWeight(MediaSource source, IRssFeedCatalogSeed seed)
     {
-        foreach (var podcast in mediaOptions.PodcastSources)
+        foreach (var feed in seed.Feeds)
         {
-            if (string.Equals(source.Name, podcast.Name, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(source.RssUrl, podcast.RssUrl, StringComparison.OrdinalIgnoreCase))
+            if (Matches(source, feed))
             {
-                return podcast.SourceWeight;
-            }
-        }
-
-        foreach (var website in mediaOptions.WebsiteSources)
-        {
-            if (string.Equals(source.Name, website.Name, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(source.RssUrl, website.RssUrl, StringComparison.OrdinalIgnoreCase))
-            {
-                return website.SourceWeight;
+                return feed.SourceWeight;
             }
         }
 
@@ -92,4 +72,8 @@ public static class ConfidenceScoringHelper
             _ => 1.0
         };
     }
+
+    private static bool Matches(MediaSource source, RssFeedSeedEntry feed) =>
+        string.Equals(source.Name, feed.Name, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(source.RssUrl, feed.RssUrl, StringComparison.OrdinalIgnoreCase);
 }
