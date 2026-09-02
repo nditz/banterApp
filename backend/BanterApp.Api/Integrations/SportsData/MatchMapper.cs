@@ -20,7 +20,7 @@ internal static class MatchMapper
             KickoffTime = PostgresUtc.Normalize(dto.KickoffUtc),
             PredictionLockAtUtc = PostgresUtc.Normalize(dto.KickoffUtc),
             Stage = dto.Stage,
-            Group = string.Empty,
+            Group = NormalizeGroup(dto.Group),
             Venue = dto.Venue,
             Status = dto.Status,
             HomeScore = dto.HomeScore,
@@ -51,7 +51,8 @@ internal static class MatchMapper
         if (match.KickoffTime != kickoffUtc) { match.KickoffTime = kickoffUtc; changed = true; }
         if (match.PredictionLockAtUtc != kickoffUtc) { match.PredictionLockAtUtc = kickoffUtc; changed = true; }
         if (match.Stage != dto.Stage) { match.Stage = dto.Stage; changed = true; }
-        if (!string.IsNullOrEmpty(match.Group)) { match.Group = string.Empty; changed = true; }
+        var group = NormalizeGroup(dto.Group);
+        if (match.Group != group) { match.Group = group; changed = true; }
         if (match.Venue != dto.Venue) { match.Venue = dto.Venue; changed = true; }
         if (match.Status != dto.Status) { match.Status = dto.Status; changed = true; }
         if (match.HomeScore != dto.HomeScore) { match.HomeScore = dto.HomeScore; changed = true; }
@@ -60,4 +61,7 @@ internal static class MatchMapper
 
         return changed;
     }
+
+    private static string NormalizeGroup(string? group) =>
+        string.Equals(group, "PL", StringComparison.OrdinalIgnoreCase) ? "PL" : group ?? string.Empty;
 }

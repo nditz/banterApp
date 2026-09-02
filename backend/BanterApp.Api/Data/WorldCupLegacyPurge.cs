@@ -5,8 +5,9 @@ using Microsoft.Extensions.Logging;
 namespace BanterApp.Api.Data;
 
 /// <summary>
-/// Removes leftover World Cup 2026 rows so the live product is Premier League only.
-/// Filtering queries is not enough — production still had OpenFootball <c>of26-*</c> fixtures.
+/// Removes leftover World Cup 2026 and other non-Premier-League rows so the live
+/// product is PL-only. Filtering queries is not enough — production still had
+/// OpenFootball <c>of26-*</c> fixtures and mis-stamped <c>apifb-*</c> WC rows.
 /// </summary>
 public static class WorldCupLegacyPurge
 {
@@ -16,7 +17,7 @@ public static class WorldCupLegacyPurge
         CancellationToken cancellationToken = default)
     {
         var leftover = await db.Matches
-            .WhereWorldCupLegacy()
+            .WhereNonPremierLeague()
             .ToListAsync(cancellationToken);
         var leftoverIds = leftover.Select(m => m.Id).ToList();
 
@@ -78,7 +79,7 @@ public static class WorldCupLegacyPurge
         if (leftoverIds.Count > 0 || wcNewsIds.Count > 0 || leftoverPlayers.Count > 0)
         {
             logger?.LogWarning(
-                "World Cup legacy purge: {Matches} matches, {News} news items, {Players} national-squad players deactivated.",
+                "Non-PL / World Cup purge: {Matches} matches, {News} news items, {Players} national-squad players deactivated.",
                 leftoverIds.Count,
                 wcNewsIds.Count,
                 leftoverPlayers.Count);

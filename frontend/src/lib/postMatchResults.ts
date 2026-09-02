@@ -11,18 +11,18 @@ export interface ResolvedMatchResult {
 const demoActualResults: Record<string, ResolvedMatchResult> = {
   pred1: {
     actualOutcome: "home",
-    actualScoreline: "2-1",
-    label: "Japan 2-1 Colombia (Home Win)",
+    actualScoreline: "3-0",
+    label: "Arsenal 3-0 Coventry City (Home Win)",
   },
   pred2: {
-    actualOutcome: "home",
-    actualScoreline: "2-1",
-    label: "Netherlands 2-1 Mexico",
+    actualOutcome: "draw",
+    actualScoreline: "2-2",
+    label: "Newcastle United 2-2 Liverpool (Draw)",
   },
   pred3: {
-    actualOutcome: "draw",
-    actualScoreline: "0-0",
-    label: "Portugal 0-0 Uruguay (Draw)",
+    actualOutcome: "away",
+    actualScoreline: "0-1",
+    label: "Nottingham Forest 0-1 Leeds United (Away Win)",
   },
 };
 

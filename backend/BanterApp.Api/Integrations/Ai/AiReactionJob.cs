@@ -2,7 +2,7 @@ using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Feed;
 using BanterApp.Api.Integrations;
-using BanterApp.Api.Integrations.Media;
+using BanterApp.Api.Integrations.Banter;
 using BanterApp.Api.Services;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +29,7 @@ public sealed class AiReactionJob
 
     private readonly AppDbContext _db;
     private readonly IContentGenerator _ai;
-    private readonly ReactionMediaResolver _reactionMedia;
+    private readonly IBanterGenerator _banterGenerator;
     private readonly AiOptions _aiOptions;
     private readonly BackgroundJobsOptions _jobOptions;
     private readonly IApplicationErrorLogger _errorLogger;
@@ -38,7 +38,7 @@ public sealed class AiReactionJob
     public AiReactionJob(
         AppDbContext db,
         IContentGenerator ai,
-        ReactionMediaResolver reactionMedia,
+        IBanterGenerator banterGenerator,
         IOptions<AiOptions> aiOptions,
         IOptions<BackgroundJobsOptions> jobOptions,
         IApplicationErrorLogger errorLogger,
@@ -46,7 +46,7 @@ public sealed class AiReactionJob
     {
         _db = db;
         _ai = ai;
-        _reactionMedia = reactionMedia;
+        _banterGenerator = banterGenerator;
         _aiOptions = aiOptions.Value;
         _jobOptions = jobOptions.Value;
         _errorLogger = errorLogger;
@@ -122,13 +122,21 @@ public sealed class AiReactionJob
                     summary,
                     "BanterBot",
                     item.Category);
-                var media = await _reactionMedia.ResolveAsync(
-                    new[] { visual.GifQuery }.Concat(textQueries),
-                    mood,
-                    item.Id.GetHashCode(),
+                var banterContext = BanterContextFactory.FromFeedItem(
+                    item.MatchId,
+                    headline,
+                    card.Body,
+                    item.Category,
+                    mood);
+                var media = await _banterGenerator.GenerateAsync(
+                    BanterContextFactory.CreateRequest(
+                        banterContext,
+                        new[] { visual.GifQuery }.Concat(textQueries),
+                        mood,
+                        item.Id.GetHashCode()),
                     cancellationToken);
                 imageUrl = media.Url;
-                mediaType = media.Type;
+                mediaType = media.MediaType;
             }
             catch (Exception ex)
             {
@@ -138,13 +146,21 @@ public sealed class AiReactionJob
                     summary,
                     "BanterBot",
                     item.Category);
-                var media = await _reactionMedia.ResolveAsync(
-                    textQueries,
-                    card.Mood ?? "news",
-                    item.Id.GetHashCode(),
+                var banterContext = BanterContextFactory.FromFeedItem(
+                    item.MatchId,
+                    headline,
+                    card.Body,
+                    item.Category,
+                    card.Mood ?? "news");
+                var media = await _banterGenerator.GenerateAsync(
+                    BanterContextFactory.CreateRequest(
+                        banterContext,
+                        textQueries,
+                        card.Mood ?? "news",
+                        item.Id.GetHashCode()),
                     cancellationToken);
                 imageUrl = media.Url;
-                mediaType = media.Type;
+                mediaType = media.MediaType;
             }
 
             var reactionTitle = string.IsNullOrWhiteSpace(card.Title)

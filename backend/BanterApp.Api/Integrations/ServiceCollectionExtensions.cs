@@ -1,6 +1,7 @@
 using BanterApp.Api.Features.Feed;
 using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.Ai;
+using BanterApp.Api.Integrations.Banter;
 using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.FootballBanter;
 using BanterApp.Api.Integrations.FootballReference;
@@ -46,6 +47,8 @@ public static class ServiceCollectionExtensions
         services.Configure<ProcessingOptions>(configuration.GetSection(ProcessingOptions.SectionName));
         services.Configure<SourceWeightsOptions>(configuration.GetSection(SourceWeightsOptions.SectionName));
         services.Configure<ReactionGifOptions>(configuration.GetSection(ReactionGifOptions.SectionName));
+        services.Configure<BanterOptions>(configuration.GetSection(BanterOptions.SectionName));
+        services.PostConfigure<BanterOptions>(opts => opts.ValidateOrNormalize());
 
         services.AddSingleton<IFootballBanterConfigProvider>(sp =>
         {
@@ -169,6 +172,17 @@ public static class ServiceCollectionExtensions
         services.AddScoped<FeedReactionMediaService>();
         services.AddScoped<MatchResolutionService>();
         services.AddScoped<FeedRelevanceScorer>();
+
+        services.AddScoped<IBanterHistoryService, BanterHistoryService>();
+        services.AddScoped<IBanterScenarioClassifier, DeterministicBanterScenarioClassifier>();
+        services.AddHttpClient<IBanterConceptGenerator, OpenAiBanterConceptGenerator>();
+        services.AddHttpClient<IBanterCandidateProvider, GiphyBanterCandidateProvider>();
+        services.AddScoped<IBanterCandidateScorer, BanterCandidateScorer>();
+        services.AddSingleton<IBanterRandom, SystemBanterRandom>();
+        services.AddScoped<IBanterCandidateSelector, WeightedBanterCandidateSelector>();
+        services.AddScoped<LegacyBanterGenerator>();
+        services.AddScoped<BanterOrchestrator>();
+        services.AddScoped<IBanterGenerator, FeatureFlaggedBanterGenerator>();
 
         services.AddScoped<PunditMediaItemService>();
         services.AddScoped<PunditReviewFlagger>();

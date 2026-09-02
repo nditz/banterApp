@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BanterApp.Api.Common;
+using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -39,12 +40,26 @@ public sealed class SportmonksProvider : ISportsDataFallbackProvider
 
     public string ProviderName => "sportmonks";
 
-    public bool IsConfigured => !string.IsNullOrWhiteSpace(_options.Token);
+    /// <summary>
+    /// Requires a token <em>and</em> a scoped season or league id.
+    /// LeagueId=0 / SeasonId=0 must never pull the unfiltered "all fixtures" feed.
+    /// </summary>
+    public bool IsConfigured =>
+        !string.IsNullOrWhiteSpace(_options.Token) &&
+        (_options.SeasonId > 0 || _options.LeagueId > 0);
 
     public async Task<IReadOnlyList<MatchDto>> GetFixturesAsync(CancellationToken cancellationToken = default)
     {
         if (!IsConfigured)
         {
+            if (!string.IsNullOrWhiteSpace(_options.Token) &&
+                _options.SeasonId <= 0 &&
+                _options.LeagueId <= 0)
+            {
+                _logger.LogWarning(
+                    "Sportmonks token is set but LeagueId/SeasonId are both 0; refusing unscoped all-fixtures request.");
+            }
+
             return [];
         }
 
@@ -52,9 +67,7 @@ public sealed class SportmonksProvider : ISportsDataFallbackProvider
         {
             var path = _options.SeasonId > 0
                 ? $"fixtures?filters=fixtureSeasons:{_options.SeasonId}"
-                : _options.LeagueId > 0
-                    ? $"fixtures?filters=fixtureLeagues:{_options.LeagueId}"
-                    : "fixtures";
+                : $"fixtures?filters=fixtureLeagues:{_options.LeagueId}";
 
             var url =
                 $"{_options.BaseUrl.TrimEnd('/')}/{path}" +
@@ -69,7 +82,11 @@ public sealed class SportmonksProvider : ISportsDataFallbackProvider
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-            return MapFixtures(document.RootElement);
+            // Defense in depth: only keep fixtures tagged as PL (mapper leaves Group empty for SM).
+            return MapFixtures(document.RootElement)
+                .Select(m => m with { Group = string.IsNullOrWhiteSpace(m.Group) ? "PL" : m.Group })
+                .Where(PremierLeagueMatchScope.IsPremierLeagueDto)
+                .ToList();
         }
         catch (Exception ex)
         {

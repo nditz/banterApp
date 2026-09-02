@@ -31,7 +31,8 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
     {
         var path =
             $"fixtures?league={_options.LeagueId}&season={_options.Season}";
-        return await FetchFixturesOrFallbackAsync(path, null, _fallback.GetAllFixturesAsync, cancellationToken);
+        // Always apply league id filter when mapping so foreign competitions never enter the PL pipeline.
+        return await FetchFixturesOrFallbackAsync(path, _options.LeagueId, _fallback.GetAllFixturesAsync, cancellationToken);
     }
 
     public async Task<IReadOnlyList<MatchDto>> GetUpcomingFixturesAsync(
@@ -39,7 +40,7 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
     {
             var path =
                 $"fixtures?league={_options.LeagueId}&season={_options.Season}&status=NS";
-        return await FetchFixturesOrFallbackAsync(path, null, _fallback.GetUpcomingFixturesAsync, cancellationToken);
+        return await FetchFixturesOrFallbackAsync(path, _options.LeagueId, _fallback.GetUpcomingFixturesAsync, cancellationToken);
     }
 
     public async Task<IReadOnlyList<MatchDto>> GetResultsAsync(
@@ -47,7 +48,7 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
     {
         var path =
             $"fixtures?league={_options.LeagueId}&season={_options.Season}&status=FT";
-        return await FetchFixturesOrFallbackAsync(path, null, _fallback.GetResultsAsync, cancellationToken);
+        return await FetchFixturesOrFallbackAsync(path, _options.LeagueId, _fallback.GetResultsAsync, cancellationToken);
     }
 
     public async Task<IReadOnlyList<MatchDto>> GetLiveFixturesAsync(

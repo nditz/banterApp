@@ -95,30 +95,31 @@ public sealed class ScoreSyncJob
                 }
             }
 
+            // Never stamp foreign competitions as PL — only league-scoped / Group==PL / pl26-* rows.
             var merged = all
                 .Concat(live)
+                .Where(PremierLeagueMatchScope.IsPremierLeagueDto)
                 .GroupBy(d => d.Id)
                 .Select(g => g.Last())
                 .ToList();
 
             foreach (var dto in merged)
             {
-                if (PremierLeagueMatchScope.IsWorldCupLegacyId(dto.Id))
-                {
-                    continue;
-                }
-
                 var match = await _db.Matches.FindAsync([dto.Id], cancellationToken);
                 if (match is null)
                 {
                     match = MatchMapper.FromDto(dto);
                     match.CompetitionSeasonId = season.Id;
+                    match.Group = "PL";
                     _db.Matches.Add(match);
                     added++;
                 }
-                else if (MatchMapper.ApplyDto(match, dto))
+                else if (MatchMapper.ApplyDto(match, dto) ||
+                         match.CompetitionSeasonId != season.Id ||
+                         !string.Equals(match.Group, "PL", StringComparison.OrdinalIgnoreCase))
                 {
                     match.CompetitionSeasonId = season.Id;
+                    match.Group = "PL";
                     updated++;
                 }
 
