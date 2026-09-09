@@ -38,9 +38,30 @@ public class ProductionStartupValidatorTests
     }
 
     [Fact]
+    public async Task Validate_Production_RequiresApiFootballKeyWhenProviderIsLive()
+    {
+        var values = ValidProduction();
+        values["SportsData:Provider"] = "apifootball";
+        var validator = Create(Environments.Production, values);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => validator.ValidateAsync());
+        Assert.Contains("SportsData:ApiKey", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Validate_Production_AcceptsCompleteConfig()
     {
         var validator = Create(Environments.Production, ValidProduction());
+        await validator.ValidateAsync();
+    }
+
+    [Fact]
+    public async Task Validate_Production_AcceptsApiFootballWithKey()
+    {
+        var values = ValidProduction();
+        values["SportsData:Provider"] = "apifootball";
+        values["SportsData:ApiKey"] = "live-key";
+        var validator = Create(Environments.Production, values);
         await validator.ValidateAsync();
     }
 

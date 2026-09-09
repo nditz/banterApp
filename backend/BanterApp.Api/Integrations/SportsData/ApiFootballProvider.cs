@@ -7,7 +7,9 @@ namespace BanterApp.Api.Integrations.SportsData;
 
 /// <summary>
 /// API-Football (api-football.com) provider for Premier League fixtures and enrichment data.
-/// Falls back to <see cref="MockSportsDataProvider"/> when the API key is missing or requests fail.
+/// Falls back to <see cref="MockSportsDataProvider"/> only when the API key is missing.
+/// When a key is present, fixture/standings request failures throw
+/// <see cref="SportsDataUnavailableException"/> so sync jobs fail visibly.
 /// </summary>
 public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrichment
 {
@@ -32,7 +34,7 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
         var path =
             $"fixtures?league={_options.LeagueId}&season={_options.Season}";
         // Always apply league id filter when mapping so foreign competitions never enter the PL pipeline.
-        return await FetchFixturesOrFallbackAsync(path, _options.LeagueId, _fallback.GetAllFixturesAsync, cancellationToken);
+        return await FetchFixturesAsync(path, _options.LeagueId, allowEmpty: false, _fallback.GetAllFixturesAsync, cancellationToken);
     }
 
     public async Task<IReadOnlyList<MatchDto>> GetUpcomingFixturesAsync(
@@ -40,7 +42,7 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
     {
             var path =
                 $"fixtures?league={_options.LeagueId}&season={_options.Season}&status=NS";
-        return await FetchFixturesOrFallbackAsync(path, _options.LeagueId, _fallback.GetUpcomingFixturesAsync, cancellationToken);
+        return await FetchFixturesAsync(path, _options.LeagueId, allowEmpty: true, _fallback.GetUpcomingFixturesAsync, cancellationToken);
     }
 
     public async Task<IReadOnlyList<MatchDto>> GetResultsAsync(
@@ -48,15 +50,16 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
     {
         var path =
             $"fixtures?league={_options.LeagueId}&season={_options.Season}&status=FT";
-        return await FetchFixturesOrFallbackAsync(path, _options.LeagueId, _fallback.GetResultsAsync, cancellationToken);
+        return await FetchFixturesAsync(path, _options.LeagueId, allowEmpty: true, _fallback.GetResultsAsync, cancellationToken);
     }
 
     public async Task<IReadOnlyList<MatchDto>> GetLiveFixturesAsync(
         CancellationToken cancellationToken = default)
     {
-        return await FetchFixturesOrFallbackAsync(
+        return await FetchFixturesAsync(
             "fixtures?live=all",
             _options.LeagueId,
+            allowEmpty: true,
             _fallback.GetLiveFixturesAsync,
             cancellationToken);
     }
@@ -92,9 +95,17 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
     {
         var all = await GetAllStandingsAsync(cancellationToken);
         var key = group.Trim().ToUpperInvariant();
-        return all.TryGetValue(key, out var standings)
-            ? standings
-            : await _fallback.GetStandingsAsync(group, cancellationToken);
+        if (all.TryGetValue(key, out var standings) && standings.Count > 0)
+        {
+            return standings;
+        }
+
+        if (_client.HasApiKey)
+        {
+            throw new SportsDataUnavailableException($"API-Football returned no standings for group {key}.");
+        }
+
+        return await _fallback.GetStandingsAsync(group, cancellationToken);
     }
 
     public async Task<IReadOnlyList<TeamDto>> GetTeamsAsync(CancellationToken cancellationToken = default)
@@ -148,6 +159,7 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
     {
         if (!_client.HasApiKey)
         {
+            _logger.LogWarning("API-Football key missing; using mock standings.");
             return await BuildFallbackStandingsAsync(cancellationToken);
         }
 
@@ -156,14 +168,26 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
             using var document = await _client.GetJsonAsync(
                 $"standings?league={_options.LeagueId}&season={_options.Season}",
                 cancellationToken);
-            return document is null
-                ? await BuildFallbackStandingsAsync(cancellationToken)
-                : ApiFootballFixtureMapper.MapStandings(document.RootElement);
+            if (document is null)
+            {
+                throw new SportsDataUnavailableException("API-Football returned no standings document.");
+            }
+
+            var mapped = ApiFootballFixtureMapper.MapStandings(document.RootElement);
+            if (!mapped.TryGetValue("PL", out var plRows) || plRows.Count == 0)
+            {
+                throw new SportsDataUnavailableException("API-Football returned no Premier League standings.");
+            }
+
+            return mapped;
+        }
+        catch (SportsDataUnavailableException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "API-Football standings request failed; using mock data.");
-            return await BuildFallbackStandingsAsync(cancellationToken);
+            throw new SportsDataUnavailableException("API-Football standings request failed.", ex);
         }
     }
 
@@ -211,14 +235,16 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
         }
     }
 
-    private async Task<IReadOnlyList<MatchDto>> FetchFixturesOrFallbackAsync(
+    private async Task<IReadOnlyList<MatchDto>> FetchFixturesAsync(
         string path,
         int? leagueIdFilter,
+        bool allowEmpty,
         Func<CancellationToken, Task<IReadOnlyList<MatchDto>>> fallback,
         CancellationToken cancellationToken)
     {
         if (!_client.HasApiKey)
         {
+            _logger.LogWarning("API-Football key missing; using mock fixtures for {Path}.", path);
             return await fallback(cancellationToken);
         }
 
@@ -227,24 +253,28 @@ public sealed class ApiFootballProvider : ISportsDataProvider, ISportsDataEnrich
             using var document = await _client.GetJsonAsync(path, cancellationToken);
             if (document is null)
             {
-                _logger.LogWarning("API-Football returned no document for {Path}; using mock fixtures.", path);
-                return await fallback(cancellationToken);
+                throw new SportsDataUnavailableException(
+                    $"API-Football returned no document for {path}.");
             }
 
             var fixtures = ApiFootballFixtureMapper.MapFixtures(document.RootElement, leagueIdFilter);
             LogApiErrors(document.RootElement);
-            if (fixtures.Count == 0)
+            if (fixtures.Count == 0 && !allowEmpty)
             {
-                _logger.LogWarning("API-Football returned 0 fixtures for {Path}; using mock fixtures.", path);
-                return await fallback(cancellationToken);
+                throw new SportsDataUnavailableException(
+                    $"API-Football returned 0 fixtures for {path}.");
             }
 
             return fixtures;
         }
+        catch (SportsDataUnavailableException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "API-Football fixtures request failed for {Path}; using mock fixtures.", path);
-            return await fallback(cancellationToken);
+            throw new SportsDataUnavailableException(
+                $"API-Football fixtures request failed for {path}.", ex);
         }
     }
 

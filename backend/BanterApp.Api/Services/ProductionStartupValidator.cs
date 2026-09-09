@@ -51,9 +51,16 @@ public sealed class ProductionStartupValidator(
             errors.Add("Production requires Ai:ApiKey when Ai:Provider is openai.");
         }
 
-        if (string.IsNullOrWhiteSpace(configuration["YouTube:ApiKey"]))
+        var youtubeApiKey = configuration["YouTube:ApiKey"];
+        if (string.IsNullOrWhiteSpace(youtubeApiKey))
         {
             errors.Add("Production requires YouTube:ApiKey.");
+        }
+
+        var sportsProvider = configuration["SportsData:Provider"]?.Trim().ToLowerInvariant() ?? "mock";
+        if (sportsProvider is "apifootball" && string.IsNullOrWhiteSpace(configuration["SportsData:ApiKey"]))
+        {
+            errors.Add("Production requires SportsData:ApiKey when SportsData:Provider is apifootball.");
         }
 
         var legal = configuration.GetSection(LegalOptions.SectionName).Get<LegalOptions>() ?? new LegalOptions();

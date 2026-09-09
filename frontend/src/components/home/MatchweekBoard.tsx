@@ -4,26 +4,49 @@ import { MatchCard } from "@/components/prediction/MatchCard";
 import { Panel } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentMatchweek } from "@/hooks/useMatches";
+import { datasetStatusFromMatchweek, isUnofficialMatchweek } from "@/lib/football-dataset";
 import { groupMatchesByUkDate } from "@/lib/matchweek";
 
 export function MatchweekBoard() {
   const { data, isLoading, isError } = useCurrentMatchweek();
   const matches = data?.matches ?? [];
   const days = groupMatchesByUkDate(matches);
+  const status = datasetStatusFromMatchweek(data, isError);
+  const subtitle = isUnofficialMatchweek(data)
+    ? "Premier League 2026/27 · sample fixtures for local/dev"
+    : "Premier League 2026/27 · same rounds as BBC Sport";
 
   return (
     <Panel
       title={data?.number ? `Matchweek ${data.number}` : "Current matchweek"}
-      subtitle="Premier League 2026/27 · same rounds as BBC Sport"
+      subtitle={subtitle}
       accent="pitch"
     >
-      {isError && (
-        <p className="mb-3 text-xs text-muted-foreground">Official 2026/27 fixtures shown</p>
-      )}
       {isLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-40 w-full" />
           <Skeleton className="h-40 w-full" />
+        </div>
+      ) : status === "error" ? (
+        <p role="alert" className="text-sm text-muted-foreground">
+          {data?.error ?? "Current matchweek fixtures could not be loaded. This is not an empty week."}
+        </p>
+      ) : status === "stale" ? (
+        <div className="space-y-5">
+          <p role="status" className="text-sm text-muted-foreground">
+            {data?.error ??
+              "These kickoffs are overdue without results. Fixtures may be stale until score sync succeeds."}
+          </p>
+          {days.map((day) => (
+            <section key={day.key} className="space-y-3">
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                {day.label}
+              </h3>
+              {day.matches.map((match) => (
+                <MatchCard key={match.id} match={match} />
+              ))}
+            </section>
+          ))}
         </div>
       ) : matches.length === 0 ? (
         <p className="text-sm text-muted-foreground">No fixtures in this matchweek yet.</p>

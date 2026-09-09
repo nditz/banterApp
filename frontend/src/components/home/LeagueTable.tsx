@@ -18,8 +18,9 @@ const headCell =
 const numCell = "w-full text-right tabular-nums";
 
 export function LeagueTable({ compact = false }: { compact?: boolean }) {
-  const { data, isLoading } = useLeagueTable();
-  const rows = rankPremierLeagueTable(data ?? []);
+  const { data, isLoading, isError } = useLeagueTable();
+  const rows = rankPremierLeagueTable(data?.rows ?? []);
+  const status = isError ? "error" : data?.status ?? (rows.length > 0 ? "ok" : "empty");
   const showSplit = compact && rows.length > 9;
   const topRows = showSplit ? rows.slice(0, 6) : compact ? rows.slice(0, 8) : rows;
   const bottomRows = showSplit ? rows.slice(-3) : [];
@@ -34,11 +35,22 @@ export function LeagueTable({ compact = false }: { compact?: boolean }) {
     >
       {isLoading ? (
         <Skeleton className="h-64 w-full" />
+      ) : status === "error" ? (
+        <p role="alert" className="text-sm text-muted-foreground">
+          {data?.error ?? "Standings could not be loaded. This is not an empty table."}
+        </p>
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Table appears once fixtures and results have synced.
+          No standings yet — the table appears after results have been recorded.
         </p>
       ) : (
+        <>
+          {status === "stale" && (
+            <p role="status" className="mb-3 text-sm text-muted-foreground">
+              {data?.error ??
+                "Standings may be behind — some fixtures are overdue without results."}
+            </p>
+          )}
         <div className="min-w-0 w-full max-w-full" role="table" aria-label="Premier League table">
           <div className={cn(grid, "pb-2")} role="row">
             <span className={cn(headCell, "pl-2")} role="columnheader">
@@ -88,6 +100,7 @@ export function LeagueTable({ compact = false }: { compact?: boolean }) {
             <StandingsRow key={row.teamCode} row={row} compact={compact} grid={grid} />
           ))}
         </div>
+        </>
       )}
       {!compact && rows.length > 0 && (
         <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">

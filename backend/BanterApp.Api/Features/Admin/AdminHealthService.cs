@@ -1,6 +1,7 @@
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations;
 using BanterApp.Api.Integrations.Ai;
 using BanterApp.Api.Integrations.FootballBanter;
@@ -85,6 +86,18 @@ public sealed class AdminHealthService(
 
         var fixtureCount = await db.Matches.CountAsync(ct);
         var matchweekCount = await db.Matchweeks.CountAsync(ct);
+        var sportsProvider = configuration["SportsData:Provider"]?.Trim().ToLowerInvariant() ?? "mock";
+        var sportsApiKey = configuration["SportsData:ApiKey"];
+        var lastScoreSync = await db.SyncRuns
+            .Where(r => r.JobName == ScoreSyncJob.JobId)
+            .OrderByDescending(r => r.StartedAt)
+            .FirstOrDefaultAsync(ct);
+        var overdueUnfinished = await db.Matches
+            .WherePremierLeague()
+            .ToListAsync(ct);
+        var hasOverdue = FootballDatasetStatus.HasOverdueUnfinished(
+            overdueUnfinished.Select(m => ((string?)m.Status, m.KickoffTime)),
+            DateTimeOffset.UtcNow);
 
         return new
         {
@@ -119,8 +132,15 @@ public sealed class AdminHealthService(
                 competition = "Premier League",
                 leagueId = configuration.GetValue("SportsData:LeagueId", 39),
                 season = configuration.GetValue("SportsData:Season", 2026),
+                provider = sportsProvider,
+                apiKeyConfigured = !string.IsNullOrWhiteSpace(sportsApiKey),
+                usingMock = FootballDatasetStatus.IsMockProvider(sportsProvider),
                 fixtureCount,
-                matchweekCount
+                matchweekCount,
+                lastScoreSyncStatus = lastScoreSync?.Status,
+                lastScoreSyncAt = lastScoreSync?.FinishedAt,
+                lastScoreSyncError = lastScoreSync?.ErrorMessage,
+                overdueUnfinishedFixtures = hasOverdue
             },
             punditPipeline = new
             {
@@ -178,6 +198,14 @@ public sealed class AdminHealthService(
 
         var openAiSummary = await providerUsageGuard.GetTodaySummaryAsync("openai", ct);
         var premierLeagueFixtures = await db.Matches.AnyAsync(ct);
+        var sportsProvider = configuration["SportsData:Provider"]?.Trim().ToLowerInvariant() ?? "mock";
+        var sportsLive = sportsProvider == "apifootball" &&
+                         !string.IsNullOrWhiteSpace(configuration["SportsData:ApiKey"]);
+        var plMatches = await db.Matches.WherePremierLeague().ToListAsync(ct);
+        var fixturesFresh = plMatches.Count > 0 &&
+                            !FootballDatasetStatus.HasOverdueUnfinished(
+                                plMatches.Select(m => ((string?)m.Status, m.KickoffTime)),
+                                DateTimeOffset.UtcNow);
 
         return new
         {
@@ -191,6 +219,8 @@ public sealed class AdminHealthService(
                 Check("Admin user exists", adminExists),
                 Check("RSS sources configured", rssConfigured),
                 Check("Premier League fixtures present", premierLeagueFixtures),
+                Check("SportsData uses live API-Football", sportsLive),
+                Check("Current fixtures are not overdue without results", fixturesFresh),
                 Check("SportsData league is Premier League (39)", configuration.GetValue("SportsData:LeagueId", 0) == 39),
                 Check("Job scheduler active", backgroundJobsOptions.Value.Enabled),
                 Check("Error logging active", true),

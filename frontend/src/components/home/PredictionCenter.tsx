@@ -7,6 +7,7 @@ import { MatchCard } from "@/components/prediction/MatchCard";
 import { Panel } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentMatchweek, useMatches } from "@/hooks/useMatches";
+import { datasetStatusFromMatchweek, isUnofficialMatchweek } from "@/lib/football-dataset";
 import { isMatchLocked } from "@/lib/anonymous";
 import type { Match } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -30,8 +31,8 @@ export function PredictionCenter() {
   const touchStartX = useRef<number | null>(null);
 
   const weekMatches = currentWeek?.matches;
-  const isLoading = weekLoading || ((weekMatches?.length ?? 0) === 0 && upcomingLoading);
-  const isError = weekError || upcomingError;
+  const weekStatus = datasetStatusFromMatchweek(currentWeek, weekError);
+  const isLoading = weekLoading || ((weekMatches?.length ?? 0) === 0 && upcomingLoading && !weekError);
 
   const openMatches = useMemo(() => {
     const matches = weekMatches && weekMatches.length > 0 ? weekMatches : upcoming ?? [];
@@ -78,9 +79,23 @@ export function PredictionCenter() {
       className="xl:flex xl:max-h-[calc(100vh-6.5rem)] xl:min-h-[34rem] xl:flex-col"
       bodyClassName="xl:flex xl:min-h-0 xl:flex-1 xl:flex-col"
     >
-      {isError && (
+      {weekStatus === "error" && (
+        <p role="alert" className="mb-3 shrink-0 text-sm text-muted-foreground">
+          {currentWeek?.error ??
+            (upcomingError
+              ? "Fixtures could not be loaded."
+              : "Current matchweek fixtures could not be loaded.")}
+        </p>
+      )}
+      {weekStatus === "stale" && (
+        <p role="status" className="mb-3 shrink-0 text-sm text-muted-foreground">
+          {currentWeek?.error ??
+            "These kickoffs are overdue without results. Score sync may be failing."}
+        </p>
+      )}
+      {isUnofficialMatchweek(currentWeek) && weekStatus !== "error" && (
         <p className="mb-3 shrink-0 text-xs text-muted-foreground">
-          Demo fixtures shown
+          Sample fixtures — not a live sports feed.
         </p>
       )}
 
@@ -90,6 +105,10 @@ export function PredictionCenter() {
             <Skeleton key={i} className="h-40 w-full rounded-lg" />
           ))}
         </div>
+      ) : weekStatus === "error" && pageCount === 0 ? (
+        <p role="alert" className="py-8 text-center text-sm text-muted-foreground">
+          Fixtures are unavailable right now. This is not an empty matchweek.
+        </p>
       ) : pageCount === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           No open fixtures this matchweek. Check the full board for upcoming weeks.

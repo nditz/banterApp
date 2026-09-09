@@ -7,14 +7,16 @@ namespace BanterApp.Api.Tests;
 public class PremierLeagueMatchweekTests
 {
     [Fact]
-    public async Task MockFixtures_MatchOfficial2026_27Matchweeks()
+    public async Task MockFixtures_CoverOpeningWeeksAndACurrentSeptemberRound()
     {
         var provider = new MockSportsDataProvider();
         var fixtures = await provider.GetAllFixturesAsync();
 
-        Assert.Equal(20, fixtures.Count);
+        Assert.Equal(40, fixtures.Count);
         Assert.Equal(10, fixtures.Count(m => m.MatchweekNumber == 1));
         Assert.Equal(10, fixtures.Count(m => m.MatchweekNumber == 2));
+        Assert.Equal(10, fixtures.Count(m => m.MatchweekNumber == 3));
+        Assert.Equal(10, fixtures.Count(m => m.MatchweekNumber == 4));
 
         var opener = fixtures.Single(m => m.Id == "pl26-mw1-1");
         Assert.Equal("Arsenal", opener.HomeTeam.Name);
@@ -26,30 +28,46 @@ public class PremierLeagueMatchweekTests
         var monday = fixtures.Single(m => m.Id == "pl26-mw1-10");
         Assert.Equal("Fulham", monday.HomeTeam.Name);
         Assert.Equal("Chelsea", monday.AwayTeam.Name);
-        Assert.Equal("NS", monday.Status);
+        Assert.Equal("FT", monday.Status);
+        Assert.Equal(0, monday.HomeScore);
+        Assert.Equal(2, monday.AwayScore);
     }
 
     [Fact]
-    public async Task MockStandings_MatchPremierLeagueTieBreakersAfterMatchweek1()
+    public async Task MockStandings_IncludePlayedMatchesAfterTwoWeeks()
     {
         var provider = new MockSportsDataProvider();
         var table = await provider.GetStandingsAsync("PL");
 
         Assert.Equal(20, table.Count);
-        Assert.Equal(
-            ["BHA", "ARS", "BRE", "EVE", "HUL", "IPS", "MCI", "LEE", "LIV", "NEW", "CHE", "FUL"],
-            table.Take(12).Select(r => r.Team.Code).ToArray());
+        Assert.All(table, row => Assert.Equal(2, row.Played));
+        Assert.Equal("ARS", table[0].Team.Code);
+        Assert.Equal(6, table[0].Points);
         Assert.Equal(4, table[0].GoalDifference);
-        Assert.Equal(0, table.Single(r => r.Team.Code == "CHE").Played);
-        Assert.Equal(0, table.Single(r => r.Team.Code == "FUL").Played);
     }
 
     [Fact]
-    public async Task CurrentMatchweek_StaysOnRoundUntilEveryFixtureIsFinished()
+    public async Task CurrentMatchweek_On9Sep2026_ResolvesToOpenWeek3()
     {
         var provider = new MockSportsDataProvider();
         var fixtures = await provider.GetAllFixturesAsync();
-        var week = CurrentMatchweek.Resolve(fixtures.Select(m => (m.MatchweekNumber, (string?)m.Status)));
-        Assert.Equal(1, week);
+        var now = new DateTimeOffset(2026, 9, 9, 12, 0, 0, TimeSpan.Zero);
+        var week = CurrentMatchweek.Resolve(
+            fixtures.Select(m => (m.MatchweekNumber, (string?)m.Status, (DateTimeOffset?)m.KickoffUtc)),
+            now);
+        Assert.Equal(3, week);
+    }
+
+    [Fact]
+    public async Task CurrentMatchweek_WithoutKickoffs_StaysOnLowestUnfinishedRound()
+    {
+        var week = CurrentMatchweek.Resolve(
+        [
+            (1, "FT"),
+            (2, "FT"),
+            (3, "NS"),
+            (3, "NS"),
+        ]);
+        Assert.Equal(3, week);
     }
 }

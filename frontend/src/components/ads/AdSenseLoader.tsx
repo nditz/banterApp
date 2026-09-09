@@ -1,14 +1,14 @@
 "use client";
 
 import Script from "next/script";
-import { ADSENSE_ENABLED, ADSENSE_SCRIPT_SRC } from "@/lib/ads";
+import { canRequestAds, ADSENSE_SCRIPT_SRC } from "@/lib/ads";
 
 /**
  * Loads the AdSense script once. Auto ads (configured in the AdSense dashboard)
  * inject units without requiring per-slot ids.
  */
 export function AdSenseLoader() {
-  if (!ADSENSE_ENABLED) {
+  if (!canRequestAds()) {
     return null;
   }
 

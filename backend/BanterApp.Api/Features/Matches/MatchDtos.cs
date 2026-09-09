@@ -41,3 +41,18 @@ public sealed record StandingRowResponse(
     int GoalsAgainst,
     int GoalDiff,
     int Points);
+
+public sealed record CurrentMatchweekApiResponse(
+    int Number,
+    IReadOnlyList<MatchResponse> Matches,
+    string Status,
+    string Source,
+    bool Official,
+    string? Error);
+
+public sealed record StandingsApiResponse(
+    string Status,
+    string Source,
+    DateTimeOffset? LastSyncedAt,
+    string? Error,
+    IReadOnlyList<StandingRowResponse> Rows);
