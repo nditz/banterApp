@@ -5,6 +5,7 @@ using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.Media.Dtos;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace BanterApp.Api.Integrations.Pundits;
 
@@ -27,9 +28,7 @@ public sealed class PunditMediaItemService
         CancellationToken ct = default)
     {
         var normalizedExternalId = ExternalIdNormalizer.Normalize(externalId);
-        var existing = await _db.MediaSources.FirstOrDefaultAsync(
-            x => x.SourceType == sourceType && x.ExternalId == normalizedExternalId,
-            ct);
+        var existing = await FindSourceAsync(sourceType, normalizedExternalId, rssUrl, ct);
 
         if (existing is not null)
         {
@@ -59,7 +58,8 @@ public sealed class PunditMediaItemService
             UpdatedAt = DateTimeOffset.UtcNow
         };
         _db.MediaSources.Add(source);
-        await _db.SaveChangesAsync(ct);
+        // Persist on the next item/feed SaveChanges. Saving here flushes every pending
+        // media_items row and is what production logged at EnsureSourceAsync line 62.
         return source;
     }
 
@@ -69,18 +69,26 @@ public sealed class PunditMediaItemService
         CancellationToken cancellationToken)
     {
         var externalId = ExternalIdNormalizer.Normalize(item.ExternalId);
+        if (string.IsNullOrWhiteSpace(externalId))
+        {
+            return (0, 0, 1, false);
+        }
+
         var hash = ContentHashHelper.Compute(externalId, item.SourceUrl, item.Title);
 
-        var duplicateHash = await _db.MediaItems
-            .AnyAsync(x => x.ContentHash == hash && x.MediaSourceId != source.Id, cancellationToken);
+        var duplicateHash = _db.MediaItems.Local.Any(x =>
+                x.ContentHash == hash && x.MediaSourceId != source.Id)
+            || await _db.MediaItems
+                .AnyAsync(x => x.ContentHash == hash && x.MediaSourceId != source.Id, cancellationToken);
         if (duplicateHash)
         {
             return (0, 0, 1, false);
         }
 
-        var existing = await _db.MediaItems.FirstOrDefaultAsync(
-            x => x.MediaSourceId == source.Id && x.ExternalId == externalId,
-            cancellationToken);
+        var existing = FindTrackedItem(source.Id, externalId)
+            ?? await _db.MediaItems.FirstOrDefaultAsync(
+                x => x.MediaSourceId == source.Id && x.ExternalId == externalId,
+                cancellationToken);
 
         var rawSummary = item.Description;
         var rawText = item.FullText ?? item.Description;
@@ -113,7 +121,7 @@ public sealed class PunditMediaItemService
                 ProcessingStatus = MediaItemProcessingStatus.Pending,
                 LastSyncedAt = DateTimeOffset.UtcNow
             });
-            return (1, 0, 0, true);
+            return await PersistUpsertAsync((1, 0, 0, true), cancellationToken);
         }
 
         var textChanged = existing.RawText != rawText;
@@ -144,9 +152,81 @@ public sealed class PunditMediaItemService
             existing.ContentHash = StringLimits.Truncate(hash, StringLimits.ContentHash);
             existing.TranscriptSnippet = StringLimits.Truncate(rawText, 280);
             existing.LastSyncedAt = DateTimeOffset.UtcNow;
-            return (0, 1, 0, textChanged);
+            return await PersistUpsertAsync((0, 1, 0, textChanged), cancellationToken);
         }
 
         return (0, 0, 1, false);
     }
+
+    private async Task<(int Created, int Updated, int Skipped, bool TextChanged)> PersistUpsertAsync(
+        (int Created, int Updated, int Skipped, bool TextChanged) result,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            return result;
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            DiscardAddedMediaItems();
+            return (0, 0, 1, false);
+        }
+    }
+
+    private async Task<MediaSource?> FindSourceAsync(
+        string sourceType,
+        string normalizedExternalId,
+        string? rssUrl,
+        CancellationToken ct)
+    {
+        var local = _db.MediaSources.Local.FirstOrDefault(x =>
+            x.SourceType == sourceType && x.ExternalId == normalizedExternalId);
+        if (local is not null)
+        {
+            return local;
+        }
+
+        var existing = await _db.MediaSources.FirstOrDefaultAsync(
+            x => x.SourceType == sourceType && x.ExternalId == normalizedExternalId,
+            ct);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        if (string.IsNullOrWhiteSpace(rssUrl))
+        {
+            return null;
+        }
+
+        local = _db.MediaSources.Local.FirstOrDefault(x =>
+            x.SourceType == sourceType && x.RssUrl == rssUrl);
+        if (local is not null)
+        {
+            return local;
+        }
+
+        return await _db.MediaSources.FirstOrDefaultAsync(
+            x => x.SourceType == sourceType && x.RssUrl == rssUrl,
+            ct);
+    }
+
+    private MediaItem? FindTrackedItem(Guid sourceId, string externalId) =>
+        _db.MediaItems.Local.FirstOrDefault(x =>
+            x.MediaSourceId == sourceId && x.ExternalId == externalId);
+
+    private void DiscardAddedMediaItems()
+    {
+        foreach (var entry in _db.ChangeTracker.Entries<MediaItem>()
+                     .Where(e => e.State == EntityState.Added)
+                     .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+    }
+
+    private static bool IsUniqueViolation(DbUpdateException ex) =>
+        ex.InnerException is PostgresException pg &&
+        pg.SqlState == PostgresErrorCodes.UniqueViolation;
 }

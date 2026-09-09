@@ -4,6 +4,7 @@ using BanterApp.Api.Integrations.FootballBanter;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.Rss;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace BanterApp.Api.Integrations.Pundits;
@@ -61,59 +62,77 @@ public sealed class RssOpinionSyncJob
             {
                 var url = feed.Url;
                 var publication = feed.Name;
-                var source = await _mediaItems.EnsureSourceAsync(
-                    publication,
-                    "rss",
-                    url,
-                    rssUrl: url,
-                    siteUrl: url,
-                    ct: cancellationToken);
+                var feedCreated = 0;
+                var feedUpdated = 0;
 
-                IReadOnlyList<Media.Dtos.MediaItemDto> articles;
                 try
                 {
-                    articles = await _rss.FetchFeedAsync(
-                        url,
-                        _options.MaxItemsPerSource,
+                    var source = await _mediaItems.EnsureSourceAsync(
                         publication,
-                        includeFullContent: true,
-                        cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    failed++;
-                    _logger.LogWarning(ex, "RSS feed fetch failed for {Url}.", url);
-                    await _tracker.LogErrorAsync(Provider, JobId, "rss_feed", ex.Message, run.Id, url, cancellationToken);
-                    continue;
-                }
+                        "rss",
+                        url,
+                        rssUrl: url,
+                        siteUrl: url,
+                        ct: cancellationToken);
 
-                foreach (var article in articles)
-                {
+                    IReadOnlyList<Media.Dtos.MediaItemDto> articles;
                     try
                     {
-                        var (c, u, _, _) = await _mediaItems.UpsertItemAsync(source, article, cancellationToken);
-                        created += c;
-                        updated += u;
+                        articles = await _rss.FetchFeedAsync(
+                            url,
+                            _options.MaxItemsPerSource,
+                            publication,
+                            includeFullContent: true,
+                            cancellationToken);
                     }
                     catch (Exception ex)
                     {
                         failed++;
-                        _logger.LogWarning(ex, "Failed to upsert RSS item {ExternalId}.", article.ExternalId);
-                        await _tracker.LogErrorAsync(
-                            Provider,
-                            JobId,
-                            "media_item",
-                            ex.Message,
-                            run.Id,
-                            article.ExternalId,
-                            cancellationToken);
+                        _logger.LogWarning(ex, "RSS feed fetch failed for {Url}.", url);
+                        await _tracker.LogErrorAsync(Provider, JobId, "rss_feed", ex.Message, run.Id, url, cancellationToken);
+                        continue;
                     }
-                }
-            }
 
-            if (created > 0 || updated > 0)
-            {
-                await _db.SaveChangesAsync(cancellationToken);
+                    foreach (var article in articles)
+                    {
+                        try
+                        {
+                            var (c, u, _, _) = await _mediaItems.UpsertItemAsync(source, article, cancellationToken);
+                            feedCreated += c;
+                            feedUpdated += u;
+                        }
+                        catch (Exception ex)
+                        {
+                            failed++;
+                            _logger.LogWarning(ex, "Failed to upsert RSS item {ExternalId}.", article.ExternalId);
+                            await _tracker.LogErrorAsync(
+                                Provider,
+                                JobId,
+                                "media_item",
+                                ex.Message,
+                                run.Id,
+                                article.ExternalId,
+                                cancellationToken);
+                        }
+                    }
+
+                    await _db.SaveChangesAsync(cancellationToken);
+                    created += feedCreated;
+                    updated += feedUpdated;
+                }
+                catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException pg &&
+                                                   pg.SqlState == Npgsql.PostgresErrorCodes.UniqueViolation)
+                {
+                    _db.ChangeTracker.Clear();
+                    _logger.LogWarning(ex, "Skipped duplicate RSS media rows for {Url}.", url);
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    _db.ChangeTracker.Clear();
+                    _logger.LogWarning(ex, "RSS feed sync failed for {Url}.", url);
+                    await _tracker.LogErrorAsync(Provider, JobId, "rss_feed", ex.Message, run.Id, url, cancellationToken);
+                }
             }
 
             await _tracker.CompleteAsync(run, created, updated, failed, ct: cancellationToken);
@@ -137,12 +156,16 @@ public sealed class RssOpinionSyncJob
         {
             return catalog
                 .Select(f => (f.Name, Url: f.RssUrl.Trim()))
+                .GroupBy(f => f.Url, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
                 .ToList();
         }
 
         return _options.RssFeedUrls
             .Where(u => !string.IsNullOrWhiteSpace(u))
             .Select(u => (Name: ResolvePublicationName(u.Trim()), Url: u.Trim()))
+            .GroupBy(f => f.Url, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
             .ToList();
     }
 

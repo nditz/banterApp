@@ -54,21 +54,21 @@ None.
 
 ## Verification Results
 - Completion-loop report: `plans/balltakes-remediation/VERIFICATION-REPORT.md`.
-- Production (2026-09-09, **Phase 1 still not deployed**):
-  - `GET https://api.balltakes.com/api/health` → `status=ok`, `matchCount=20`, no `overdueUnfinishedFixtures`.
-  - `GET /api/matchweeks/current` → number **2**, `pl26-mw2-*`, no `status` envelope.
-  - `GET /api/standings` → bare array, 20 clubs, Chelsea/Fulham played 0.
-  - `GET /api/matches/upcoming` → 11 overdue `pl26-*` `NS` rows (including MW1 Fulham–Chelsea still `NS`).
-  - Public `/` HTML: Open picks **0**.
-- Local tests/lint/typecheck/production build passed after the read-path + client stale inference fixes.
-- Interactive browser walkthrough of the new UI was not available. Re-verify `/`, `/matchweek`, `/table` after deploy.
+- Production re-run (2026-09-09, **after `main` `#37` / `46ba2b2`**):
+  - `GET https://api.balltakes.com/api/health` → `status=degraded`, `matchCount=20`, `lastScoreSyncStatus=failed`, `overdueUnfinishedFixtures=true`. Error: “Score sync fetched 0 Premier League fixtures from the live sports provider.”
+  - `GET /api/matchweeks/current` → number **2**, envelope `status=stale`, `source=mock`, `official=false`, 10× `pl26-mw2-*` all `NS`.
+  - `GET /api/standings` → envelope `{ status, rows }`, `status=stale`, 20 clubs, Chelsea/Fulham played 0.
+  - `GET /api/matches/upcoming` → **[]** (stored PL calendar exists; overdue NS rows are not upcoming).
+  - Public `/` HTML: Open picks **0**; no World Cup copy; no `adsbygoogle.js`.
+- Local: backend 307 passed; frontend Vitest 21 passed; eslint + `tsc --noEmit` clean. Vercel production READY on `46ba2b2`.
+- Interactive browser walkthrough of stale banners / ad rails was not done (R3).
 
 ## Acceptance Criteria Status
 - [ ] Passed
-- [x] Partial — football jobs/errors/ads/empty-states addressed in code; live current matchweek still blocked on API-Football returning real 2026/27 fixtures
-- [x] Blocked — production is still on the pre–Phase 1 API; Phase 1 is **not marked complete**
+- [x] Partial — honesty path deployed (stale/error visible, jobs fail loudly); live current matchweek still blocked on API-Football returning real 2026/27 fixtures
+- [x] Blocked — R2 live ingest (0 PL fixtures from API-Football). Previous R1 (not deployed) is closed.
 
-**Phase complete:** no. Do not start Phase 2 until a post-deploy probe shows stale/error (or live MW≥3) and jobs are visible.
+**Phase complete:** no. Do not start Phase 2 until live `apifb-*` MW≥3 exists **or** stale mock + failed score-sync is explicitly accepted as the integrity end state.
 
 Football data (this phase):
 - Current matchweek resolver reused (not rewritten).

@@ -323,7 +323,11 @@ public sealed class MediaIngestJob
             CreatedAt = DateTimeOffset.UtcNow
         };
         _db.MediaSources.Add(source);
-        await _db.SaveChangesAsync(ct);
+        if (!_db.ChangeTracker.Entries<MediaItem>().Any(e => e.State == EntityState.Added))
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+
         return source;
     }
 
@@ -358,9 +362,16 @@ public sealed class MediaIngestJob
         CancellationToken cancellationToken)
     {
         var externalId = ExternalIdNormalizer.Normalize(item.ExternalId);
-        var existing = await _db.MediaItems.FirstOrDefaultAsync(
-            x => x.MediaSourceId == source.Id && x.ExternalId == externalId,
-            cancellationToken);
+        if (string.IsNullOrWhiteSpace(externalId))
+        {
+            return (0, 0, 0);
+        }
+
+        var existing = _db.MediaItems.Local.FirstOrDefault(x =>
+                x.MediaSourceId == source.Id && x.ExternalId == externalId)
+            ?? await _db.MediaItems.FirstOrDefaultAsync(
+                x => x.MediaSourceId == source.Id && x.ExternalId == externalId,
+                cancellationToken);
 
         if (existing is null)
         {

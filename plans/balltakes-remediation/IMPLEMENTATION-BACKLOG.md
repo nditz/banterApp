@@ -12,17 +12,17 @@ P0 items that make the live product look empty or silently broken.
 
 | ID | Item | Status today | Action | Files / services |
 |---|---|---|---|---|
-| P1-01 | Live sports provider | **Confirmed live, still serving mock rows** | Production is `apifootball-live` but DB has 20 `pl26-*` fixtures because the provider used to fall back to mock. Live calls now throw instead of substituting mock. | Render env, `ApiFootballProvider`, `ScoreSyncJob` |
-| P1-02 | Current matchweek fixtures | **Stale in prod until live ingest; API envelope not deployed** | APIs label overdue mock MW2 as `stale`. Do **not** rewrite `CurrentMatchweek.Resolve`. Read endpoints no longer live-substitute when PL rows exist. | `MatchEndpoints.GetCurrentMatchweek`, `CurrentMatchweek` |
-| P1-03 | Mock calendar ceiling | **Done** | Mock calendar extended through MW4 (Sep 2026) and marked unofficial. | `MockSportsDataProvider.BuildFixtures` |
-| P1-04 | Standings empty vs failed | **Done in code; prod still bare array** | Envelope `{ status, rows, error }`; UI distinguishes empty / error / stale. | `GetStandings`, `LeagueTable` |
-| P1-05 | Score/standings Hangfire silence | **Done in code; unverified in prod** | Rethrow after `FailAsync`; `AttemptsExceededAction.Fail`; admin `NextRunAt` + last error. | `ScoreSyncJob`, `StandingsSyncJob`, `JobRegistryService` |
-| P1-06 | Frontend empty/error/stale | **Done in code; needs frontend deploy** | Stopped silent mock fallback. Distinct copy for loading / empty / error / stale. Client infers stale/`pl26-*` unofficial if the API omits those fields. | `MatchweekBoard`, `PredictionCenter`, `LeagueTable`, `useMatches`, `football-dataset.ts` |
+| P1-01 | Live sports provider | **Deployed honesty; live ingest still empty** | Production is `apifootball-live`. Score-sync **failed** with 0 PL fixtures and did **not** mock-fill. DB still 20 `pl26-*`. | Render env, `ApiFootballProvider`, `ScoreSyncJob` |
+| P1-02 | Current matchweek fixtures | **Stale visible in prod** | Envelope `status=stale`, `source=mock`, unofficial MW2. Do **not** rewrite `CurrentMatchweek.Resolve`. | `MatchEndpoints.GetCurrentMatchweek`, `CurrentMatchweek` |
+| P1-03 | Mock calendar ceiling | **Done** | Mock calendar extended through MW4 (Sep 2026) and marked unofficial. Prod DB still MW1–2 only. | `MockSportsDataProvider.BuildFixtures` |
+| P1-04 | Standings empty vs failed | **Done in prod** | Envelope `{ status, rows, error }` with `status=stale`. UI distinguishes empty / error / stale. | `GetStandings`, `LeagueTable` |
+| P1-05 | Score/standings Hangfire silence | **Done in prod (public health)** | `lastScoreSyncStatus=failed` on `/api/health`. Admin jobs UI 401 without auth. | `ScoreSyncJob`, `StandingsSyncJob`, `JobRegistryService` |
+| P1-06 | Frontend empty/error/stale | **Deployed; not click-verified** | Stopped silent mock fallback. Stale copy in production JS. | `MatchweekBoard`, `PredictionCenter`, `LeagueTable`, `useMatches`, `football-dataset.ts` |
 | P1-07 | AdSense without consent | **Done (stopgap)** | Do not load `AdSenseLoader` / slots until advertising consent is granted. No CMP UI (Phase 8). | `AdSenseLoader`, `AdSlot`, `advertising-consent.ts` |
-| P1-08 | Dead ad rails | **Done** | Collapse `PageWithSideAds` when slots or consent are missing. | `PageWithSideAds`, `AdSlot` |
-| P1-09 | Production data proof | **Done** | Recorded in `IMPLEMENTATION-LOG.md` (20 matches, MW2 stale, standings MW1-shaped). | Admin `/admin/jobs`, `/admin/health`, `/api/health` |
+| P1-08 | Dead ad rails | **Done (not click-verified)** | Collapse `PageWithSideAds` when slots or consent are missing. | `PageWithSideAds`, `AdSlot` |
+| P1-09 | Production data proof | **Done** | Re-verified 2026-09-09 after `main` `#37` / `46ba2b2`. See `VERIFICATION-REPORT.md`. | Admin `/admin/jobs`, `/admin/health`, `/api/health` |
 
-**Phase 1 gate:** local code covers visible failures, stale labels, job visibility, ad collapse, and stored-calendar read-path honesty. **Not complete:** production (2026-09-09) still serves the old health/current-week/standings shapes. Do not start Phase 2 until post-deploy verification in `VERIFICATION-REPORT.md` shows `stale`/`error` (or live MW≥3) and jobs are observable.
+**Phase 1 gate:** integrity deploy **passed** (stale/error visible; jobs fail loudly). **Not complete:** live ingest still returns 0 PL fixtures (R2). Do not start Phase 2 until live `apifb-*` MW≥3 exists **or** stale mock + failed score-sync is explicitly accepted as the integrity end state.
 
 **Out of scope:** follow pundits, receipts, Studio packs, nav IA, design polish.
 
