@@ -255,6 +255,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+
         modelBuilder.Entity<PunditFollow>(e =>
         {
             e.ToTable("pundit_follows", t => t.HasCheckConstraint(

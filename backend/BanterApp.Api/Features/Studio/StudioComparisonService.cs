@@ -47,6 +47,7 @@ public sealed class StudioComparisonService(
             myPreds = [];
         }
 
+
         if (!matchweekMode && myPreds.Count == 0)
         {
             return new StudioComparisonResponse(

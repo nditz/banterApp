@@ -60,6 +60,7 @@ describe("product navigation IA", () => {
     );
   });
 
+
   it("demotes Table from mobile primary", () => {
     expect(labels(MOBILE_BOTTOM_NAV)).not.toContain("Table");
     expect(labels(DESKTOP_OVERFLOW_NAV)).toContain("Table");

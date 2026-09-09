@@ -2939,6 +2939,7 @@ namespace BanterApp.Api.Data.Migrations
                     b.Navigation("User");
                 });
 
+
             modelBuilder.Entity("BanterApp.Api.Data.Entities.PunditFollow", b =>
                 {
                     b.HasOne("BanterApp.Api.Data.Entities.AnonymousUser", "AnonymousUser")
