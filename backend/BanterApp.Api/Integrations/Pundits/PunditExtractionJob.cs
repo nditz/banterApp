@@ -56,8 +56,7 @@ public sealed class PunditExtractionJob
             var batchSize = Math.Clamp(_options.ExtractionBatchSize, 1, 20);
             var items = await _db.MediaItems
                 .Include(i => i.MediaSource)
-                .Where(i => (i.ProcessingStatus == MediaItemProcessingStatus.Enriched ||
-                             i.ProcessingStatus == MediaItemProcessingStatus.Failed) &&
+                .Where(i => i.ProcessingStatus == MediaItemProcessingStatus.Enriched &&
                             i.MediaSource.ExtractPredictions &&
                             i.MediaSource.IsActive)
                 .OrderBy(i => i.LastSyncedAt)
@@ -73,10 +72,18 @@ public sealed class PunditExtractionJob
                     continue;
                 }
 
+                var sourceText = item.RawText;
+                if (!SourceTextQuality.IsUsable(sourceText, _options.MinSourceTextLength) ||
+                    SourceTextQuality.IsTitleDescriptionFallback(item.Title, item.Description, sourceText))
+                {
+                    item.ProcessingStatus = MediaItemProcessingStatus.Skipped;
+                    item.ProcessingError = "Source text is not a usable transcript or article body.";
+                    continue;
+                }
+
                 try
                 {
                     var sourceType = MapSourceType(item.MediaSource.SourceType);
-                    var sourceText = item.RawText ?? item.Description ?? item.Title;
                     var extraction = await _extractor.ExtractAsync(
                         sourceType,
                         item.Publication ?? item.MediaSource.Name,
@@ -84,14 +91,13 @@ public sealed class PunditExtractionJob
                         item.Title,
                         item.PublishedAt,
                         item.Author,
-                        sourceText,
+                        sourceText!,
                         cancellationToken);
 
                     if (extraction is null || extraction.Pundits.Count == 0)
                     {
-                        item.ProcessingStatus = MediaItemProcessingStatus.Failed;
-                        item.ProcessingError = "Extraction returned no pundit opinions.";
-                        failed++;
+                        item.ProcessingStatus = MediaItemProcessingStatus.Skipped;
+                        item.ProcessingError = "No grounded pundit opinions in source text.";
                         continue;
                     }
 

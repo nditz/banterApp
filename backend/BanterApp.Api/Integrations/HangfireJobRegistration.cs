@@ -35,7 +35,8 @@ public static class HangfireJobRegistration
         FootballPlayerStatsSyncJob.JobId,
         FootballTopScorersSyncJob.JobId,
         FootballTopAssistsSyncJob.JobId,
-        FootballReferenceFullSyncJob.JobId
+        FootballReferenceFullSyncJob.JobId,
+        GifQueryRefreshJob.JobId
     ];
 
     public static void RegisterRecurringJobs(WebApplication app)
@@ -243,6 +244,16 @@ public static class HangfireJobRegistration
                 "*/30 * * * *");
         }
 
+        if (!IsPaused(pausedOrDisabled, "gif.query.refresh"))
+        {
+            var gifInterval = Math.Clamp(jobs.GifQueryRefreshIntervalMinutes, 60, 1440);
+            var gifCron = BuildStaggeredCron(gifInterval, jobs.GifQueryRefreshStartMinute);
+            recurring.AddOrUpdate<GifQueryRefreshJob>(
+                GifQueryRefreshJob.JobId,
+                job => job.SyncAsync(CancellationToken.None),
+                gifCron);
+        }
+
         recurring.AddOrUpdate<FootballReferenceFullSyncJob>(
             FootballReferenceFullSyncJob.JobId,
             job => job.SyncAsync(CancellationToken.None),
@@ -318,6 +329,10 @@ public static class HangfireJobRegistration
                 break;
             case FootballTopAssistsSyncJob.JobId:
                 recurring.AddOrUpdate<FootballTopAssistsSyncJob>(FootballTopAssistsSyncJob.JobId, j => j.SyncAsync(CancellationToken.None), "*/30 * * * *");
+                break;
+            case GifQueryRefreshJob.JobId:
+                recurring.AddOrUpdate<GifQueryRefreshJob>(GifQueryRefreshJob.JobId, j => j.SyncAsync(CancellationToken.None),
+                    BuildStaggeredCron(Math.Clamp(jobs.GifQueryRefreshIntervalMinutes, 60, 1440), jobs.GifQueryRefreshStartMinute));
                 break;
             case FootballReferenceFullSyncJob.JobId:
                 recurring.AddOrUpdate<FootballReferenceFullSyncJob>(FootballReferenceFullSyncJob.JobId, j => j.SyncAsync(CancellationToken.None), Cron.Never());

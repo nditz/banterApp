@@ -28,7 +28,32 @@ public class FootballDatasetStatusTests
     {
         Assert.True(FootballDatasetStatus.LooksLikeMockIds(["pl26-mw2-1", "pl26-mw2-2"]));
         Assert.False(FootballDatasetStatus.LooksLikeMockIds(["apifb-123"]));
+        Assert.False(FootballDatasetStatus.LooksLikeMockIds(["fd-123"]));
         Assert.False(FootballDatasetStatus.LooksLikeMockIds([]));
+        Assert.True(FootballDatasetStatus.LooksLikeOfficialIds(["fd-123", "fd-456"]));
+        Assert.True(FootballDatasetStatus.LooksLikeOfficialIds(["apifb-1"]));
+        Assert.False(FootballDatasetStatus.LooksLikeOfficialIds(["overdue-mw2-1"]));
+        Assert.False(FootballDatasetStatus.LooksLikeOfficialIds(["pl26-mw2-1"]));
+        Assert.False(FootballDatasetStatus.LooksLikeOfficialIds([]));
+    }
+
+    [Theory]
+    [InlineData("footballdata")]
+    [InlineData("football-data")]
+    [InlineData("football_data")]
+    public void FootballDataAliases_AreLiveNotMock(string provider)
+    {
+        Assert.True(FootballDatasetStatus.IsFootballDataProvider(provider));
+        Assert.True(FootballDatasetStatus.IsLiveProvider(provider));
+        Assert.False(FootballDatasetStatus.IsMockProvider(provider));
+    }
+
+    [Fact]
+    public void ApiFootball_IsLiveNotMock()
+    {
+        Assert.True(FootballDatasetStatus.IsLiveProvider("apifootball"));
+        Assert.False(FootballDatasetStatus.IsMockProvider("apifootball"));
+        Assert.False(FootballDatasetStatus.IsFootballDataProvider("apifootball"));
     }
 
     [Fact]

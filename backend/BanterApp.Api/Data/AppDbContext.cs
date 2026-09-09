@@ -23,6 +23,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<GeneratedContent> GeneratedContents => Set<GeneratedContent>();
     public DbSet<NewsFeedItem> NewsFeedItems => Set<NewsFeedItem>();
     public DbSet<ReactionGifUse> ReactionGifUses => Set<ReactionGifUse>();
+    public DbSet<GifAsset> GifAssets => Set<GifAsset>();
+    public DbSet<GifSearchQuery> GifSearchQueries => Set<GifSearchQuery>();
     public DbSet<BanterContentHistory> BanterContentHistories => Set<BanterContentHistory>();
     public DbSet<TournamentBonusPick> TournamentBonusPicks => Set<TournamentBonusPick>();
     public DbSet<TournamentAwardResult> TournamentAwardResults => Set<TournamentAwardResult>();
@@ -247,6 +249,30 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(x => new { x.WindowId, x.Seed })
                 .IsUnique()
                 .HasFilter("\"Seed\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<GifAsset>(e =>
+        {
+            e.ToTable("gif_assets");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Url).HasMaxLength(GifAssetLimits.Url);
+            e.Property(x => x.Title).HasMaxLength(GifAssetLimits.Title);
+            e.Property(x => x.Description).HasMaxLength(GifAssetLimits.Description);
+            e.Property(x => x.Mood).HasMaxLength(GifAssetLimits.Mood);
+            e.Property(x => x.Tags).HasMaxLength(GifAssetLimits.Tags);
+            e.Property(x => x.Source).HasMaxLength(GifAssetLimits.Source);
+            e.HasIndex(x => x.Url).IsUnique();
+            e.HasIndex(x => new { x.IsActive, x.Mood });
+        });
+
+        modelBuilder.Entity<GifSearchQuery>(e =>
+        {
+            e.ToTable("gif_search_queries");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Phrase).HasMaxLength(GifSearchQueryLimits.Phrase);
+            e.Property(x => x.Source).HasMaxLength(GifSearchQueryLimits.Source);
+            e.HasIndex(x => x.Phrase).IsUnique();
+            e.HasIndex(x => new { x.IsActive, x.IsFootballRelated, x.LastSeenAtUtc });
         });
 
         modelBuilder.Entity<BanterContentHistory>(e =>

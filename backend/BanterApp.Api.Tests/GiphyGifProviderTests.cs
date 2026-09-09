@@ -68,6 +68,19 @@ public class GiphyGifProviderTests
     }
 
     [Fact]
+    public void ExtractSearchPhrases_ParsesTrendingSearchesAndTags()
+    {
+        using var trending = JsonDocument.Parse("""{ "data": ["happy birthday", "premier league", "goal"] }""");
+        using var tags = JsonDocument.Parse("""{ "data": [{ "name": "epl meme" }, { "name": "haaland" }] }""");
+
+        var searches = GiphyResponseParser.ExtractSearchPhrases(trending.RootElement);
+        var tagNames = GiphyResponseParser.ExtractSearchPhrases(tags.RootElement);
+
+        Assert.Equal(new[] { "happy birthday", "premier league", "goal" }, searches);
+        Assert.Equal(new[] { "epl meme", "haaland" }, tagNames);
+    }
+
+    [Fact]
     public void FromUrl_UsesMediaIdNotCdnHost()
     {
         Assert.Equal(

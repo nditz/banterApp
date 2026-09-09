@@ -16,8 +16,8 @@ namespace BanterApp.Api.Integrations.SportsData;
 public sealed class StandingsSyncJob
 {
     public const string JobId = "standings-sync";
-    private const string Provider = "api_football";
 
+    private readonly ISportsDataProvider _sports;
     private readonly ISportsDataEnrichment _enrichment;
     private readonly IEnumerable<ISportsDataFallbackProvider> _fallbacks;
     private readonly AppDbContext _db;
@@ -26,6 +26,7 @@ public sealed class StandingsSyncJob
     private readonly ILogger<StandingsSyncJob> _logger;
 
     public StandingsSyncJob(
+        ISportsDataProvider sports,
         ISportsDataEnrichment enrichment,
         IEnumerable<ISportsDataFallbackProvider> fallbacks,
         AppDbContext db,
@@ -33,6 +34,7 @@ public sealed class StandingsSyncJob
         IOptions<SportsDataOptions> options,
         ILogger<StandingsSyncJob> logger)
     {
+        _sports = sports;
         _enrichment = enrichment;
         _db = db;
         _tracker = tracker;
@@ -41,10 +43,17 @@ public sealed class StandingsSyncJob
         _fallbacks = fallbacks;
     }
 
+    private string SyncProviderName =>
+        FootballDatasetStatus.IsFootballDataProvider(_options.Provider)
+            ? "football_data"
+            : FootballDatasetStatus.IsMockProvider(_options.Provider)
+                ? "mock"
+                : "api_football";
+
     [AutomaticRetry(Attempts = 1, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
     public async Task SyncAsync(CancellationToken cancellationToken)
     {
-        var run = await _tracker.StartAsync(Provider, JobId, cancellationToken);
+        var run = await _tracker.StartAsync(SyncProviderName, JobId, cancellationToken);
         var created = 0;
         var updated = 0;
 
@@ -54,13 +63,24 @@ public sealed class StandingsSyncJob
                 new Dictionary<string, IReadOnlyList<StandingDto>>(StringComparer.OrdinalIgnoreCase);
             try
             {
-                standings = await _enrichment.GetAllStandingsAsync(cancellationToken);
+                var primary = await _sports.GetStandingsAsync("PL", cancellationToken);
+                if (primary.Count > 0)
+                {
+                    standings = new Dictionary<string, IReadOnlyList<StandingDto>>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["PL"] = primary
+                    };
+                }
+                else
+                {
+                    standings = await _enrichment.GetAllStandingsAsync(cancellationToken);
+                }
             }
             catch (SportsDataUnavailableException ex)
             {
                 _logger.LogWarning(ex, "Live standings provider failed; computing from stored fixtures if possible.");
                 await _tracker.LogErrorAsync(
-                    Provider,
+                    SyncProviderName,
                     JobId,
                     "standings",
                     ex.Message,
@@ -113,7 +133,7 @@ public sealed class StandingsSyncJob
                     var existing = await _db.StandingRows.FirstOrDefaultAsync(
                         x => x.GroupKey == "PL" &&
                              x.TeamCode == row.Team.Code &&
-                             x.Provider == Provider,
+                             x.Provider == SyncProviderName,
                         cancellationToken);
 
                     if (existing is null)
@@ -135,7 +155,7 @@ public sealed class StandingsSyncJob
                             GoalsAgainst = row.GoalsAgainst,
                             GoalDiff = row.GoalDifference,
                             Points = row.Points,
-                            Provider = Provider,
+                            Provider = SyncProviderName,
                             LastSyncedAt = DateTimeOffset.UtcNow
                         });
                         created++;
@@ -161,7 +181,7 @@ public sealed class StandingsSyncJob
                     await _tracker.UpsertExternalIdAsync(
                         "team",
                         row.Team.Code,
-                        Provider,
+                        SyncProviderName,
                         row.Team.Id,
                         ct: cancellationToken);
                 }

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { MatchweekBoard } from "@/components/home/MatchweekBoard";
-import { PageWithSideAds } from "@/components/layout/PageWithSideAds";
 
 export const metadata: Metadata = {
   title: "Matchweek picks",
@@ -11,8 +10,7 @@ export const metadata: Metadata = {
 
 export default function MatchweekPage() {
   return (
-    <PageWithSideAds>
-      <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-3xl space-y-5">
         <header>
           <p className="page-kicker">Premier League 2026/27</p>
           <h1 className="mt-3 text-2xl font-bold sm:text-3xl">Matchweek picks</h1>
@@ -23,6 +21,5 @@ export default function MatchweekPage() {
         </header>
         <MatchweekBoard />
       </div>
-    </PageWithSideAds>
   );
 }

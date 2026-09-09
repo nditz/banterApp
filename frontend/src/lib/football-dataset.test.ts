@@ -5,7 +5,7 @@ import {
   datasetStatusFromMatchweek,
   isUnofficialMatchweek,
 } from "./football-dataset";
-import { canRequestAds } from "./ads";
+import { canRequestAds, resolveAdSlotId } from "./ads";
 
 describe("advertising consent", () => {
   afterEach(() => {
@@ -15,6 +15,7 @@ describe("advertising consent", () => {
   it("defaults to unset without a window", () => {
     expect(readAdvertisingConsent()).toBe("unset");
     expect(hasAdvertisingConsent()).toBe(false);
+    expect(canRequestAds()).toBe(true);
   });
 
   it("does not treat terms consent as advertising consent", () => {
@@ -28,9 +29,22 @@ describe("advertising consent", () => {
       },
     });
     expect(hasAdvertisingConsent()).toBe(false);
-    expect(canRequestAds()).toBe(false);
+    expect(canRequestAds()).toBe(true);
     setAdvertisingConsent("granted");
     expect(hasAdvertisingConsent()).toBe(true);
+    expect(canRequestAds()).toBe(true);
+    setAdvertisingConsent("denied");
+    expect(canRequestAds()).toBe(false);
+  });
+});
+
+describe("ad slots", () => {
+  it("uses the ball-take-ads display unit everywhere by default", () => {
+    expect(resolveAdSlotId()).toBe("6603089832");
+    expect(resolveAdSlotId("feed-2")).toBe("6603089832");
+    expect(resolveAdSlotId("rail-left")).toBe("6603089832");
+    expect(resolveAdSlotId("rail-right")).toBe("6603089832");
+    expect(resolveAdSlotId("sidebar-main")).toBe("6603089832");
   });
 });
 

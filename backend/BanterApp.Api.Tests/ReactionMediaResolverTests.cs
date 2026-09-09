@@ -1,6 +1,8 @@
 using BanterApp.Api.Features.Feed;
 using BanterApp.Api.Integrations.Media;
+using BanterApp.Api.Tests.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace BanterApp.Api.Tests;
@@ -44,6 +46,29 @@ public class ReactionMediaResolverTests
             Assert.True(FeedGifCatalog.IsBundledSticker(media.Url));
             Assert.True(seen.Add(media.Url), $"Repeated meme/sticker {media.Url} for seed {seed}");
         }
+    }
+
+    [Fact]
+    public async Task ResolveAsync_LocalLibraryBeatsLiveProviderWhenMixChanceIsZero()
+    {
+        await using var db = TestDbContextFactory.Create();
+        var provider = new RecordingGifProvider();
+        var resolver = new ReactionMediaResolver(
+            provider,
+            new InMemoryReactionGifLedger(),
+            NullLogger<ReactionMediaResolver>.Instance,
+            new GifLibraryService(db),
+            gifOptions: Options.Create(new ReactionGifOptions
+            {
+                PreferLocalLibrary = true,
+                LiveMixChance = 0,
+                MaxLiveLookupsPerResolve = 1,
+            }));
+
+        var media = await resolver.ResolveAsync(["celebration"], "celebrate", seed: 42);
+
+        Assert.True(FeedGifCatalog.IsBundledSticker(media.Url));
+        Assert.Empty(provider.Queries);
     }
 
     [Fact]

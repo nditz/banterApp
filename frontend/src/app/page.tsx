@@ -6,7 +6,6 @@ import { HomeWelcomePanel } from "@/components/home/HomeWelcomePanel";
 import { LeagueTable } from "@/components/home/LeagueTable";
 import { PredictionCenter } from "@/components/home/PredictionCenter";
 import { RankingsPanel } from "@/components/home/RankingsPanel";
-import { PageWithSideAds } from "@/components/layout/PageWithSideAds";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -28,7 +27,7 @@ const stickyScrollSideClass = cn(
 
 export default function HomePage() {
   return (
-    <PageWithSideAds>
+    <>
       <HomeWelcomePanel />
       <HomeStatsBar />
       <HomeQuickNav />
@@ -55,6 +54,6 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-    </PageWithSideAds>
+    </>
   );
 }

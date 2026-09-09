@@ -2,6 +2,7 @@ using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Leagues;
+using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Features.Pundits;
 using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
@@ -72,11 +73,6 @@ public static class LeaderboardEndpoints
                 e.Id == currentId))
             .ToList();
 
-        if (ranked.Count == 0)
-        {
-            return Results.Ok(BuildMockView(seed: 7, totalPlayers: 1842, myRank: 137, myPoints: 86));
-        }
-
         return Results.Ok(ToView(ranked));
     }
 
@@ -123,6 +119,22 @@ public static class LeaderboardEndpoints
         });
     }
 
+    private static async Task<IResult> GetDefaultLeagueLeaderboard(
+        AppDbContext db,
+        IUserContext userContext,
+        TournamentBonusScoringService bonusScoring,
+        CancellationToken ct)
+    {
+        var league = await db.Leagues.AsNoTracking()
+            .FirstOrDefaultAsync(l => l.Kind == LeagueKind.Global, ct);
+        if (league is null)
+        {
+            return Results.Ok(EmptyView());
+        }
+
+        return await GetLeagueLeaderboard(league.Id, db, userContext, bonusScoring, ct);
+    }
+
     private static async Task<IResult> GetPunditLeaderboard(AppDbContext db, CancellationToken ct)
     {
         var pundits = await db.Pundits
@@ -130,18 +142,18 @@ public static class LeaderboardEndpoints
             .Include(p => p.Predictions)
             .ThenInclude(pp => pp.Match)
             .Include(p => p.Opinions)
+            .ThenInclude(o => o.Match)
             .ToListAsync(ct);
-
-        if (pundits.Count == 0)
-        {
-            return Results.Ok(Array.Empty<PunditLeaderboardEntry>());
-        }
 
         var entries = pundits
             .Select(p =>
             {
                 var finished = p.Predictions
-                    .Where(pp => pp.Match is { Status: "FT" })
+                    .Where(pp => pp.Match is { Status: "FT" } &&
+                                 PremierLeagueMatchScope.IsPremierLeague(pp.Match))
+                    .ToList();
+                var plOpinions = p.Opinions
+                    .Where(o => o.Match is not null && PremierLeagueMatchScope.IsPremierLeague(o.Match))
                     .ToList();
                 var correct = finished.Count(pp =>
                 {
@@ -153,24 +165,30 @@ public static class LeaderboardEndpoints
                 });
 
                 var display = PunditDisplayResolver.Resolve(p);
-                var total = finished.Count > 0 ? finished.Count : p.Opinions.Count;
-                var score = finished.Count > 0 ? correct : p.Opinions.Count;
+                var total = finished.Count > 0 ? finished.Count : 0;
+                var score = finished.Count > 0 ? correct : 0;
 
-                return new PunditLeaderboardEntry(
-                    p.Id,
-                    display.DisplayName,
-                    display.DeskLabel,
-                    display.Archetype,
-                    display.ParodyCue,
-                    display.StyleSlug,
-                    display.IsFictionalPersona,
-                    display.AttributionNote,
-                    display.AvatarSeed,
-                    display.SourceUrl,
-                    score,
-                    total,
-                    0);
+                return new
+                {
+                    HasPremierLeagueTake = finished.Count > 0 || plOpinions.Count > 0,
+                    Entry = new PunditLeaderboardEntry(
+                        p.Id,
+                        display.DisplayName,
+                        display.DeskLabel,
+                        display.Archetype,
+                        display.ParodyCue,
+                        display.StyleSlug,
+                        display.IsFictionalPersona,
+                        display.AttributionNote,
+                        display.AvatarSeed,
+                        display.SourceUrl,
+                        score,
+                        total,
+                        0)
+                };
             })
+            .Where(x => x.HasPremierLeagueTake)
+            .Select(x => x.Entry)
             .OrderByDescending(e => e.TotalPredictions > 0 && e.CorrectPredictions <= e.TotalPredictions
                 ? (double)e.CorrectPredictions / e.TotalPredictions
                 : 0)
@@ -183,11 +201,9 @@ public static class LeaderboardEndpoints
         return Results.Ok(entries);
     }
 
-    private static IResult GetDefaultLeagueLeaderboard() =>
-        Results.Ok(BuildMockView(seed: 21, totalPlayers: 64, myRank: 14, myPoints: 142));
+    private static IResult GetFriendsLeaderboard() => Results.Ok(EmptyView());
 
-    private static IResult GetFriendsLeaderboard() =>
-        Results.Ok(BuildMockView(seed: 42, totalPlayers: 18, myRank: 4, myPoints: 142));
+    private static LeaderboardView EmptyView() => new([], null, 0);
 
     /// <summary>Top 10 + the current user's pinned row + total player count (FPL-style).</summary>
     private static LeaderboardView ToView(IReadOnlyList<LeaderboardEntry> ranked)
@@ -195,39 +211,5 @@ public static class LeaderboardEndpoints
         var top = ranked.Take(TopCount).ToList();
         var me = ranked.FirstOrDefault(e => e.IsCurrentUser);
         return new LeaderboardView(top, me, ranked.Count);
-    }
-
-    private static LeaderboardView BuildMockView(int seed, int totalPlayers, int myRank, int myPoints)
-    {
-        string[] names =
-        [
-            "TitleChaser", "PenaltyProphet", "MatchweekMaven", "GoldenBootGazer",
-            "OffsideOracle", "HatTrickHero", "VARVeteran", "CornerKickKing",
-            "NutmegNinja", "ExtraTimeExpert", "StoppageSage", "TopBinTactician"
-        ];
-
-        var random = new Random(seed);
-        var basePoints = 150 + random.Next(40);
-
-        var top = Enumerable.Range(0, Math.Min(TopCount, totalPlayers))
-            .Select(i => new LeaderboardEntry(
-                Guid.NewGuid(),
-                names[i % names.Length],
-                basePoints - i * (3 + random.Next(4)),
-                12 + random.Next(8),
-                i + 1))
-            .ToList();
-
-        LeaderboardEntry? me = null;
-        if (myRank > 0 && myRank <= totalPlayers)
-        {
-            me = new LeaderboardEntry(null, "You", myPoints, 16, myRank, IsCurrentUser: true);
-            if (myRank <= TopCount)
-            {
-                top[myRank - 1] = me;
-            }
-        }
-
-        return new LeaderboardView(top, me, totalPlayers);
     }
 }

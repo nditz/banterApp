@@ -11,6 +11,7 @@ public class JobRegistryTests
     [InlineData("youtube.search.sync", "youtube-opinion-sync")]
     [InlineData("openai.opinion.extract", "pundit-extraction")]
     [InlineData("predictions.aggregate.refresh", "prediction-aggregate-refresh")]
+    [InlineData("gif.query.refresh", "gif-query-refresh")]
     public void FindByKey_MapsSpecKeysToHangfireIds(string key, string hangfireId)
     {
         var job = JobRegistry.FindByKey(key);

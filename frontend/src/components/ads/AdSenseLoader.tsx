@@ -4,8 +4,8 @@ import Script from "next/script";
 import { canRequestAds, ADSENSE_SCRIPT_SRC } from "@/lib/ads";
 
 /**
- * Loads the AdSense script once. Auto ads (configured in the AdSense dashboard)
- * inject units without requiring per-slot ids.
+ * Loads the AdSense script once for ca-pub-5886846159925642.
+ * Individual units are the "ball-take-ads" Display slot rendered by AdSlot.
  */
 export function AdSenseLoader() {
   if (!canRequestAds()) {

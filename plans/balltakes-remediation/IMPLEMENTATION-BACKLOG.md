@@ -12,17 +12,17 @@ P0 items that make the live product look empty or silently broken.
 
 | ID | Item | Status today | Action | Files / services |
 |---|---|---|---|---|
-| P1-01 | Live sports provider | **Deployed honesty; live ingest still empty** | Production is `apifootball-live`. Score-sync **failed** with 0 PL fixtures and did **not** mock-fill. DB still 20 `pl26-*`. | Render env, `ApiFootballProvider`, `ScoreSyncJob` |
+| P1-01 | Live sports provider | **Deployed honesty; live ingest still empty** | Production is `apifootball-live`. Latest score-sync **completed** with **0** items and did **not** mock-fill. DB still 20 `pl26-*`. football-data fallback is dropping `fd-*` rows (`Group` empty) until the local mapper ships. | Render env, `ApiFootballProvider`, `FootballDataFixtureMapper`, `ScoreSyncJob` |
 | P1-02 | Current matchweek fixtures | **Stale visible in prod** | Envelope `status=stale`, `source=mock`, unofficial MW2. Do **not** rewrite `CurrentMatchweek.Resolve`. | `MatchEndpoints.GetCurrentMatchweek`, `CurrentMatchweek` |
 | P1-03 | Mock calendar ceiling | **Done** | Mock calendar extended through MW4 (Sep 2026) and marked unofficial. Prod DB still MW1–2 only. | `MockSportsDataProvider.BuildFixtures` |
 | P1-04 | Standings empty vs failed | **Done in prod** | Envelope `{ status, rows, error }` with `status=stale`. UI distinguishes empty / error / stale. | `GetStandings`, `LeagueTable` |
-| P1-05 | Score/standings Hangfire silence | **Done in prod (public health)** | `lastScoreSyncStatus=failed` on `/api/health`. Admin jobs UI 401 without auth. | `ScoreSyncJob`, `StandingsSyncJob`, `JobRegistryService` |
+| P1-05 | Score/standings Hangfire silence | **Partial in prod** | Health still `degraded` (overdue). Latest score-sync is `completed` / 0 items / null error (weaker than previous `failed`). Admin jobs UI 401 without auth. | `ScoreSyncJob`, `StandingsSyncJob`, `JobRegistryService` |
 | P1-06 | Frontend empty/error/stale | **Deployed; not click-verified** | Stopped silent mock fallback. Stale copy in production JS. | `MatchweekBoard`, `PredictionCenter`, `LeagueTable`, `useMatches`, `football-dataset.ts` |
 | P1-07 | AdSense without consent | **Done (stopgap)** | Do not load `AdSenseLoader` / slots until advertising consent is granted. No CMP UI (Phase 8). | `AdSenseLoader`, `AdSlot`, `advertising-consent.ts` |
 | P1-08 | Dead ad rails | **Done (not click-verified)** | Collapse `PageWithSideAds` when slots or consent are missing. | `PageWithSideAds`, `AdSlot` |
-| P1-09 | Production data proof | **Done** | Re-verified 2026-09-09 after `main` `#37` / `46ba2b2`. See `VERIFICATION-REPORT.md`. | Admin `/admin/jobs`, `/admin/health`, `/api/health` |
+| P1-09 | Production data proof | **Done** | Re-verified 2026-09-09 after `main` `#38` / `b8ed852`. See `VERIFICATION-REPORT.md`. | Admin `/admin/jobs`, `/admin/health`, `/api/health` |
 
-**Phase 1 gate:** integrity deploy **passed** (stale/error visible; jobs fail loudly). **Not complete:** live ingest still returns 0 PL fixtures (R2). Do not start Phase 2 until live `apifb-*` MW≥3 exists **or** stale mock + failed score-sync is explicitly accepted as the integrity end state.
+**Phase 1 gate:** integrity deploy **passed** (stale/error visible; no mock-fill). **Not complete:** live ingest still returns 0 PL fixtures (R2). Do not start Phase 2 until live `fd-*` / `apifb-*` MW≥3 exists **or** stale mock + failed/empty score-sync is explicitly accepted as the integrity end state.
 
 **Out of scope:** follow pundits, receipts, Studio packs, nav IA, design polish.
 

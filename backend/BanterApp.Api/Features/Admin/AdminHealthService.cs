@@ -134,6 +134,7 @@ public sealed class AdminHealthService(
                 season = configuration.GetValue("SportsData:Season", 2026),
                 provider = sportsProvider,
                 apiKeyConfigured = !string.IsNullOrWhiteSpace(sportsApiKey),
+                footballDataTokenConfigured = !string.IsNullOrWhiteSpace(configuration["FootballData:Token"]),
                 usingMock = FootballDatasetStatus.IsMockProvider(sportsProvider),
                 fixtureCount,
                 matchweekCount,
@@ -199,13 +200,18 @@ public sealed class AdminHealthService(
         var openAiSummary = await providerUsageGuard.GetTodaySummaryAsync("openai", ct);
         var premierLeagueFixtures = await db.Matches.AnyAsync(ct);
         var sportsProvider = configuration["SportsData:Provider"]?.Trim().ToLowerInvariant() ?? "mock";
-        var sportsLive = sportsProvider == "apifootball" &&
-                         !string.IsNullOrWhiteSpace(configuration["SportsData:ApiKey"]);
+        var sportsLive = FootballDatasetStatus.IsFootballDataProvider(sportsProvider)
+            ? !string.IsNullOrWhiteSpace(configuration["FootballData:Token"])
+            : sportsProvider == "apifootball" &&
+              !string.IsNullOrWhiteSpace(configuration["SportsData:ApiKey"]);
         var plMatches = await db.Matches.WherePremierLeague().ToListAsync(ct);
         var fixturesFresh = plMatches.Count > 0 &&
                             !FootballDatasetStatus.HasOverdueUnfinished(
                                 plMatches.Select(m => ((string?)m.Status, m.KickoffTime)),
                                 DateTimeOffset.UtcNow);
+        var competitionOk = FootballDatasetStatus.IsFootballDataProvider(sportsProvider)
+            ? string.Equals(configuration["FootballData:CompetitionCode"] ?? "PL", "PL", StringComparison.OrdinalIgnoreCase)
+            : configuration.GetValue("SportsData:LeagueId", 0) == 39;
 
         return new
         {
@@ -219,9 +225,9 @@ public sealed class AdminHealthService(
                 Check("Admin user exists", adminExists),
                 Check("RSS sources configured", rssConfigured),
                 Check("Premier League fixtures present", premierLeagueFixtures),
-                Check("SportsData uses live API-Football", sportsLive),
+                Check("SportsData uses live football-data.org", sportsLive),
                 Check("Current fixtures are not overdue without results", fixturesFresh),
-                Check("SportsData league is Premier League (39)", configuration.GetValue("SportsData:LeagueId", 0) == 39),
+                Check("SportsData competition is Premier League", competitionOk),
                 Check("Job scheduler active", backgroundJobsOptions.Value.Enabled),
                 Check("Error logging active", true),
                 Check("Production environment variables valid", productionChecks),

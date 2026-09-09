@@ -98,45 +98,56 @@ public sealed class ContentEnrichmentJob
     {
         var sourceType = item.MediaSource.SourceType;
 
-        if (string.Equals(sourceType, "youtube", StringComparison.OrdinalIgnoreCase))
-        {
-            var videoId = item.ExternalId;
-            var transcript = await _transcriptProvider.GetTranscriptAsync(
-                videoId,
-                item.Title,
-                item.Description,
-                cancellationToken);
-
-            item.RawText = transcript.TranscriptText ?? transcript.FallbackText;
-            item.TranscriptSnippet = StringLimits.Truncate(item.RawText, 280);
-            item.ProcessingStatus = MediaItemProcessingStatus.Enriched;
-            if (!transcript.IsComplete)
+            if (string.Equals(sourceType, "youtube", StringComparison.OrdinalIgnoreCase))
             {
-                item.ProcessingError = "Transcript incomplete; using title/description fallback.";
+                var videoId = item.ExternalId;
+                var transcript = await _transcriptProvider.GetTranscriptAsync(
+                    videoId,
+                    item.Title,
+                    item.Description,
+                    cancellationToken);
+
+                if (!transcript.IsComplete ||
+                    !SourceTextQuality.IsUsable(transcript.TranscriptText, _options.MinSourceTextLength))
+                {
+                    item.TranscriptSnippet = StringLimits.Truncate(transcript.FallbackText, 280);
+                    item.RawText = null;
+                    item.ProcessingStatus = MediaItemProcessingStatus.Skipped;
+                    item.ProcessingError = SourceTextQuality.IncompleteTranscriptMessage;
+                    return;
+                }
+
+                item.RawText = transcript.TranscriptText;
+                item.TranscriptSnippet = StringLimits.Truncate(item.RawText, 280);
+                item.ProcessingStatus = MediaItemProcessingStatus.Enriched;
+                item.ProcessingError = null;
+                return;
             }
 
-            return;
-        }
-
-        if (!string.IsNullOrWhiteSpace(item.RawText) && item.RawText.Length >= _options.MinSourceTextLength)
-        {
-            item.ProcessingStatus = MediaItemProcessingStatus.Enriched;
-            return;
-        }
-
-        if (_options.FetchArticleBodies && !string.IsNullOrWhiteSpace(item.SourceUrl))
-        {
-            var body = await _articleFetcher.FetchArticleTextAsync(item.SourceUrl, cancellationToken);
-            if (!string.IsNullOrWhiteSpace(body))
+            if (!string.IsNullOrWhiteSpace(item.RawText) &&
+                SourceTextQuality.IsUsable(item.RawText, _options.MinSourceTextLength) &&
+                !SourceTextQuality.IsTitleDescriptionFallback(item.Title, item.Description, item.RawText))
             {
-                item.RawText = body;
-                item.TranscriptSnippet = StringLimits.Truncate(body, 280);
+                item.ProcessingStatus = MediaItemProcessingStatus.Enriched;
+                item.ProcessingError = null;
+                return;
             }
-        }
 
-        item.RawText ??= item.Description ?? item.RawSummary ?? item.Title;
-        item.ProcessingStatus = string.IsNullOrWhiteSpace(item.RawText)
-            ? MediaItemProcessingStatus.Skipped
-            : MediaItemProcessingStatus.Enriched;
+            if (_options.FetchArticleBodies && !string.IsNullOrWhiteSpace(item.SourceUrl))
+            {
+                var body = await _articleFetcher.FetchArticleTextAsync(item.SourceUrl, cancellationToken);
+                if (SourceTextQuality.IsUsable(body, _options.MinSourceTextLength))
+                {
+                    item.RawText = body;
+                    item.TranscriptSnippet = StringLimits.Truncate(body, 280);
+                    item.ProcessingStatus = MediaItemProcessingStatus.Enriched;
+                    item.ProcessingError = null;
+                    return;
+                }
+            }
+
+            item.RawText = null;
+            item.ProcessingStatus = MediaItemProcessingStatus.Skipped;
+            item.ProcessingError = "Source body was too short or missing; not extracting from title/description.";
     }
 }

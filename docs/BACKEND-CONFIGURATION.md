@@ -50,14 +50,14 @@ Optional **`Database:TransactionUrl`** (port 6543) is documented for reference; 
 | `Supabase:ServiceRoleKey` | Supabase | Service-role operations (if added) |
 | `Security:SessionSecret` | Security | Anonymous session / recovery tokens |
 | `Security:TurnstileSecretKey` | Security | Bot checks (empty = disabled locally) |
-| `SportsData:Provider` | SportsData | `mock` or `apifootball` |
-| `SportsData:ApiKey` | SportsData | API-Football key |
+| `SportsData:Provider` | SportsData | `footballdata` (canonical), `apifootball` (legacy), or `mock` |
+| `SportsData:ApiKey` | SportsData | API-Football key (optional enrichment only when provider is footballdata) |
 | `FootballReferenceData:Provider` | FootballReferenceData | `api_sports`, `sportmonks`, or `googleapis` |
 | `FootballReferenceData:CompetitionCode` | FootballReferenceData | e.g. `PL` |
 | `FootballReferenceData:Season` | FootballReferenceData | e.g. `2026` |
 | `FootballReferenceData:PredictionLockDeadline` | FootballReferenceData | ISO datetime when user predictions lock |
 | `Sportmonks:Token` | Sportmonks | Sportmonks fallback/validation |
-| `FootballData:Token` | FootballData | football-data.org fallback |
+| `FootballData:Token` | FootballData | football-data.org (canonical fixture/standings source) |
 | `YouTube:ApiKey` | YouTube | YouTube Data API for pundit video discovery |
 | `News:ApiKey` | News | NewsAPI.org key |
 | `Ai:Provider` / `Ai:ApiKey` | Ai | LLM provider (Phase 2) |
@@ -88,7 +88,8 @@ At deploy time, set **environment secrets** on your hosting platform. ASP.NET ma
 | `Supabase__Url` | Supabase project URL |
 | `Supabase__JwtSecret` | JWT signing secret |
 | `Supabase__AnonKey` | Anon key |
-| `SportsData__ApiKey` | API-Football |
+| `SportsData__Provider` | `footballdata` (canonical fixtures) |
+| `SportsData__ApiKey` | API-Football (optional enrichment; not required for fixtures) |
 | `Sportmonks__Token` | Sportmonks |
 | `FootballData__Token` | football-data.org |
 | `YouTube__ApiKey` | YouTube Data API |
@@ -107,8 +108,9 @@ env:
   Supabase__Url: ${{ secrets.SUPABASE_URL }}
   Supabase__JwtSecret: ${{ secrets.SUPABASE_JWT_SECRET }}
   Supabase__AnonKey: ${{ secrets.SUPABASE_ANON_KEY }}
-  SportsData__Provider: apifootball
-  SportsData__ApiKey: ${{ secrets.SPORTS_API_KEY }}
+  SportsData__Provider: footballdata
+  FootballData__Token: ${{ secrets.FOOTBALL_DATA_TOKEN }}
+  SportsData__ApiKey: ${{ secrets.SPORTS_API_KEY }} # optional enrichment only
   News__ApiKey: ${{ secrets.NEWS_API_KEY }}
   Security__SessionSecret: ${{ secrets.SESSION_SECRET }}
 ```

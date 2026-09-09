@@ -12,6 +12,7 @@ using BanterApp.Api.Integrations.Pundits;
 using BanterApp.Api.Integrations.Rss;
 using BanterApp.Api.Integrations.SportsData;
 using BanterApp.Api.Integrations.Jobs;
+using BanterApp.Api.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -74,29 +75,44 @@ public static class ServiceCollectionExtensions
             }
         });
 
-        switch (sportsProvider)
+        services.AddHttpClient<FootballDataProvider>();
+
+        if (FootballDatasetStatus.IsFootballDataProvider(sportsProvider))
         {
-            case "apifootball":
+            services.AddTransient<ISportsDataProvider>(sp => sp.GetRequiredService<FootballDataProvider>());
+            if (!string.IsNullOrWhiteSpace(sportsApiKey))
+            {
                 services.AddHttpClient<ApiFootballHttpClient>();
-                services.AddTransient<ISportsDataProvider, ApiFootballProvider>();
                 services.AddTransient<ISportsDataEnrichment, ApiFootballProvider>();
-                break;
-
-            case "mock":
-            default:
-                if (sportsProvider != "mock")
-                {
-                    Console.Error.WriteLine(
-                        $"Unknown SportsData:Provider '{sportsProvider}'; falling back to mock.");
-                }
-
-                services.TryAddSingleton<ISportsDataProvider, MockSportsDataProvider>();
+            }
+            else
+            {
                 services.TryAddSingleton<ISportsDataEnrichment, MockSportsDataProvider>();
-                break;
+            }
+        }
+        else if (sportsProvider == "apifootball")
+        {
+            services.AddHttpClient<ApiFootballHttpClient>();
+            services.AddTransient<ISportsDataProvider, ApiFootballProvider>();
+            services.AddTransient<ISportsDataEnrichment, ApiFootballProvider>();
+        }
+        else
+        {
+            if (sportsProvider != "mock")
+            {
+                Console.Error.WriteLine(
+                    $"Unknown SportsData:Provider '{sportsProvider}'; falling back to mock.");
+            }
+
+            services.TryAddSingleton<ISportsDataProvider, MockSportsDataProvider>();
+            services.TryAddSingleton<ISportsDataEnrichment, MockSportsDataProvider>();
         }
 
         services.AddHttpClient<ISportsDataFallbackProvider, SportmonksProvider>();
-        services.AddHttpClient<ISportsDataFallbackProvider, FootballDataProvider>();
+        if (!FootballDatasetStatus.IsFootballDataProvider(sportsProvider))
+        {
+            services.AddHttpClient<ISportsDataFallbackProvider, FootballDataProvider>();
+        }
 
         services.AddHttpClient<ApiFootballHttpClient>();
         services.AddScoped<ApiSportsReferenceProvider>();
@@ -170,6 +186,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ReactionMediaResolver>();
         services.AddScoped<FeedReactionMediaService>();
+        services.AddScoped<GifLibraryService>();
         services.AddScoped<MatchResolutionService>();
         services.AddScoped<FeedRelevanceScorer>();
 
@@ -202,6 +219,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ContentEnrichmentJob>();
         services.AddScoped<PunditExtractionJob>();
         services.AddScoped<PredictionAggregateJob>();
+        services.AddScoped<GifQueryRefreshJob>();
         services.AddScoped<IJobRegistryService, JobRegistryService>();
         services.AddScoped<StubMaintenanceJobs>();
 

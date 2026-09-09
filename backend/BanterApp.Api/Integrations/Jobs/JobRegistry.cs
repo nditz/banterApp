@@ -29,6 +29,7 @@ public static class JobRegistry
         new("standings-sync", "standings-sync", "Standings Sync", "Sync tournament standings.", "0 */6 * * *", true, true),
         new("news-ingest", "news-ingest", "News Ingest", "Ingest news articles for the feed.", "0 */2 * * *", true, true),
         new("ai-reactions", "ai-reactions", "AI Reactions", "Generate AI reactions on news items.", "*/20 * * * *", true, true),
+        new("gif.query.refresh", "gif-query-refresh", "GIF Query Refresh", "Seed the first-party GIF library and refresh football GIF search phrases (not Giphy files).", "22 */3 * * *", true, true),
         new("football.countries.sync", "football-countries-sync", "Football Countries Sync", "Sync national teams/countries from football API.", "0 4 * * *", true, true),
         new("football.players.sync", "football-players-sync", "Football Players Sync", "Sync tournament squads/players.", "0 5 * * *", true, true),
         new("football.player_stats.sync", "football-player-stats-sync", "Football Player Stats Sync", "Sync player statistics.", "0 6 * * *", true, true),
