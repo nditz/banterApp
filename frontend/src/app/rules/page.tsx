@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "Rules & How It Works",
   description:
-    "How Ball Takes works: prediction types, points scoring, season awards, content scripts and private leagues — everything you need to start playing.",
+    "How Ball Takes works: prediction types, points scoring, season calls, content scripts and private leagues — everything you need to start playing.",
   alternates: { canonical: "/rules" },
 };
 
@@ -65,7 +65,7 @@ export default function RulesPage() {
       </section>
 
       <section className="rounded-md border border-gold/25 bg-gold/5 p-4 shadow-sm sm:p-5">
-        <h2 className="text-base font-semibold">Season awards</h2>
+        <h2 className="text-base font-semibold">Season Calls</h2>
         <p className="mt-1 text-xs text-muted-foreground">
           Season-long predictions with big point swings — only in private leagues with at
           least {TOURNAMENT_BONUS_ELIGIBILITY.minCustomLeagueMembers} members.
@@ -103,7 +103,7 @@ export default function RulesPage() {
           href="/awards"
           className={cn(buttonVariants({ size: "sm" }), "btn-tournament mt-4 h-8 text-xs")}
         >
-          Make season awards
+          Make season calls
         </Link>
       </section>
 

@@ -235,4 +235,4 @@ Faster polling for local testing (in `appsettings.Development.json`):
 | Feed shows parody only | Predictions still seeded — extraction not wired yet |
 | Same GIFs everywhere | Separate issue — see AI visual catalog (pinned for later) |
 
-See also: `docs/BACKEND-CONFIGURATION.md`, `docs/WORLD_CUP_DATA_INTEGRATION_GAP_REPORT.md`.
+See also: `docs/BACKEND-CONFIGURATION.md`.

@@ -227,7 +227,7 @@ export function TournamentBonusBoard({ embedded = false }: { embedded?: boolean 
   const content = (
     <>
       {(sessionLoading || isLoading) && (
-        <p className="text-sm text-muted-foreground">Loading season awards…</p>
+        <p className="text-sm text-muted-foreground">Loading season calls…</p>
       )}
 
       {termsRequired && !sessionLoading && (
@@ -246,7 +246,7 @@ export function TournamentBonusBoard({ embedded = false }: { embedded?: boolean 
             <div className="rounded-md border border-gold/30 bg-gold/5 p-3 text-sm">
               <p className="font-semibold text-gold">Award points on leaderboards</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                You can save season awards below anytime before the first kickoff. Points only
+                You can save season calls below anytime before the first kickoff. Points only
                 count toward private leagues that meet these rules:
               </p>
               <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-muted-foreground">
@@ -266,7 +266,7 @@ export function TournamentBonusBoard({ embedded = false }: { embedded?: boolean 
           {data.isLocked && (
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
               <Lock className="size-3.5 shrink-0" aria-hidden />
-              Season awards locked at the first Premier League kickoff.
+              Season calls locked at the first Premier League kickoff.
             </p>
           )}
 
@@ -296,7 +296,7 @@ export function TournamentBonusBoard({ embedded = false }: { embedded?: boolean 
           </div>
 
           {savedFlash && (
-            <p className="text-xs font-medium text-pitch">Award pick saved.</p>
+            <p className="text-xs font-medium text-pitch">Season call saved.</p>
           )}
 
           <p className="text-[11px] leading-relaxed text-muted-foreground">
@@ -313,8 +313,8 @@ export function TournamentBonusBoard({ embedded = false }: { embedded?: boolean 
 
   return (
     <Panel
-      title="Season awards"
-      subtitle="Big-point awards for private leagues"
+      title="Season Calls"
+      subtitle="Big-point calls for private leagues"
       accent="gold"
     >
       {content}

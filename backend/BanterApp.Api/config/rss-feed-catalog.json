@@ -64,10 +64,11 @@
       "siteUrl": "https://www.bbc.co.uk/programmes/p02nrsln",
       "styleSlug": "bbc-studio",
       "sourceWeight": 1.2,
-      "extractPredictions": true,
-      "useForMediaIngest": true,
+      "extractPredictions": false,
+      "useForMediaIngest": false,
       "useForNews": false,
-      "useForPundit": true
+      "useForPundit": false,
+      "isActive": false
     },
     {
       "name": "The Football Ramble",
@@ -231,10 +232,11 @@
       "rssUrl": "https://feeds.bbci.co.uk/sport/football/premier-league/rss.xml",
       "siteUrl": "https://www.bbc.co.uk/sport/football/premier-league",
       "sourceWeight": 1.0,
-      "extractPredictions": true,
-      "useForMediaIngest": true,
-      "useForNews": true,
-      "useForPundit": true
+      "extractPredictions": false,
+      "useForMediaIngest": false,
+      "useForNews": false,
+      "useForPundit": false,
+      "isActive": false
     },
     {
       "name": "BBC Sport Football",
@@ -242,10 +244,11 @@
       "rssUrl": "https://feeds.bbci.co.uk/sport/football/rss.xml",
       "siteUrl": "https://www.bbc.co.uk/sport/football",
       "sourceWeight": 0.95,
-      "extractPredictions": true,
+      "extractPredictions": false,
       "useForMediaIngest": false,
-      "useForNews": true,
-      "useForPundit": true
+      "useForNews": false,
+      "useForPundit": false,
+      "isActive": false
     },
     {
       "name": "The Guardian Football",

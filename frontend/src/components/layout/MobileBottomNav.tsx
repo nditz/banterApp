@@ -2,48 +2,25 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Flame, Grid3x3, Home, Trophy, Users } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Clapperboard, Grid3x3, MessageCircle, User, Users } from "lucide-react";
+import { useCallback } from "react";
+import { MOBILE_BOTTOM_NAV, isNavHrefActive } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/", label: "Home", icon: Home, hash: null },
-  { href: "/matchweek", label: "Picks", icon: Grid3x3, hash: null },
-  { href: "/table", label: "Table", icon: Trophy, hash: null },
-  { href: "/leagues", label: "Leagues", icon: Users, hash: null },
-  { href: "/studio", label: "Studio", icon: Flame, hash: null },
-] as const;
-
-function getCurrentHash() {
-  if (typeof window === "undefined") return "";
-  return window.location.hash;
-}
+const icons = {
+  Predict: Grid3x3,
+  Banter: MessageCircle,
+  Studio: Clapperboard,
+  Leagues: Users,
+  Me: User,
+} as const;
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const [hash, setHash] = useState(getCurrentHash);
-
-  useEffect(() => {
-    const updateHash = () => setHash(window.location.hash);
-    updateHash();
-    window.addEventListener("hashchange", updateHash);
-    return () => window.removeEventListener("hashchange", updateHash);
-  }, [pathname]);
 
   const isActive = useCallback(
-    (href: string, itemHash: string | null) => {
-      if (href === "/") {
-        return pathname === "/" && !hash;
-      }
-      if (itemHash && pathname === "/") {
-        return hash === itemHash;
-      }
-      if (href.startsWith("/#")) {
-        return pathname === "/";
-      }
-      return pathname === href || pathname.startsWith(`${href}/`);
-    },
-    [pathname, hash]
+    (href: string) => isNavHrefActive(href, pathname),
+    [pathname]
   );
 
   return (
@@ -52,11 +29,13 @@ export function MobileBottomNav() {
       aria-label="Mobile navigation"
     >
       <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom,0px)]">
-        {navItems.map(({ href, label, icon: Icon, hash: itemHash }) => {
-          const active = isActive(href, itemHash);
+        {MOBILE_BOTTOM_NAV.map(({ href, label }) => {
+          const Icon = icons[label as keyof typeof icons] ?? Grid3x3;
+          const active = isActive(href);
+          const isStudio = label === "Studio";
           return (
             <Link
-              key={href}
+              key={`${label}-${href}`}
               href={href}
               className={cn(
                 "mobile-nav-item flex min-h-[3.25rem] min-w-[3rem] flex-1 flex-col items-center justify-center gap-0.5 px-0.5 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors duration-200 sm:min-w-[3.5rem]",
@@ -69,7 +48,8 @@ export function MobileBottomNav() {
               <span
                 className={cn(
                   "flex size-8 items-center justify-center rounded-md transition-all duration-200",
-                  active && "bg-foreground/8"
+                  active && "bg-foreground/8",
+                  isStudio && !active && "text-foreground/80"
                 )}
               >
                 <Icon className="size-[18px]" aria-hidden />

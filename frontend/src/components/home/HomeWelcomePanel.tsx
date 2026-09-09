@@ -6,8 +6,7 @@ import { ChevronLeft, ChevronRight, Clapperboard, Sparkles, Zap } from "lucide-r
 import { CumulativeScriptExport } from "@/components/content/CumulativeScriptExport";
 import { WelcomeSlideBody } from "@/components/home/WelcomeSlideBody";
 import { WelcomeSlidePanel } from "@/components/home/WelcomeSlidePanel";
-import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { BRAND } from "@/lib/brand";
 import { HOME_WELCOME_SLIDES } from "@/lib/scoring-rules";
@@ -24,27 +23,37 @@ function WelcomeHeroEyebrow() {
   );
 }
 
-function SlideActions({ onCreateContent }: { onCreateContent: () => void }) {
+function SlideActions() {
   return (
     <div className="flex flex-wrap gap-1.5 pt-1.5">
-      <Button
-        type="button"
-        size="sm"
-        className="btn-tournament h-8 cursor-pointer px-3 text-[11px]"
-        onClick={onCreateContent}
-      >
-        <Clapperboard className="size-3" aria-hidden />
-        Get my script
-      </Button>
       <Link
         href="#predictions"
+        className={cn(
+          buttonVariants({ size: "sm" }),
+          "btn-tournament h-8 cursor-pointer px-3 text-[11px] font-bold uppercase tracking-wider"
+        )}
+      >
+        <Sparkles className="size-3" aria-hidden />
+        Lock a pick
+      </Link>
+      <Link
+        href="#banter-feed"
         className={cn(
           buttonVariants({ variant: "outline", size: "sm" }),
           "h-8 cursor-pointer border-border px-3 text-[11px] font-bold uppercase tracking-wider"
         )}
       >
-        <Sparkles className="size-3" aria-hidden />
-        Lock a pick
+        Watch the feed
+      </Link>
+      <Link
+        href="/studio"
+        className={cn(
+          buttonVariants({ variant: "outline", size: "sm" }),
+          "h-8 cursor-pointer px-3 text-[11px] font-bold uppercase tracking-wider"
+        )}
+      >
+        <Clapperboard className="size-3" aria-hidden />
+        Open Studio
       </Link>
     </div>
   );
@@ -64,7 +73,7 @@ export function HomeWelcomePanel() {
             ...s,
             subtitle: "You're in",
             title: `Welcome back, ${greeting}.`,
-            body: "Lock your picks, climb the board, and come back next matchweek.",
+            body: "Lock your picks, scroll the feed, and come back next matchweek.",
             highlights: ["Signed in", "Picks saved to your account"],
           }
         : s
@@ -72,11 +81,6 @@ export function HomeWelcomePanel() {
   }, [greeting, isSignedIn]);
   const total = slides.length;
   const slide = slides[index];
-
-  const contentSlideIndex = useMemo(
-    () => slides.findIndex((s) => s.id === "content"),
-    [slides]
-  );
 
   const next = useCallback(() => {
     setIndex((i) => (i + 1) % total);
@@ -109,8 +113,6 @@ export function HomeWelcomePanel() {
     return () => clearInterval(timer);
   }, [next, paused, index]);
 
-  const goToContent = () => setIndex(contentSlideIndex >= 0 ? contentSlideIndex : 0);
-
   return (
     <section
       className="welcome-panel mb-4 rounded-2xl p-4 sm:p-5 lg:p-6"
@@ -128,7 +130,7 @@ export function HomeWelcomePanel() {
           </span>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-              Quick tour
+              Start here
             </p>
             <p className="text-xs font-semibold text-foreground">{slide.title}</p>
           </div>
@@ -164,7 +166,7 @@ export function HomeWelcomePanel() {
                   eyebrow={s.id === "welcome" ? <WelcomeHeroEyebrow /> : undefined}
                   footer={
                     <>
-                      {s.id === "welcome" && <SlideActions onCreateContent={goToContent} />}
+                      {s.id === "welcome" && <SlideActions />}
                       {s.id === "content" && (
                         <div className="mt-2 max-h-28 overflow-y-auto rounded-xl border border-border/60 bg-card/80 p-2.5 backdrop-blur-sm sm:max-h-32">
                           <CumulativeScriptExport minimal className="border-0 bg-transparent p-0" />

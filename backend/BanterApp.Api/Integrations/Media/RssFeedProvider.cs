@@ -2,6 +2,7 @@ using System.Xml;
 using BanterApp.Api.Common;
 using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.Media.Dtos;
+using BanterApp.Api.Integrations.Rss;
 using BanterApp.Api.Services;
 using Microsoft.Extensions.Logging;
 
@@ -59,13 +60,31 @@ public sealed class RssFeedProvider : IRssFeedProvider
             return [];
         }
 
+        if (RssSourcePolicy.IsDisallowed(feedUrl))
+        {
+            _logger.LogInformation("Skipping disallowed RSS host {Url}.", feedUrl);
+            return [];
+        }
+
         try
         {
-            var response = await _safeHttpClient.GetStringAsync(feedUrl, cancellationToken);
+            var fetch = await _safeHttpClient.FetchAsync(feedUrl, cancellationToken);
+            var response = fetch.Response;
             if (response is null || string.IsNullOrWhiteSpace(response.Content))
             {
-                _logger.LogWarning("RSS fetch failed or blocked for {Url}.", feedUrl);
-                await TrackRssErrorAsync("non_200", feedUrl, (int?)response?.StatusCode, ssrfBlocked: response is null, ct: cancellationToken);
+                var ssrfBlocked = fetch.FailureKind == SafeHttpFailureKind.Ssrf;
+                var reason = MapFetchFailureReason(fetch.FailureKind);
+                _logger.LogWarning(
+                    "RSS fetch failed for {Url}: {Reason} ({Kind}).",
+                    feedUrl,
+                    fetch.FailureReason ?? reason,
+                    fetch.FailureKind);
+                await TrackRssErrorAsync(
+                    reason,
+                    feedUrl,
+                    (int?)response?.StatusCode,
+                    ssrfBlocked,
+                    cancellationToken);
                 return [];
             }
 
@@ -94,7 +113,7 @@ public sealed class RssFeedProvider : IRssFeedProvider
             Source = "provider",
             ErrorCode = mapped.Code,
             MessageSafe = mapped.SafeMessage,
-            Severity = ssrfBlocked ? "warning" : "error",
+            Severity = "warning",
             Provider = "rss",
             IsRetryable = mapped.IsRetryable,
             Metadata = mapped.Metadata
@@ -270,4 +289,16 @@ public sealed class RssFeedProvider : IRssFeedProvider
 
         return stripped[..maxLength];
     }
+
+    private static string MapFetchFailureReason(SafeHttpFailureKind kind) =>
+        kind switch
+        {
+            SafeHttpFailureKind.Ssrf => "ssrf",
+            SafeHttpFailureKind.HttpStatus => "non_200",
+            SafeHttpFailureKind.ContentType => "invalid_xml",
+            SafeHttpFailureKind.Oversized => "oversized",
+            SafeHttpFailureKind.TooManyRedirects => "too_many_redirects",
+            SafeHttpFailureKind.EmptyUrl => "empty_url",
+            _ => "unavailable"
+        };
 }

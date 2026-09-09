@@ -4,6 +4,7 @@ using System.Text.Json;
 using BanterApp.Api.Common;
 using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.Ai;
+using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.Pundits.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -218,7 +219,11 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
                 "OpenAI pundit extraction failed: {Status} {Body}",
                 (int)response.StatusCode,
                 errorBody);
-            throw new InvalidOperationException($"OpenAI pundit extraction failed ({(int)response.StatusCode}).");
+            throw ProviderErrorMapper.MapOpenAi(
+                (int)response.StatusCode,
+                "opinion.extract",
+                _options.Model,
+                rawMessage: errorBody);
         }
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);

@@ -33,16 +33,6 @@
       ],
       "feeds": [
         {
-          "name": "BBC Sport Football Premier League",
-          "url": "https://feeds.bbci.co.uk/sport/football/premier-league/rss.xml",
-          "source_name": "BBC Sport"
-        },
-        {
-          "name": "BBC Sport Football",
-          "url": "https://feeds.bbci.co.uk/sport/football/rss.xml",
-          "source_name": "BBC Sport"
-        },
-        {
           "name": "ESPN Soccer News",
           "url": "https://www.espn.com/espn/rss/soccer/news",
           "source_name": "ESPN"
@@ -111,11 +101,6 @@
           "name": "The Athletic FC Podcast",
           "url": "https://feeds.acast.com/public/shows/6818be7d1d28d62313ac8ef3",
           "source_name": "The Athletic"
-        },
-        {
-          "name": "BBC 5 Live Football Daily",
-          "url": "https://podcasts.files.bbci.co.uk/p02nrsln.rss",
-          "source_name": "BBC"
         },
         {
           "name": "The Football Ramble",

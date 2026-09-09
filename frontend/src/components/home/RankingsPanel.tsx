@@ -48,7 +48,7 @@ export function RankingsPanel() {
         title="Aura rankings"
         subtitle={
           selectedLeague?.bonusPointsEnabled
-            ? `${selectedLeague.name} · includes season award points`
+            ? `${selectedLeague.name} · includes season-call points`
             : selectedLeague?.name ?? "Pick a league below"
         }
         accent="gold"

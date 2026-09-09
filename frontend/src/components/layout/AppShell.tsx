@@ -27,20 +27,15 @@ import { useSession } from "@/hooks/useSession";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { flushPendingAvatar, uploadAvatarFile } from "@/lib/avatar-upload";
 import { BRAND } from "@/lib/brand";
+import {
+  DESKTOP_OVERFLOW_NAV,
+  DESKTOP_PRIMARY_NAV,
+  MOBILE_OVERFLOW_NAV,
+  isNavHrefActive,
+} from "@/lib/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/matchweek", label: "Matchweek" },
-  { href: "/table", label: "Table" },
-  { href: "/awards", label: "Awards" },
-  { href: "/leagues", label: "Leagues" },
-  { href: "/studio", label: "Studio" },
-  { href: "/rules", label: "Rules" },
-  { href: "/predictions/history", label: "History" },
-];
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -54,6 +49,7 @@ export function AppShell({ children }: AppShellProps) {
   const [restoreOpenPath, setRestoreOpenPath] = useState<string | null>(null);
   const [restoreSheetPath, setRestoreSheetPath] = useState<string | null>(null);
   const [accountOpenPath, setAccountOpenPath] = useState<string | null>(null);
+  const [moreOpenPath, setMoreOpenPath] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
@@ -61,8 +57,10 @@ export function AppShell({ children }: AppShellProps) {
   const restoreOpen = restoreOpenPath === pathname;
   const restoreSheetOpen = restoreSheetPath === pathname;
   const accountOpen = accountOpenPath === pathname;
+  const moreOpen = moreOpenPath === pathname;
   const restoreRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
   const supabaseUser = useSupabaseUser();
   const isSignedIn = supabaseUser.isSignedIn || (session?.authenticated ?? false);
@@ -128,6 +126,17 @@ export function AppShell({ children }: AppShellProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [accountOpen]);
 
+  useEffect(() => {
+    if (!moreOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(event.target as Node)) {
+        setMoreOpenPath(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [moreOpen]);
+
   if (isAdminRoute) {
     return <>{children}</>;
   }
@@ -189,21 +198,70 @@ export function AppShell({ children }: AppShellProps) {
           </div>
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Main navigation">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
+            {DESKTOP_PRIMARY_NAV.map((link) => {
+              const active = isNavHrefActive(link.href, pathname);
+              return (
+                <Link
+                  key={`${link.label}-${link.href}`}
+                  href={link.href}
+                  className={cn(
+                    "rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors",
+                    active
+                      ? "bg-white/10 text-white"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
+                  )}
+                  aria-current={active ? "page" : undefined}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+            <div className="relative" ref={moreRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  setMoreOpenPath((current) => (current === pathname ? null : pathname))
+                }
                 className={cn(
-                  "rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors",
-                    pathname === link.href
-                    ? "bg-white/10 text-white"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                  "h-8 gap-1 px-3 text-xs font-bold uppercase tracking-wider text-white/70 hover:bg-white/10 hover:text-white",
+                  moreOpen && "bg-white/10 text-white",
+                  DESKTOP_OVERFLOW_NAV.some((link) => isNavHrefActive(link.href, pathname)) &&
+                    !moreOpen &&
+                    "text-white"
                 )}
-                aria-current={pathname === link.href ? "page" : undefined}
+                aria-expanded={moreOpen}
+                aria-haspopup="menu"
               >
-                {link.label}
-              </Link>
-            ))}
+                More
+                <ChevronDown className="size-3.5" aria-hidden />
+              </Button>
+              {moreOpen && (
+                <div
+                  role="menu"
+                  className="absolute left-0 top-full z-50 mt-1.5 min-w-[11rem] overflow-hidden rounded-lg border border-border bg-popover py-1 text-popover-foreground shadow-lg"
+                >
+                  {DESKTOP_OVERFLOW_NAV.map((link) => {
+                    const active = isNavHrefActive(link.href, pathname);
+                    return (
+                      <Link
+                        key={`${link.label}-${link.href}`}
+                        href={link.href}
+                        role="menuitem"
+                        onClick={() => setMoreOpenPath(null)}
+                        className={cn(
+                          "block px-3 py-2 text-xs font-bold uppercase tracking-wider hover:bg-muted",
+                          active ? "bg-muted text-foreground" : "text-muted-foreground"
+                        )}
+                        aria-current={active ? "page" : undefined}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             {session?.isPlatformAdmin && (
               <Link
                 href="/admin"
@@ -374,25 +432,28 @@ export function AppShell({ children }: AppShellProps) {
             id={mobileMenuId}
             className="border-t border-white/10 px-4 py-3 lg:hidden"
             style={{ backgroundColor: BRAND.headerBackground }}
-            aria-label="Mobile navigation"
+            aria-label="More pages"
           >
             <div className="flex flex-col gap-0.5">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileMenuPath(null)}
-                  className={cn(
-                    "min-h-11 rounded-md px-3 py-2.5 text-xs font-bold uppercase tracking-wider",
-                    pathname === link.href
-                      ? "bg-white/10 text-white"
-                      : "text-white/75 hover:bg-white/10"
-                  )}
-                  aria-current={pathname === link.href ? "page" : undefined}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {MOBILE_OVERFLOW_NAV.map((link) => {
+                const active = isNavHrefActive(link.href, pathname);
+                return (
+                  <Link
+                    key={`${link.label}-${link.href}`}
+                    href={link.href}
+                    onClick={() => setMobileMenuPath(null)}
+                    className={cn(
+                      "min-h-11 rounded-md px-3 py-2.5 text-xs font-bold uppercase tracking-wider",
+                      active
+                        ? "bg-white/10 text-white"
+                        : "text-white/75 hover:bg-white/10"
+                    )}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
               {session?.isPlatformAdmin && (
                 <Link
                   href="/admin"

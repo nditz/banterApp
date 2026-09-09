@@ -6,9 +6,9 @@ import { TOURNAMENT_BONUS_RULES } from "@/lib/scoring-rules";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Season awards",
+  title: "Season Calls",
   description:
-    "Lock Premier League season awards — title, top four, relegation, Golden Boot and more — on Ball Takes.",
+    "Lock Premier League season calls — title, top four, relegation, Golden Boot and more — on Ball Takes.",
   alternates: { canonical: "/awards" },
 };
 
@@ -17,7 +17,7 @@ export default function AwardsPage() {
     <div className="mx-auto max-w-4xl space-y-5">
         <header>
           <p className="page-kicker">Lock before kickoff</p>
-          <h1 className="mt-3 text-2xl font-bold sm:text-3xl">Season awards</h1>
+          <h1 className="mt-3 text-2xl font-bold sm:text-3xl">Season Calls</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             Call the title, top four, the drop, and the individual awards before the first
             kickoff. Nail them in a private league with at least 3 members and swing the
@@ -30,7 +30,7 @@ export default function AwardsPage() {
         <section className="rounded-md border border-border bg-card p-4 shadow-sm sm:p-5">
           <h2 className="text-base font-semibold">Scoring by difficulty</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Harder calls pay more. Points are awarded when official season awards are announced.
+            Harder calls pay more. Points land when official season awards are announced.
           </p>
           <ul className="mt-4 space-y-2">
             {TOURNAMENT_BONUS_RULES.map((rule) => (

@@ -62,12 +62,13 @@ public sealed class RssNewsProvider
         if (fromDb.Count > 0)
         {
             return fromDb
+                .Where(f => !RssSourcePolicy.IsDisallowed(f.RssUrl))
                 .Select(f => (f.Name, Url: f.RssUrl.Trim()))
                 .ToList();
         }
 
         return _options.RssFeedUrls
-            .Where(u => !string.IsNullOrWhiteSpace(u))
+            .Where(u => !string.IsNullOrWhiteSpace(u) && !RssSourcePolicy.IsDisallowed(u))
             .Select(u => (Name: SourceNameFromFeed(u.Trim()), Url: u.Trim()))
             .ToList();
     }

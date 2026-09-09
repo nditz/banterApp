@@ -21,6 +21,7 @@ public sealed class RssFeedSeedEntry
     public bool UseForMediaIngest { get; set; }
     public bool UseForNews { get; set; }
     public bool UseForPundit { get; set; }
+    public bool IsActive { get; set; } = true;
     public ConfidenceScoringOptions? ConfidenceScoring { get; set; }
 }
 

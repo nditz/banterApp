@@ -5,6 +5,38 @@ namespace BanterApp.Api.Services;
 public interface ISafeHttpClient
 {
     Task<SafeHttpResponse?> GetStringAsync(string url, CancellationToken ct = default);
+
+    async Task<SafeHttpFetchResult> FetchAsync(string url, CancellationToken ct = default)
+    {
+        var response = await GetStringAsync(url, ct);
+        return response is null
+            ? SafeHttpFetchResult.Fail(SafeHttpFailureKind.Unavailable)
+            : SafeHttpFetchResult.Ok(response);
+    }
+}
+
+public enum SafeHttpFailureKind
+{
+    None,
+    EmptyUrl,
+    Ssrf,
+    HttpStatus,
+    ContentType,
+    Oversized,
+    TooManyRedirects,
+    Unavailable
+}
+
+public sealed record SafeHttpFetchResult(
+    SafeHttpResponse? Response,
+    SafeHttpFailureKind FailureKind,
+    string? FailureReason = null)
+{
+    public static SafeHttpFetchResult Ok(SafeHttpResponse response) =>
+        new(response, SafeHttpFailureKind.None);
+
+    public static SafeHttpFetchResult Fail(SafeHttpFailureKind kind, string? reason = null) =>
+        new(null, kind, reason);
 }
 
 public sealed record SafeHttpResponse(
@@ -21,18 +53,21 @@ public sealed class SafeHttpClient(
     public const int DefaultTimeoutSeconds = 10;
     public const int MaxResponseBytes = 5 * 1024 * 1024;
 
-    public async Task<SafeHttpResponse?> GetStringAsync(string url, CancellationToken ct = default)
+    public async Task<SafeHttpResponse?> GetStringAsync(string url, CancellationToken ct = default) =>
+        (await FetchAsync(url, ct)).Response;
+
+    public async Task<SafeHttpFetchResult> FetchAsync(string url, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(url))
         {
-            return null;
+            return SafeHttpFetchResult.Fail(SafeHttpFailureKind.EmptyUrl, "empty_url");
         }
 
         var validation = await urlValidator.ValidateAsync(url, ct);
         if (!validation.IsAllowed)
         {
             logger.LogWarning("SSRF blocked fetch for {Url}: {Reason}", url, validation.Reason);
-            return null;
+            return SafeHttpFetchResult.Fail(SafeHttpFailureKind.Ssrf, validation.Reason ?? "ssrf");
         }
 
         using var client = httpClientFactory.CreateClient(nameof(SafeHttpClient));
@@ -63,7 +98,9 @@ public sealed class SafeHttpClient(
                         currentUrl,
                         nextUri,
                         redirectValidation.Reason);
-                    return null;
+                    return SafeHttpFetchResult.Fail(
+                        SafeHttpFailureKind.Ssrf,
+                        redirectValidation.Reason ?? "ssrf_redirect");
                 }
 
                 currentUrl = nextUri.ToString();
@@ -72,11 +109,14 @@ public sealed class SafeHttpClient(
 
             if (!response.IsSuccessStatusCode)
             {
-                return new SafeHttpResponse(
-                    string.Empty,
-                    response.Content.Headers.ContentType?.MediaType ?? "text/plain",
-                    response.StatusCode,
-                    currentUrl);
+                return new SafeHttpFetchResult(
+                    new SafeHttpResponse(
+                        string.Empty,
+                        response.Content.Headers.ContentType?.MediaType ?? "text/plain",
+                        response.StatusCode,
+                        currentUrl),
+                    SafeHttpFailureKind.HttpStatus,
+                    $"http_{(int)response.StatusCode}");
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync(ct);
@@ -90,7 +130,7 @@ public sealed class SafeHttpClient(
                 if (total > MaxResponseBytes)
                 {
                     logger.LogWarning("Response exceeded max size for {Url}.", currentUrl);
-                    return null;
+                    return SafeHttpFetchResult.Fail(SafeHttpFailureKind.Oversized, "oversized");
                 }
 
                 await reader.WriteAsync(buffer.AsMemory(0, read), ct);
@@ -100,17 +140,17 @@ public sealed class SafeHttpClient(
             if (!IsAllowedContentType(contentType))
             {
                 logger.LogWarning("Blocked content type {ContentType} for {Url}.", contentType, currentUrl);
-                return null;
+                return SafeHttpFetchResult.Fail(SafeHttpFailureKind.ContentType, contentType);
             }
 
             reader.Position = 0;
             using var textReader = new StreamReader(reader);
             var body = await textReader.ReadToEndAsync(ct);
-            return new SafeHttpResponse(body, contentType, response.StatusCode, currentUrl);
+            return SafeHttpFetchResult.Ok(new SafeHttpResponse(body, contentType, response.StatusCode, currentUrl));
         }
 
         logger.LogWarning("Too many redirects for {Url}.", url);
-        return null;
+        return SafeHttpFetchResult.Fail(SafeHttpFailureKind.TooManyRedirects, "too_many_redirects");
     }
 
     private static bool IsRedirect(HttpStatusCode statusCode) =>

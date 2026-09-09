@@ -57,6 +57,9 @@ public class FootballBanterConfigValidatorTests
         Assert.Contains(
             result.Config.Sources.Rss.Feeds,
             f => f.Url.Contains("premier-league", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            result.Config.Sources.Rss.Feeds,
+            f => f.Url.Contains("bbc", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

@@ -11,19 +11,25 @@ public static class ProviderErrorMapper
         string? providerRequestId = null,
         string? rawMessage = null)
     {
-        var (safeMessage, retryable) = statusCode switch
+        var (code, safeMessage, mappedStatus, retryable) = statusCode switch
         {
-            429 => ("AI service is temporarily busy. Please try again shortly.", true),
-            408 or 504 => ("AI service timed out. Please try again.", true),
-            >= 500 => ("AI service is temporarily unavailable.", true),
-            400 => ("AI request could not be processed.", false),
-            _ => ("AI service request failed.", statusCode >= 500)
+            429 => (ErrorCodes.RateLimited, "AI service is temporarily busy. Please try again shortly.",
+                StatusCodes.Status429TooManyRequests, true),
+            408 or 504 => (ErrorCodes.OpenAiApiError, "AI service timed out. Please try again.",
+                StatusCodes.Status504GatewayTimeout, true),
+            >= 500 => (ErrorCodes.OpenAiApiError, "AI service is temporarily unavailable.",
+                StatusCodes.Status503ServiceUnavailable, true),
+            400 => (ErrorCodes.OpenAiApiError, "AI request could not be processed.",
+                StatusCodes.Status502BadGateway, false),
+            _ => (ErrorCodes.OpenAiApiError, "AI service request failed.",
+                statusCode >= 500 ? StatusCodes.Status503ServiceUnavailable : StatusCodes.Status502BadGateway,
+                statusCode >= 500)
         };
 
         return new ProviderAppException(
-            ErrorCodes.OpenAiApiError,
+            code,
             safeMessage,
-            statusCode >= 500 ? StatusCodes.Status503ServiceUnavailable : StatusCodes.Status502BadGateway,
+            mappedStatus,
             "openai",
             retryable,
             operation,
@@ -83,11 +89,13 @@ public static class ProviderErrorMapper
                 "timeout" => "Feed request timed out.",
                 "invalid_xml" => "Feed returned invalid content.",
                 "non_200" => "Feed is currently unavailable.",
+                "oversized" => "Feed response was too large.",
+                "too_many_redirects" => "Feed redirected too many times.",
                 "parse_failed" => "Article content could not be extracted.",
                 _ => "We could not load this feed right now."
             };
 
-        var retryable = !ssrfBlocked && reason is "timeout" or "non_200";
+        var retryable = !ssrfBlocked && reason is "timeout" or "non_200" or "too_many_redirects" or "unavailable";
 
         return new ProviderAppException(
             ErrorCodes.RssFetchError,
