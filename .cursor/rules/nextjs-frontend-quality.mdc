@@ -1,0 +1,19 @@
+---
+description: Apply when editing Ball Takes Next.js React TypeScript frontend files
+globs: "**/*.{tsx,ts,jsx,js,css}"
+alwaysApply: false
+---
+# Next.js Frontend Quality
+
+- Inspect package.json and current framework conventions before adding libraries.
+- Preserve the existing router and data-fetching architecture unless a migration is explicitly approved.
+- Prefer small composable components over page-sized monoliths.
+- Keep static content server-rendered where the current architecture supports it; use client components only for genuine interaction.
+- Avoid unnecessary global state.
+- Use semantic HTML and accessible interactive controls.
+- Use `next/image` where appropriate and prevent avoidable layout shift.
+- Lazy-load below-fold rich media.
+- Do not silently swallow frontend data errors.
+- Reuse project fetch/query abstractions.
+- After material edits run the existing lint, typecheck, tests and build commands discovered from package.json.
+- Do not invent commands or replace the package manager.

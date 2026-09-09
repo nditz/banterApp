@@ -1895,6 +1895,42 @@ namespace BanterApp.Api.Data.Migrations
                     b.ToTable("pundits", (string)null);
                 });
 
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.PunditFollow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AnonymousUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PunditId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PunditId");
+
+                    b.HasIndex("AnonymousUserId", "PunditId")
+                        .IsUnique()
+                        .HasFilter("\"AnonymousUserId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "PunditId")
+                        .IsUnique()
+                        .HasFilter("\"UserId\" IS NOT NULL");
+
+                    b.ToTable("pundit_follows", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_pundit_follows_owner", "(\"UserId\" IS NOT NULL AND \"AnonymousUserId\" IS NULL) OR (\"UserId\" IS NULL AND \"AnonymousUserId\" IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("BanterApp.Api.Data.Entities.PunditOpinion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2752,6 +2788,29 @@ namespace BanterApp.Api.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BanterApp.Api.Data.Entities.PunditFollow", b =>
+                {
+                    b.HasOne("BanterApp.Api.Data.Entities.AnonymousUser", "AnonymousUser")
+                        .WithMany()
+                        .HasForeignKey("AnonymousUserId");
+
+                    b.HasOne("BanterApp.Api.Data.Entities.Pundit", "Pundit")
+                        .WithMany("Follows")
+                        .HasForeignKey("PunditId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BanterApp.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("AnonymousUser");
+
+                    b.Navigation("Pundit");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BanterApp.Api.Data.Entities.PunditOpinion", b =>
                 {
                     b.HasOne("BanterApp.Api.Data.Entities.Match", "Match")
@@ -2944,6 +3003,8 @@ namespace BanterApp.Api.Data.Migrations
 
             modelBuilder.Entity("BanterApp.Api.Data.Entities.Pundit", b =>
                 {
+                    b.Navigation("Follows");
+
                     b.Navigation("Opinions");
 
                     b.Navigation("Predictions");

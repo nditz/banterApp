@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Clapperboard, History, Sparkles, Table2, Trophy } from "lucide-react";
+import { Clapperboard, History, Mic2, Sparkles, Table2, Trophy } from "lucide-react";
 import { RankingsPanel } from "@/components/home/RankingsPanel";
 import { buttonVariants } from "@/components/ui/button";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
@@ -25,6 +25,12 @@ const links = [
     label: "Table",
     description: "Premier League standings",
     icon: Table2,
+  },
+  {
+    href: "/pundits",
+    label: "Pundits",
+    description: "Follow desks and compare takes",
+    icon: Mic2,
   },
   {
     href: "/studio",

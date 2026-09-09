@@ -5,12 +5,15 @@ import { Calendar, MapPin } from "lucide-react";
 import { FixtureStatusBadge } from "@/components/prediction/FixtureStatusBadge";
 import { PredictionButtons } from "@/components/prediction/PredictionButtons";
 import { TeamFlag } from "@/components/brackets/TeamFlag";
+import { MatchPunditComparison } from "@/components/prediction/MatchPunditComparison";
 import { isMatchLocked } from "@/lib/anonymous";
 import { usePredictionHistory } from "@/hooks/usePredictions";
-import type { Match } from "@/lib/types";
+import type { Match, StudioMatchComparison } from "@/lib/types";
 
 interface MatchCardProps {
   match: Match;
+  comparison?: StudioMatchComparison;
+  filteringToFollows?: boolean;
 }
 
 function formatKickoff(iso: string): string {
@@ -42,7 +45,7 @@ function shortName(name: string): string {
   return last ?? name;
 }
 
-export function MatchCard({ match }: MatchCardProps) {
+export function MatchCard({ match, comparison, filteringToFollows }: MatchCardProps) {
   const [selectedPrediction, setSelectedPrediction] = useState<string | null>(null);
   const { data: predictions } = usePredictionHistory();
   const matchPredictions = useMemo(
@@ -144,6 +147,7 @@ export function MatchCard({ match }: MatchCardProps) {
           onSelect={setSelectedPrediction}
         />
       </div>
+      <MatchPunditComparison comparison={comparison} filteringToFollows={filteringToFollows} />
     </article>
   );
 }

@@ -9,7 +9,8 @@ namespace BanterApp.Api.Features.Admin;
 
 public sealed class AdminReviewService(
     AppDbContext db,
-    IRecurringJobManager recurringJobs)
+    IRecurringJobManager recurringJobs,
+    PunditMatchPredictionSync predictionSync)
 {
     public async Task<List<object>> ListPendingAsync(CancellationToken ct)
     {
@@ -45,13 +46,18 @@ public sealed class AdminReviewService(
 
     public async Task ApproveAsync(Guid id, IUserContext user, CancellationToken ct)
     {
-        var opinion = await db.PunditOpinions.FindAsync([id], ct)
+        var opinion = await db.PunditOpinions
+            .Include(o => o.Pundit)
+            .Include(o => o.SourceItem)
+            .ThenInclude(i => i.MediaSource)
+            .FirstOrDefaultAsync(o => o.Id == id, ct)
             ?? throw new KeyNotFoundException("Opinion not found.");
 
         opinion.NeedsHumanReview = false;
         opinion.ReviewStatus = "approved";
         opinion.ReviewedAt = DateTimeOffset.UtcNow;
         opinion.ReviewedByUserId = user.UserId;
+        await predictionSync.EnsureFromOpinionAsync(opinion, ct);
         await db.SaveChangesAsync(ct);
     }
 

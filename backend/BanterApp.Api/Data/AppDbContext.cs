@@ -20,6 +20,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LeagueMember> LeagueMembers => Set<LeagueMember>();
     public DbSet<Pundit> Pundits => Set<Pundit>();
     public DbSet<PunditPrediction> PunditPredictions => Set<PunditPrediction>();
+    public DbSet<PunditFollow> PunditFollows => Set<PunditFollow>();
     public DbSet<GeneratedContent> GeneratedContents => Set<GeneratedContent>();
     public DbSet<NewsFeedItem> NewsFeedItems => Set<NewsFeedItem>();
     public DbSet<ReactionGifUse> ReactionGifUses => Set<ReactionGifUse>();
@@ -217,6 +218,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.Pundit).WithMany(p => p.Predictions).HasForeignKey(x => x.PunditId);
             e.HasOne(x => x.Match).WithMany(m => m.PunditPredictions).HasForeignKey(x => x.MatchId)
                 .IsRequired(false);
+        });
+
+        modelBuilder.Entity<PunditFollow>(e =>
+        {
+            e.ToTable("pundit_follows", t => t.HasCheckConstraint(
+                "CK_pundit_follows_owner",
+                "(\"UserId\" IS NOT NULL AND \"AnonymousUserId\" IS NULL) OR (\"UserId\" IS NULL AND \"AnonymousUserId\" IS NOT NULL)"));
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.UserId, x.PunditId })
+                .IsUnique()
+                .HasFilter("\"UserId\" IS NOT NULL");
+            e.HasIndex(x => new { x.AnonymousUserId, x.PunditId })
+                .IsUnique()
+                .HasFilter("\"AnonymousUserId\" IS NOT NULL");
+            e.HasIndex(x => x.PunditId);
+            e.HasOne(x => x.Pundit).WithMany(p => p.Follows).HasForeignKey(x => x.PunditId);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
+            e.HasOne(x => x.AnonymousUser).WithMany().HasForeignKey(x => x.AnonymousUserId);
         });
 
         modelBuilder.Entity<GeneratedContent>(e =>

@@ -7,6 +7,7 @@ import { MatchCard } from "@/components/prediction/MatchCard";
 import { Panel } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentMatchweek, useMatches } from "@/hooks/useMatches";
+import { useStudio } from "@/hooks/useStudio";
 import { datasetStatusFromMatchweek, isUnofficialMatchweek } from "@/lib/football-dataset";
 import { isMatchLocked } from "@/lib/anonymous";
 import type { Match } from "@/lib/types";
@@ -42,6 +43,13 @@ export function PredictionCenter() {
     }
     return (upcoming ?? []).filter((match) => !isMatchLocked(match));
   }, [weekMatches, upcoming]);
+
+  const comparisonIds = useMemo(() => openMatches.map((m) => m.id), [openMatches]);
+  const { data: comparison } = useStudio(comparisonIds);
+  const comparisonById = useMemo(
+    () => new Map((comparison?.matches ?? []).map((row) => [row.matchId, row])),
+    [comparison]
+  );
 
   const pages = useMemo(
     () => chunk<Match>(openMatches, MATCHES_PER_PAGE),
@@ -133,7 +141,12 @@ export function PredictionCenter() {
                   {...(pageIndex !== safePage ? { inert: true } : {})}
                 >
                   {pageMatches.map((match) => (
-                    <MatchCard key={match.id} match={match} />
+                    <MatchCard
+                      key={match.id}
+                      match={match}
+                      comparison={comparisonById.get(match.id)}
+                      filteringToFollows={comparison?.filteringToFollows}
+                    />
                   ))}
                 </div>
               ))}

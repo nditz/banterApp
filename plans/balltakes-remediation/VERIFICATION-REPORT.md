@@ -1,11 +1,11 @@
 # Verification Report
 
-**Date:** 2026-09-09  
-**Phase under test:** Phase 2 — Product Cleanup  
-**Method:** Implement-phase checks from `cursor/IMPLEMENT-PHASE-PROMPT.md`. Local Vitest, eslint, `tsc --noEmit`, Next.js production build, and SSR probes against `next start` on port 3010.  
-**Browser:** No interactive click-through. Public HTML from the local production server was inspected.
+**Date:** 2026-09-09 (Phase 3 implementation run; local only)  
+**Phase under test:** Phase 3 — Pundits & Comparison  
+**Method:** `cursor/IMPLEMENT-PHASE-PROMPT.md` (implement + local verify). Production HTML/API not re-probed for follow APIs — they are not deployed yet.  
+**Browser:** No interactive click-through. SSR of `/pundits`, `/studio`, `/matchweek`, `/me` via local `next start` on port 3011.
 
-Phase 1 football/integrity remains closed. This run implemented Phase 2 only.
+Phase 1 football/integrity and Phase 2 product cleanup remain closed in production (`#40`). Phase 3 is **implemented locally, not in production**.
 
 ---
 
@@ -13,73 +13,80 @@ Phase 1 football/integrity remains closed. This run implemented Phase 2 only.
 
 | Question | Result |
 |---|---|
-| All current-phase P0/P1 passing? | **Yes** — Phase 2 items are copy/IA/docs; no P0 data regressions introduced |
-| Mark Phase 2 complete? | **Yes** (nav, Season Calls, welcome, WC archive, seed, orphan UI, sitemap, Studio copy) |
-| Start Phase 3? | **Not in this run** — start only in a new deliberate task |
+| All current-phase P0/P1 passing in production? | **Not yet** — code not deployed; `pundit_follows` migration not applied |
+| Mark Phase 3 complete? | **Local yes / production no** |
+| Start Phase 4? | **No** — wait for production migrate + deploy + live follow/compare |
 
 ---
 
-## Local verification (this run)
+## Local verification
 
 | Check | Result |
 |---|---|
-| Frontend Vitest | **31 passed** (0 failed) |
-| ESLint | **clean** (`--max-warnings 0`) |
-| `tsc --noEmit` | **clean** |
-| Next.js production build | **succeeded**; routes include `/me` and `/studio` |
-| SSR `/` | Start here; Lock a pick; Watch the feed; Season Calls; no Quick tour |
-| SSR `/awards` | h1 **Season Calls** (not Season awards) |
-| SSR `/studio` | no “fictional pundit” / “pundit desk” |
-| `/sitemap.xml` | `/studio` priority **0.9**; `/table` **0.6** |
-| `/brackets` | **308** redirect preserved |
+| Backend tests | **367 passed** |
+| Frontend Vitest | **35 passed** (nav Pundits overflow, sitemap `/pundits` 0.8, comparison phase) |
+| Lint / typecheck | eslint clean on touched files; `tsc --noEmit` clean |
+| Production build | Next.js succeeded; `/pundits` listed |
+| SSR `/pundits` | **200** — Compare your takes, Follow sourced |
+| SSR `/me` | **200** — Follow desks + `/pundits` |
+| SSR `/studio` | **200** — Content Studio (Studio not removed) |
+| SSR `/matchweek` | **200** — comparison strip is client-fetched after API |
 
 ---
 
-## Phase 2 backlog vs evidence
+## Phase 3 backlog vs evidence
 
-| ID | Item | Status |
-|---|---|---|
-| P2-01 | Navigation IA | **Done** — tests lock Predict/Banter/Studio/Leagues/Me; Table not in mobile primary |
-| P2-02 | Awards → Season Calls | **Done** — copy/nav; `/awards` URL kept |
-| P2-03 | Welcome tour | **Done** — 3 slides; unit test |
-| P2-04 | WC docs/pack | **Done** — `docs/_archive/world-cup/` |
-| P2-05 | seed.sql | **Done** — do-not-use notice |
-| P2-06 | Orphan prediction UI | **Done** — selectors/hook removed |
-| P2-07 | Studio sitemap | **Done** — 0.9 |
-| P2-08 | Studio pundit copy | **Done** — sourced pundit predictions |
+| ID | Item | Local | Production |
+|---|---|---|---|
+| P3-01 | Follow model | Pass (unit tests: follow Source, reject Persona, idempotent, unfollow) | Pending migrate |
+| P3-02 | Follow UX | Pass (page + overflow + Me; feed/Studio filter when follows exist) | Pending deploy |
+| P3-03 | Matchweek comparison | Pass (unit: matchIds without user pick, wasCorrect after FT, follow filter) | Pending deploy |
+| P3-04 | Attribution | Pass (Source URL + resolver note on directory/comparison; no invented quotes) | Pending deploy |
+| P3-05 | Ingest quality | Pass (unreviewed hidden; approve writes `PunditPrediction`; health counts) | Pending deploy |
 
 ---
 
-## Failures found this loop
+## Failures / remaining
 
-### R3-style click-through — **open (P2)**
+### Production migrate + deploy — **open, blocks Phase 3 gate**
 
-Walk `/`, `/matchweek`, `/studio`, `/awards`, `/me` at 1440 and 375: bottom nav order, More menu, Season Calls, welcome CTAs. Not a Phase 2 gate.
+- Apply `20260909195409_AddPunditFollows` on Postgres, deploy API + frontend.
+- Then verify: `POST /api/pundits/{id}/follow`, `/pundits` Follow button, matchweek you-vs-pundits strip, Studio vs-pundits follow filter.
 
-No P0/P1 failures in this phase.
+### Comparison empty when no match-linked Source picks — **data, not a code hide**
+
+- If current MW has no reviewed `PunditPrediction` rows, cards show an explicit empty line plus Follow pundits. Do not treat that as a silent failure of fixtures.
+
+### Comparison API errors still collapse to empty — **open, not a Phase 3 P0**
+
+- `useStudio` catches `ApiError` and returns an empty DTO (pre-existing Studio behavior).
+
+### Guest Terms overlay — **open, pre-existing**
+
+- More → Pundits can be inert until terms + Turnstile. Same as Phase 2.
 
 ---
 
-## Acceptance criteria (Phase 2 slice)
+## Acceptance criteria (Phase 3 slice)
 
-From `16-ACCEPTANCE-CRITERIA.md`:
-
-| Criterion | Now |
+| Criterion | Local now |
 |---|---|
-| Mobile navigation is coherent | **Pass** (config + SSR) — Predict / Banter / Studio / Leagues / Me |
-| Studio is central | **Pass** — center of five on mobile; desktop primary; sitemap 0.9 |
-| No stale World Cup UI/copy in PL flows | **Pass** for nav/welcome/seed/docs archive. `/brackets` redirect kept |
+| Users can follow pundits or equivalent is exposed | **Pass** — `/pundits`, overflow, Me |
+| User vs pundit comparison visible | **Pass** — matchweek, homepage picks, Studio |
+| Source attribution preserved | **Pass** |
 | Tests for changed critical paths | **Pass** |
 | Implementation log updated | Yes |
-| Existing architecture reused | Yes — AppShell, TournamentBonusBoard, StudioPage extended |
+| Existing architecture reused | Yes — no second pundit table; Studio kept |
+| Studio not removed | Yes |
+| No fabricated quotes | Yes |
 
-Follow pundits, receipts, Studio packs, banter timeline product mix, CMP: later phases.
+Out of scope: receipts, Studio packs, CMP, Aura persistence.
 
 ---
 
 ## Next action
 
-1. Phase 2 product cleanup is **closed**.
-2. Optional: click-verify the new nav at 1440 / 375.
-3. Start Phase 3 (Pundits & Comparison) only in a **new deliberate task**.
-4. Do not rename `TournamentBonus*` APIs. Do not remove Studio. Do not re-seed World Cup fixtures.
+1. Apply `pundit_follows` migration on production Postgres.
+2. Deploy API then frontend.
+3. Re-run `cursor/VERIFY-PROMPT.md` against `balltakes.com` (follow, matchweek strip, Studio filter, health prediction counts).
+4. Only then start Phase 4 (Receipt Engine).

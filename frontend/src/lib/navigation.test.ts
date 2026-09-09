@@ -44,6 +44,14 @@ describe("product navigation IA", () => {
     );
   });
 
+  it("exposes Pundits in overflow, not the primary spine", () => {
+    expect(labels(DESKTOP_OVERFLOW_NAV)).toContain("Pundits");
+    expect(labels(MOBILE_OVERFLOW_NAV)).toContain("Pundits");
+    expect(labels(DESKTOP_PRIMARY_NAV)).not.toContain("Pundits");
+    expect(labels(MOBILE_BOTTOM_NAV)).not.toContain("Pundits");
+    expect(DESKTOP_OVERFLOW_NAV.find((l) => l.label === "Pundits")?.href).toBe("/pundits");
+  });
+
   it("demotes Table from mobile primary", () => {
     expect(labels(MOBILE_BOTTOM_NAV)).not.toContain("Table");
     expect(labels(DESKTOP_OVERFLOW_NAV)).toContain("Table");

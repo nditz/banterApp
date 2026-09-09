@@ -1,0 +1,21 @@
+---
+description: Ball Takes visual and product UI rules for Next.js frontend work
+alwaysApply: false
+---
+# Ball Takes UI Rules
+
+- Preserve the black/green Ball Takes identity.
+- Treat green as an accent, not a default surface.
+- The shell must be clean; football, memes, GIFs and receipts provide the chaos.
+- Do not introduce glassmorphism, excessive glow, unnecessary gradients, or generic AI-dashboard styling.
+- Prefer whitespace and typography over adding borders around everything.
+- Use the existing design system first; consolidate one-off styling into shared tokens/components.
+- Do not add arbitrary Tailwind values when an existing token can express the intent.
+- Limit each screen to one dominant action and a few secondary focal points.
+- Use football visual identity: crests, scorelines, kickoff, matchweek, Aura and pundit comparisons.
+- Every asynchronous section must explicitly support loading, loaded, empty and error states.
+- Never leave empty advertisement placeholders visible.
+- Studio is a primary product destination and must never look like a generic blank AI prompt page.
+- Banter content should have multiple visual variants rather than one generic card template.
+- Respect accessibility, keyboard/focus states, contrast and reduced motion.
+- Validate 375px, 768px and 1440px layouts before declaring UI work complete.

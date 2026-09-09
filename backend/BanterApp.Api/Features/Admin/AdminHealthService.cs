@@ -83,6 +83,15 @@ public sealed class AdminHealthService(
         var opinionsRejected = await db.PunditOpinions.CountAsync(o => o.ReviewStatus == "rejected", ct);
         var opinionsVisibleInFeed = await db.PunditOpinions.CountAsync(
             o => o.Pundit.Kind == PunditKind.Source && !o.NeedsHumanReview && o.ReviewStatus != "rejected", ct);
+        var punditPredictionsTotal = await db.PunditPredictions.CountAsync(ct);
+        var punditPredictionsMatchLinked = await db.PunditPredictions.CountAsync(
+            p => p.MatchId != null && p.IsMatched, ct);
+        var opinionsMatchLinked = await db.PunditOpinions.CountAsync(o => o.MatchId != null, ct);
+        var opinionsMatchLinkedWithoutPrediction = await db.PunditOpinions.CountAsync(
+            o => o.MatchId != null &&
+                 o.ReviewStatus != "rejected" &&
+                 !db.PunditPredictions.Any(p => p.PunditId == o.PunditId && p.MatchId == o.MatchId),
+            ct);
 
         var fixtureCount = await db.Matches.CountAsync(ct);
         var matchweekCount = await db.Matchweeks.CountAsync(ct);
@@ -160,7 +169,14 @@ public sealed class AdminHealthService(
                     total = opinionsTotal,
                     needingReview = opinionsNeedingReview,
                     rejected = opinionsRejected,
-                    visibleInFeed = opinionsVisibleInFeed
+                    visibleInFeed = opinionsVisibleInFeed,
+                    matchLinked = opinionsMatchLinked,
+                    matchLinkedWithoutPrediction = opinionsMatchLinkedWithoutPrediction
+                },
+                predictions = new
+                {
+                    total = punditPredictionsTotal,
+                    matchLinked = punditPredictionsMatchLinked
                 }
             },
             storage = new { status = "ok" },

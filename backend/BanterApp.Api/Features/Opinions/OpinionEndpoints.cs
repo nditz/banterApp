@@ -1,4 +1,5 @@
 using BanterApp.Api.Common;
+using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 
 namespace BanterApp.Api.Features.Opinions;
@@ -17,6 +18,9 @@ public static class OpinionEndpoints
 
         var pundits = app.MapGroup("/api/pundits").WithTags("Pundits").AllowAnonymous();
         pundits.MapGet("/", ListPundits).RequireRateLimiting(RateLimitPolicies.PublicSearch);
+        pundits.MapGet("/follows", ListFollows).RequireRateLimiting(RateLimitPolicies.PublicSearch);
+        pundits.MapPost("/{id:guid}/follow", FollowPundit).RequireRateLimiting(RateLimitPolicies.Write);
+        pundits.MapDelete("/{id:guid}/follow", UnfollowPundit).RequireRateLimiting(RateLimitPolicies.Write);
         pundits.MapGet("/{id:guid}/opinions", GetPunditOpinions).RequireRateLimiting(RateLimitPolicies.PublicSearch);
 
         var opinions = app.MapGroup("/api/opinions").WithTags("Opinions").AllowAnonymous();
@@ -38,7 +42,8 @@ public static class OpinionEndpoints
     }
 
     private static async Task<IResult> ListPundits(
-        OpinionQueryService queries,
+        PunditFollowService follows,
+        IUserContext user,
         string? kind,
         int? pageSize,
         CancellationToken ct)
@@ -47,7 +52,59 @@ public static class OpinionEndpoints
             ? PunditKind.Persona
             : PunditKind.Source;
         var take = Math.Clamp(pageSize ?? 50, 1, 100);
-        return Results.Ok(await queries.QueryPunditsAsync(punditKind, take, ct));
+        return Results.Ok(await follows.ListDirectoryAsync(punditKind, take, user, ct));
+    }
+
+    private static async Task<IResult> ListFollows(
+        PunditFollowService follows,
+        IUserContext user,
+        CancellationToken ct)
+    {
+        var directory = await follows.ListDirectoryAsync(PunditKind.Source, 100, user, ct);
+        return Results.Ok(directory.Where(p => p.IsFollowed).ToList());
+    }
+
+    private static async Task<IResult> FollowPundit(
+        Guid id,
+        PunditFollowService follows,
+        IUserContext user,
+        AppDbContext db,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        var guard = await SessionGuard.RequireActiveSessionAsync(user, http, db, ct);
+        if (guard is not null)
+        {
+            return guard;
+        }
+
+        var (dto, error, status) = await follows.FollowAsync(id, user, ct);
+        if (error is not null)
+        {
+            return Results.Json(new { error }, statusCode: status);
+        }
+
+        return status == StatusCodes.Status201Created
+            ? Results.Created($"/api/pundits/{id}/follow", dto)
+            : Results.Ok(dto);
+    }
+
+    private static async Task<IResult> UnfollowPundit(
+        Guid id,
+        PunditFollowService follows,
+        IUserContext user,
+        AppDbContext db,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        var guard = await SessionGuard.RequireActiveSessionAsync(user, http, db, ct);
+        if (guard is not null)
+        {
+            return guard;
+        }
+
+        await follows.UnfollowAsync(id, user, ct);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> GetPunditOpinions(

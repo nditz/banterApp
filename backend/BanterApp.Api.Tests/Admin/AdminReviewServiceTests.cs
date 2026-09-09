@@ -1,6 +1,8 @@
 using BanterApp.Api.Common;
+using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Admin;
+using BanterApp.Api.Integrations.Pundits;
 using BanterApp.Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -16,7 +18,7 @@ public class AdminReviewServiceTests
         await SeedOpinionAsync(db, needsReview: true, reviewStatus: "pending");
         await SeedOpinionAsync(db, needsReview: false, reviewStatus: "approved");
 
-        var service = new AdminReviewService(db, new FakeRecurringJobManager());
+        var service = CreateService(db);
         var pending = await service.ListPendingAsync(CancellationToken.None);
 
         Assert.Single(pending);
@@ -27,7 +29,7 @@ public class AdminReviewServiceTests
     {
         await using var db = TestDbContextFactory.Create();
         var opinionId = await SeedOpinionAsync(db, needsReview: true, reviewStatus: "pending");
-        var service = new AdminReviewService(db, new FakeRecurringJobManager());
+        var service = CreateService(db);
         var admin = new UserContext { UserId = Guid.NewGuid() };
 
         await service.ApproveAsync(opinionId, admin, CancellationToken.None);
@@ -44,7 +46,7 @@ public class AdminReviewServiceTests
     {
         await using var db = TestDbContextFactory.Create();
         var opinionId = await SeedOpinionAsync(db, needsReview: true, reviewStatus: "pending");
-        var service = new AdminReviewService(db, new FakeRecurringJobManager());
+        var service = CreateService(db);
         var admin = new UserContext { UserId = Guid.NewGuid() };
 
         await service.RejectAsync(opinionId, admin, "Low confidence", CancellationToken.None);
@@ -60,7 +62,7 @@ public class AdminReviewServiceTests
     {
         await using var db = TestDbContextFactory.Create();
         var opinionId = await SeedOpinionAsync(db, needsReview: true, reviewStatus: "pending");
-        var service = new AdminReviewService(db, new FakeRecurringJobManager());
+        var service = CreateService(db);
         var admin = new UserContext { UserId = Guid.NewGuid() };
 
         await service.UpdateAsync(
@@ -86,10 +88,51 @@ public class AdminReviewServiceTests
         Assert.True(saved.IsDirectQuote);
     }
 
+    [Fact]
+    public async Task ApproveAsync_writes_match_linked_pundit_prediction()
+    {
+        await using var db = TestDbContextFactory.Create();
+        db.Matches.Add(new Match
+        {
+            Id = "fd-test-1",
+            TeamA = "Arsenal",
+            TeamB = "Chelsea",
+            TeamACode = "ARS",
+            TeamBCode = "CHE",
+            KickoffTime = DateTimeOffset.UtcNow.AddDays(1),
+            Stage = "League",
+            Venue = "Emirates"
+        });
+        var opinionId = await SeedOpinionAsync(
+            db,
+            needsReview: true,
+            reviewStatus: "pending",
+            matchId: "fd-test-1",
+            prediction: "Arsenal to win",
+            predictionType: "match_result",
+            kind: PunditKind.Source);
+        var service = CreateService(db);
+
+        await service.ApproveAsync(opinionId, new UserContext { UserId = Guid.NewGuid() }, CancellationToken.None);
+
+        var linked = await db.PunditPredictions.SingleAsync();
+        Assert.Equal("fd-test-1", linked.MatchId);
+        Assert.Equal("Arsenal to win", linked.Prediction);
+        Assert.True(linked.IsMatched);
+        Assert.Equal("https://example.com", linked.SourceUrl);
+    }
+
+    private static AdminReviewService CreateService(AppDbContext db) =>
+        new(db, new FakeRecurringJobManager(), new PunditMatchPredictionSync(db));
+
     private static async Task<Guid> SeedOpinionAsync(
         BanterApp.Api.Data.AppDbContext db,
         bool needsReview,
-        string reviewStatus)
+        string reviewStatus,
+        string? matchId = null,
+        string? prediction = null,
+        string? predictionType = null,
+        PunditKind kind = PunditKind.Persona)
     {
         var source = new MediaSource
         {
@@ -113,8 +156,10 @@ public class AdminReviewServiceTests
         var pundit = new Pundit
         {
             Id = Guid.NewGuid(),
+            Kind = kind,
             Name = "Unknown",
-            NormalizedName = "unknown"
+            NormalizedName = "unknown",
+            AttributionMode = PunditAttributionMode.Licensed
         };
         var opinion = new PunditOpinion
         {
@@ -122,6 +167,9 @@ public class AdminReviewServiceTests
             SourceItemId = item.Id,
             PunditId = pundit.Id,
             Opinion = "Original opinion",
+            Prediction = prediction,
+            PredictionType = predictionType,
+            MatchId = matchId,
             NeedsHumanReview = needsReview,
             ReviewStatus = reviewStatus,
             CreatedAt = DateTimeOffset.UtcNow

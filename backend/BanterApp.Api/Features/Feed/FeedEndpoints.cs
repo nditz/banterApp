@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Opinions;
 using BanterApp.Api.Integrations.News;
 using Microsoft.EntityFrameworkCore;
 
@@ -56,6 +57,7 @@ public static class FeedEndpoints
         AppDbContext db,
         INewsProvider news,
         IUserContext user,
+        PunditFollowService follows,
         FeedReactionMediaService feedMedia,
         HttpContext http,
         CancellationToken ct)
@@ -64,7 +66,8 @@ public static class FeedEndpoints
         var size = Math.Clamp(pageSize ?? count ?? 20, 1, 50);
         var skip = (currentPage - 1) * size;
 
-        var (feedMode, personal) = await PersonalizedFeedService.BuildAsync(db, user, 20, ct);
+        var followedIds = await follows.GetFollowedPunditIdsAsync(user, ct);
+        var (feedMode, personal) = await PersonalizedFeedService.BuildAsync(db, user, 20, followedIds, ct);
         var newsItems = await LoadNewsItemsAsync(db, news, feedMedia, 100, ct);
         var merged = DedupeAndVaryMedia(personal
             .Concat(newsItems)
@@ -83,6 +86,7 @@ public static class FeedEndpoints
         AppDbContext db,
         INewsProvider news,
         IUserContext user,
+        PunditFollowService follows,
         FeedReactionMediaService feedMedia,
         HttpContext http,
         CancellationToken ct)
@@ -91,7 +95,8 @@ public static class FeedEndpoints
         var size = Math.Clamp(pageSize ?? count ?? 10, 1, 30);
         var skip = (currentPage - 1) * size;
 
-        var (feedMode, personal) = await PersonalizedFeedService.BuildAsync(db, user, 10, ct);
+        var followedIds = await follows.GetFollowedPunditIdsAsync(user, ct);
+        var (feedMode, personal) = await PersonalizedFeedService.BuildAsync(db, user, 10, followedIds, ct);
         var newsItems = await LoadNewsItemsAsync(db, news, feedMedia, 100, ct);
         var merged = DedupeAndVaryMedia(personal
             .Concat(newsItems)

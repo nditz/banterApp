@@ -38,6 +38,16 @@ export default defineConfig({
       use: { viewport: { width: viewport.width, height: viewport.height } },
     })),
     {
+      name: "phase2-mobile-375",
+      testMatch: /phase2-ia\.spec\.ts/,
+      use: { viewport: { width: 375, height: 812 } },
+    },
+    {
+      name: "phase2-desktop-1440",
+      testMatch: /phase2-ia\.spec\.ts/,
+      use: { viewport: { width: 1440, height: 900 } },
+    },
+    {
       name: "admin-mobile",
       testMatch: /responsive\/admin-pages\.spec\.ts/,
       use: {
