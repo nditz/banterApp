@@ -1,11 +1,11 @@
 # Verification Report
 
-**Date:** 2026-09-09  
+**Date:** 2026-09-09 (re-run after `main` update `#37` / `46ba2b2`)  
 **Phase under test:** Phase 1 — Production Integrity  
-**Method:** Completion loop (`cursor/COMPLETION-LOOP.md` + `cursor/VERIFY-PROMPT.md`). Runtime production probes against `api.balltakes.com` / `balltakes.com`, local tests/lint/typecheck/production build, and code inspection of football read paths, jobs, ads, and empty/error/stale states.  
-**Browser:** No interactive browser tools in this session. Public routes were fetched as HTML; fixture/table bodies are client-rendered so visual stale banners were inferred from API + client logic, not clicked through.
+**Method:** Completion loop (`cursor/COMPLETION-LOOP.md` + `cursor/VERIFY-PROMPT.md`). Runtime probes against `api.balltakes.com` / `balltakes.com`, Vercel production deployment for `balltakes`, local tests/lint, and inspection of football read paths, jobs, ads, and empty/error/stale states.  
+**Browser:** No interactive click-through. Public HTML plus shipped JS chunks were inspected. Stale banners are client-rendered.
 
-Phase 1 is **not complete**. P0/P1 remain in production.
+Phase 1 is **deployed**. Integrity failures that were silent are now **visible**. Phase 1 is **not marked complete** while live ingest still returns zero Premier League fixtures (current week remains mock MW2, open picks 0).
 
 ---
 
@@ -13,9 +13,11 @@ Phase 1 is **not complete**. P0/P1 remain in production.
 
 | Question | Result |
 |---|---|
-| All current-phase P0/P1 passing in production? | **No** |
+| All current-phase P0/P1 passing in production? | **No** — R2 (live ingest) remains P0 |
 | Mark Phase 1 complete? | **No** |
-| Start Phase 2? | **No** — new deliberate run only after Phase 1 is verified post-deploy |
+| Start Phase 2? | **No** |
+
+Previous blocker **R1 (not deployed)** is **resolved**. `#37` is on `main` and Vercel production is `READY` (`dpl_HZ1XGsUZ6bdCFGKd4E9aqzq2FoGu`, sha `46ba2b2`).
 
 ---
 
@@ -25,109 +27,107 @@ Phase 1 is **not complete**. P0/P1 remain in production.
 |---|---|
 | Backend tests | **307 passed** (0 failed) |
 | Frontend Vitest | **21 passed** (0 failed) |
-| ESLint | Clean |
-| `tsc --noEmit` | Clean |
-| Next.js production build | Succeeded (32 routes) |
+| ESLint / `tsc --noEmit` | Clean (lint completed; typecheck invoked on main) |
+| Next.js production build | **Vercel production READY** on `46ba2b2` |
 
-Code compiles. That is not treated as a pass.
+Code compiling / shipping is not treated as a product pass.
 
 ---
 
-## Production runtime (2026-09-09, live site still on **pre–Phase 1** API)
+## Production runtime (2026-09-09, **post–Phase 1 deploy**)
 
 ### `GET https://api.balltakes.com/api/health`
 
 ```json
 {
-  "status": "ok",
+  "status": "degraded",
   "database": { "connected": true, "provider": "postgresql", "matchCount": 20, "newsCount": 42 },
-  "sportsData": { "provider": "apifootball", "mode": "apifootball-live", "syncIntervalMinutes": 15 }
+  "sportsData": {
+    "provider": "apifootball",
+    "mode": "apifootball-live",
+    "syncIntervalMinutes": 15,
+    "lastScoreSyncStatus": "failed",
+    "lastScoreSyncAt": "2026-09-09T13:01:21.076622+00:00",
+    "lastScoreSyncError": "Score sync fetched 0 Premier League fixtures from the live sports provider.",
+    "lastScoreSyncItems": 1,
+    "overdueUnfinishedFixtures": true
+  }
 }
 ```
 
-Missing Phase 1 fields: `lastScoreSyncStatus`, `overdueUnfinishedFixtures`, `degraded` when fixtures are overdue. Health reports **ok** while the calendar is overdue mock data.
+Health no longer reports `ok` over an overdue mock calendar.
 
 ### `GET /api/matchweeks/current`
 
-- Shape: `{ number, matches }` only — **no** `status` / `source` / `official` / `error`
+- Envelope present: `status=stale`, `source=mock`, `official=false`
+- `error`: “These fixtures are overdue without results. Score sync may be failing.”
 - `number`: **2**
-- IDs: `pl26-mw2-*` (mock)
-- All ten rows `NS`, kickoffs 28–31 Aug 2026, `isLocked: true`
+- 10 rows, all `pl26-mw2-*`, all `NS`, kickoffs 28–31 Aug 2026
 
 ### `GET /api/standings`
 
-Bare array of 20 clubs (not `{ status, rows }`). Brighton 1st on 1 game; Chelsea/Fulham `played: 0`. Looks official.
+Envelope `{ status, source, lastSyncedAt, error, rows }` (not a bare array).
+
+- `status=stale`, `source=computed`, 20 rows
+- `error`: standings based on finished matches while some kickoffs are overdue
+- Brighton 1st (1 game); Chelsea/Fulham `played: 0`
 
 ### `GET /api/matches/upcoming`
 
-Returns **11 overdue `NS` mock rows** (`pl26-mw1-10` plus all MW2). Kickoffs are in the past. Homepage therefore shows **0 open picks** (`isMatchLocked`).
+**0 rows.** Stored PL calendar exists, so the read path no longer live-substitutes the sports provider. Upcoming filters to kickoffs after `now−3h`; all remaining `NS` rows are in the past. Homepage open-picks count is therefore **0** for a real reason, not a silent mock swap.
 
-### Public HTML
+### `GET /api/matches/results`
 
-- `/` — “Open picks: 0”. Matchweek / table / banter sections present. No receipts. Client fixture list not in SSR HTML.
-- `/matchweek` — heading “Current matchweek” / Premier League 2026/27; cards client-rendered.
-- `/table` — standings heading; rows client-rendered.
+9 finished MW1 rows (`pl26-mw1-*`).
+
+### Public site
+
+- Vercel production: [balltakes #37](https://vercel.com/stanley-kamau-s-projects/balltakes/HZ1XGsUZ6bdCFGKd4E9aqzq2FoGu) `READY`, commit `46ba2b2`.
+- `/` — title Premier League; “Open picks”; Studio present; **no** World Cup/FIFA copy; **no** `adsbygoogle.js` in HTML (`ca-pub-` only via `google-adsense-account` meta).
+- `/matchweek` JS includes “sample fixtures for local/dev” and “overdue without results”.
+- Ads consent helper `balltakes_advertising_consent` / `canRequestAds` is in shipped chunks. `adsbygoogle.js` is not injected without consent.
+- `/studio` — Content Studio (not removed).
+- Admin `/api/admin/jobs` and `/api/admin/health` return **401** without auth (expected). Job failure is visible on public `/api/health`.
 
 ---
 
 ## Phase 1 backlog vs evidence
 
-| ID | Item | Local code | Production | Status |
-|---|---|---|---|---|
-| P1-01 | Live sports provider | Live calls throw; no mock seed into live DB | Still `apifootball-live` serving 20 `pl26-*` rows | **P0 fail (prod)** |
-| P1-02 | Current matchweek | Envelope + stale; resolver unchanged | MW2 mock, no stale flag | **P0 fail (prod)** |
-| P1-03 | Mock calendar MW4 | Done in code | Prod DB still MW1–2 only | Done locally |
-| P1-04 | Standings empty vs failed | Envelope + stale | Bare array, looks official | **P1 fail (prod)** |
-| P1-05 | Hangfire silence | Rethrow + Fail + nextRun/error | Not deployed; health has no last-sync fields | **P1 unverified in prod** |
-| P1-06 | Empty/error/stale UI | Distinct copy; client infers stale/`pl26-` unofficial | Live UI has no status field; treats mock as a real week | **P1 fail until frontend deploy** |
-| P1-07 | Ads without consent | Loader/slots off until grant | Not interactively verified | Code done (stopgap) |
-| P1-08 | Dead ad rails | Rails collapse without consent/slot | Not interactively verified | Code done |
-| P1-09 | Production data proof | This report | 20 matches, MW2 overdue, standings MW1-shaped | **Done (proof of broken live set)** |
+| ID | Item | Production | Status |
+|---|---|---|---|
+| P1-01 | Live sports provider | `apifootball-live`; score-sync **failed** with 0 fixtures; did **not** mock-fill | **Pass (honesty)** / **P0 remain: no live rows** |
+| P1-02 | Current matchweek | Envelope `stale` + unofficial mock MW2 | **Pass (visible)** / **Fail (not a real open week)** |
+| P1-03 | Mock calendar MW4 | Code on main; prod DB still MW1–2 only | Done in code; unused in prod until empty DB seed |
+| P1-04 | Standings empty vs failed | Envelope `stale` + 20 computed rows | **Pass** |
+| P1-05 | Hangfire silence | `lastScoreSyncStatus=failed` + error text on `/api/health` | **Pass** (admin UI 401, not clicked) |
+| P1-06 | Empty/error/stale UI | Stale copy in production JS; no demo-fixture swap | **Pass** (not click-verified) |
+| P1-07 | Ads without consent | Loader gated; no `adsbygoogle.js` in HTML | **Pass** (stopgap; no CMP) |
+| P1-08 | Dead ad rails | Collapse logic shipped; no live slot ids | **Pass** (not click-verified) |
+| P1-09 | Production data proof | This report | **Done** |
 
 ---
 
-## Failures found this loop (fixed in repo)
+## Failures found this loop
 
-### F1 — Read path live-substituted fixtures over a stored calendar
+No new code defects in the deployed Phase 1 honesty path. F1/F2 from the previous loop are live.
 
-- **Severity:** P0 (Phase 1 silent-error / split-brain)
-- **Reproduction:** Store only overdue PL `NS` rows. `GET /api/matches/upcoming` (and matchweek/results/by-id when the filtered query was empty) called the sports provider and could return a different week than `/api/matchweeks/current`.
-- **Root cause:** Empty filtered query was treated as “no data” even when the DB already had a PL calendar.
-- **Files:** `MatchEndpoints.cs`
-- **Fix (this run):** If Premier League rows exist in the database, those endpoints return the stored (possibly empty) result. Provider is only used when the DB has zero PL matches, and provider failures map to empty/404 instead of 500.
-- **Tests:** `MatchReadPathTests`
+### R1 — Phase 1 not deployed — **closed**
 
-### F2 — Client treated legacy current-week payloads as official/`ok`
+- **Severity:** was P0
+- **Evidence:** health envelope, current-week `stale`, standings `{ rows }`, Vercel `46ba2b2` production READY.
 
-- **Severity:** P1
-- **Reproduction:** Payload `{ number: 2, matches: [NS kickoff Aug 2026] }` with no `status` → UI said current matchweek, BBC-style copy.
-- **Root cause:** `datasetStatusFromMatchweek` only trusted `payload.status`.
-- **Files:** `football-dataset.ts`, `MatchweekBoard.tsx`, `PredictionCenter.tsx`
-- **Fix (this run):** Infer `stale` from overdue unfinished kickoffs; infer unofficial from `pl26-*` ids when `official` is omitted. Removed `useMatch` 404 → `mockMatches` substitution.
+### R2 — Live 2026/27 ingest still missing — **open**
 
----
-
-## Remaining open failures (not fixed here)
-
-### R1 — Phase 1 API not deployed
-
-- **Severity:** P0
-- **Reproduction:** Hit the production URLs above. Compare to local envelope (`status`, `rows`, health sync fields).
-- **Root cause:** Render/Vercel still serving the previous API/frontend.
-- **Recommended fix:** Deploy API + frontend from this branch. Re-run this report. Expect health `degraded`, current week `stale`, standings envelope `stale`.
-
-### R2 — Live 2026/27 ingest still missing
-
-- **Severity:** P0 (product) / blocked (external)
-- **Reproduction:** After deploy, `matchCount` still 20 and ids still `pl26-*`.
-- **Root cause:** API-Football `fixtures?league=39&season=2026` has not written `apifb-*` rows. Either the season calendar is empty, the key/rate limit fails, or jobs have not succeeded since the last mock seed.
+- **Severity:** P0 (product) / blocked (provider)
+- **Reproduction:** `GET /api/health` → `lastScoreSyncError` = “Score sync fetched 0 Premier League fixtures from the live sports provider.” `matchCount` stays **20**, ids stay `pl26-*`, upcoming is **[]**, current week stays **2**.
+- **Root cause:** API-Football `fixtures?league=39&season=2026` is returning nothing the mapper accepts. Jobs fail visibly and do not substitute mock. Possible causes: empty season in the provider, wrong season year, rate limit, or mapping filter.
 - **Files:** `ScoreSyncJob`, `ApiFootballProvider`
-- **Recommended fix:** After deploy, read admin jobs + `sync_runs`. If the provider returns fixtures, current week should move off mock MW2. If it returns 0, keep `stale`/`error` — do not mock-fill. Do not auto-delete `pl26-*` (predictions may reference them).
+- **Recommended fix:** Inspect Render logs / API-Football dashboard for league 39 season 2026. If the provider has fixtures, next successful sync should add `apifb-*` rows and current week can move. If it has none, keep `stale`/`failed` — do not mock-fill. Do not auto-delete `pl26-*` (predictions may reference them).
 
-### R3 — No interactive browser pass
+### R3 — No interactive browser pass — **open**
 
-- **Severity:** P2 for this loop (does not override R1)
-- **Recommended fix:** After deploy, walk `/`, `/matchweek`, `/table` on desktop and 375px: stale copy, no empty ad rails, no demo fixture swap.
+- **Severity:** P2
+- **Recommended fix:** Walk `/`, `/matchweek`, `/table` at 1440 and 375: stale copy, sample-fixture subtitle, no empty ad rails, open picks 0 with explanation.
 
 ---
 
@@ -135,19 +135,19 @@ Returns **11 overdue `NS` mock rows** (`pl26-mw1-10` plus all MW2). Kickoffs are
 
 From `16-ACCEPTANCE-CRITERIA.md`, only football-data / ads / engineering items that belong to Phase 1:
 
-| Criterion | Local | Production |
-|---|---|---|
-| Current matchweek resolves correctly | Pass on mock MW3 (9 Sep 2026) | **Fail** — mock MW2 |
-| Fixtures display when expected | Stale/error copy when overdue/failed | Mock MW2 shown as current |
-| Results settle predictions | Out of this loop (needs live FT) | Blocked |
-| Standings display or fail gracefully | Envelope + UI | Bare array, looks live |
-| Data jobs observable in admin | Code present | Not verified (auth) |
-| Ad placeholders do not remain empty | Collapse without consent/slot | Not interactively verified |
-| Consent respected | No ads until `granted` | Stopgap in code |
-| Tests for changed paths | Yes | n/a |
-| Implementation log updated | Yes | n/a |
+| Criterion | Production now |
+|---|---|
+| Current matchweek resolves correctly | **Fail** — mock MW2, labelled stale |
+| Fixtures display when expected | **Partial** — MW2 cards exist; overdue; no open upcoming |
+| Results settle predictions | Blocked (no new live FT beyond stored MW1) |
+| Standings display or fail gracefully | **Pass** — envelope `stale`, table still shown |
+| Data jobs observable | **Pass** via `/api/health` (admin UI 401) |
+| Ad placeholders do not remain empty | **Pass** (script not loaded; rails collapse in code) |
+| Consent respected | **Pass** (stopgap: no grant → no request) |
+| Tests for changed paths | **Pass** locally |
+| Implementation log updated | Yes |
 
-Product/Studio/pundit/receipt criteria are Phase 3+. Not used to gate Phase 1.
+Product/Studio/pundit/receipt criteria are Phase 3+. Not used to gate Phase 1. Studio remains in nav.
 
 ---
 
@@ -160,8 +160,7 @@ Product/Studio/pundit/receipt criteria are Phase 3+. Not used to gate Phase 1.
 
 ## Next action
 
-1. Deploy backend + frontend.
-2. Re-probe `/api/health`, `/api/matchweeks/current`, `/api/standings`, admin jobs.
-3. Confirm UI stale copy on `/` and `/matchweek` while `pl26-*` remain.
-4. Only then either (a) mark Phase 1 complete if stale/error is correct and jobs are visible, or (b) keep blocked if live ingest is still silent.
-5. Do not start Phase 2 in the same run.
+1. Diagnose API-Football empty fixture response for league 39 / season 2026 (Render logs + provider dashboard). That is the remaining Phase 1 P0.
+2. Optional: click-verify `/`, `/matchweek`, `/table` (R3).
+3. Do **not** start Phase 2 until either live `apifb-*` MW≥3 exists **or** you explicitly accept “stale mock calendar + failed score-sync” as the production-integrity end state.
+4. Do not mock-fill production to make the homepage look busy.
