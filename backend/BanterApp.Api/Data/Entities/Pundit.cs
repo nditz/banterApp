@@ -24,4 +24,5 @@ public class Pundit
 
     public ICollection<PunditPrediction> Predictions { get; set; } = [];
     public ICollection<PunditOpinion> Opinions { get; set; } = [];
+    public ICollection<PunditFollow> Follows { get; set; } = [];
 }

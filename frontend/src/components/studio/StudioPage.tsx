@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   FileText,
   Mic2,
@@ -116,6 +117,16 @@ export function StudioPage() {
 
       {/* Tab description */}
       <p className="text-sm text-muted-foreground">{activeTab.description}</p>
+      {tab === "vs_pundits" && (
+        <p className="text-xs text-muted-foreground">
+          {data?.filteringToFollows
+            ? `Showing ${data.followedPunditCount ?? 0} followed sourced desk${(data.followedPunditCount ?? 0) === 1 ? "" : "s"}.`
+            : "Follow desks to filter this tab to voices you actually argue with."}{" "}
+          <Link href="/pundits" className="font-semibold text-foreground hover:underline">
+            Manage follows
+          </Link>
+        </p>
+      )}
 
       {/* Tab content */}
       {tab === "script" ? (
@@ -233,7 +244,7 @@ function EmptyState({ tab }: { tab: Tab }) {
     },
     vs_pundits: {
       title: "No picks to compare",
-      body: "Make a few predictions and we'll show you how the pros called the same games.",
+      body: "Make a few predictions, then follow sourced pundits so Studio can line up your calls against theirs.",
     },
     script: { title: "", body: "" },
   };

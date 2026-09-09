@@ -55,7 +55,7 @@ export function MatchComparisonCard({ match, filter }: MatchComparisonCardProps)
         </div>
         {match.actualResult && (
           <p className="mt-1 text-xs font-semibold text-pitch">
-            Final: {match.actualResult}
+            Final: {match.actualResult} · after full time
           </p>
         )}
       </div>
@@ -108,6 +108,17 @@ export function MatchComparisonCard({ match, filter }: MatchComparisonCardProps)
                     pointsAwarded={p.pointsAwarded}
                     secondary={role !== "me"}
                   />
+                  {match.actualResult && p.wasCorrect != null && (
+                    <span
+                      className={
+                        p.wasCorrect
+                          ? "text-[10px] font-semibold text-pitch"
+                          : "text-[10px] text-muted-foreground"
+                      }
+                    >
+                      {p.wasCorrect ? "Hit" : "Miss"}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -116,8 +127,9 @@ export function MatchComparisonCard({ match, filter }: MatchComparisonCardProps)
       </div>
       {groups.some((g) => g.role === "pundit") && (
         <p className="border-t border-border px-4 py-2 text-[10px] text-muted-foreground">
-          {PUNDIT_PARODY_DISCLAIMER} You&apos;ll see who each desk is parodying — pit your picks against
-          their takes, not the real person.
+          {picks.some((p) => p.role === "pundit" && p.isFictionalPersona)
+            ? PUNDIT_PARODY_DISCLAIMER
+            : "Sourced takes keep their original URL. Generated summaries are never presented as quotes."}
         </p>
       )}
     </div>

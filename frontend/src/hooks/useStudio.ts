@@ -9,14 +9,21 @@ const EMPTY_COMPARISON: StudioComparison = {
   myLeagueRank: undefined,
   leagueTotal: undefined,
   matches: [],
+  followedPunditCount: 0,
+  filteringToFollows: false,
 };
 
-export function useStudio() {
+export function useStudio(matchIds?: string[]) {
+  const key = matchIds?.length ? [...matchIds].sort().join(",") : "mine";
   return useQuery<StudioComparison>({
-    queryKey: ["studio", "comparison"],
+    queryKey: ["studio", "comparison", key],
+    enabled: matchIds === undefined || matchIds.length > 0,
     queryFn: async () => {
       try {
-        return await apiFetch<StudioComparison>("/api/studio/comparison");
+        const qs = matchIds?.length
+          ? `?matchIds=${encodeURIComponent(matchIds.join(","))}`
+          : "";
+        return await apiFetch<StudioComparison>(`/api/studio/comparison${qs}`);
       } catch (e) {
         if (e instanceof ApiError) return EMPTY_COMPARISON;
         throw e;

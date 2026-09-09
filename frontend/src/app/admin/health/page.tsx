@@ -17,6 +17,7 @@ export default function AdminHealthPage() {
         usingOpenAiExtractor?: boolean;
         mediaItems?: Record<string, number>;
         opinions?: Record<string, number>;
+        predictions?: Record<string, number>;
       }
     | undefined;
 
@@ -95,6 +96,29 @@ export default function AdminHealthPage() {
                 <div className="flex justify-between">
                   <dt className="text-zinc-400">Rejected</dt>
                   <dd className="font-mono">{pundit.opinions?.rejected ?? 0}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-zinc-400">Match-linked</dt>
+                  <dd className="font-mono">{pundit.opinions?.matchLinked ?? 0}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-zinc-400">Linked, no pick row</dt>
+                  <dd className="font-mono">{pundit.opinions?.matchLinkedWithoutPrediction ?? 0}</dd>
+                </div>
+              </dl>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-zinc-500">
+                Match-linked predictions
+              </p>
+              <dl className="mt-1 space-y-0.5">
+                <div className="flex justify-between">
+                  <dt className="text-zinc-400">Total</dt>
+                  <dd className="font-mono">{pundit.predictions?.total ?? 0}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-zinc-400">Match-linked</dt>
+                  <dd className="font-mono">{pundit.predictions?.matchLinked ?? 0}</dd>
                 </div>
               </dl>
             </div>

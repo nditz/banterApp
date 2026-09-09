@@ -156,6 +156,7 @@ export interface StudioPickEntry {
   sourceUrl?: string;
   sourcePlatform?: string;
   avatarSeed?: string;
+  wasCorrect?: boolean | null;
 }
 
 export interface StudioMatchComparison {
@@ -173,6 +174,25 @@ export interface StudioComparison {
   myTotalPoints: number;
   myLeagueRank?: number;
   leagueTotal?: number;
+  followedPunditCount?: number;
+  filteringToFollows?: boolean;
+}
+
+export interface PunditDirectoryEntry {
+  id: string;
+  name: string;
+  role?: string | null;
+  organization?: string | null;
+  opinionCount: number;
+  predictionCount: number;
+  isFollowed: boolean;
+  attributionNote?: string | null;
+  sourceUrl?: string | null;
+  sourcePlatform?: string | null;
+  archetype?: string | null;
+  parodyCue?: string | null;
+  avatarSeed?: string | null;
+  isFictionalPersona?: boolean;
 }
 
 // ─── Paginated ────────────────────────────────────────────────────────────────

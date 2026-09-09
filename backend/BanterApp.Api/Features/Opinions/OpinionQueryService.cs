@@ -80,7 +80,16 @@ public sealed class OpinionQueryService
                 p.Name,
                 p.Role,
                 p.Organization,
-                p.Opinions.Count))
+                p.Opinions.Count,
+                p.Predictions.Count,
+                false,
+                null,
+                p.SourceUrl,
+                null,
+                p.Archetype,
+                p.ParodyCue,
+                p.AvatarSeed,
+                p.Kind != PunditKind.Source))
             .OrderBy(p => p.Name)
             .Take(take)
             .ToListAsync(cancellationToken);

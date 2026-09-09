@@ -14,7 +14,8 @@ public sealed record StudioPickEntry(
     string? AttributionNote = null,
     string? SourceUrl = null,
     string? SourcePlatform = null,
-    string? AvatarSeed = null);
+    string? AvatarSeed = null,
+    bool? WasCorrect = null);
 
 public sealed record StudioMatchComparison(
     string MatchId,
@@ -29,4 +30,6 @@ public sealed record StudioComparisonResponse(
     IReadOnlyList<StudioMatchComparison> Matches,
     int MyTotalPoints,
     int? MyLeagueRank,
-    int? LeagueTotal);
+    int? LeagueTotal,
+    int FollowedPunditCount = 0,
+    bool FilteringToFollows = false);

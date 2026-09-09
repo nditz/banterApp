@@ -21,7 +21,16 @@ public sealed record PunditSummaryDto(
     string Name,
     string? Role,
     string? Organization,
-    int OpinionCount);
+    int OpinionCount,
+    int PredictionCount = 0,
+    bool IsFollowed = false,
+    string? AttributionNote = null,
+    string? SourceUrl = null,
+    string? SourcePlatform = null,
+    string? Archetype = null,
+    string? ParodyCue = null,
+    string? AvatarSeed = null,
+    bool IsFictionalPersona = false);
 
 public sealed record SourceSummaryDto(
     Guid Id,

@@ -4,12 +4,16 @@ import { MatchCard } from "@/components/prediction/MatchCard";
 import { Panel } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentMatchweek } from "@/hooks/useMatches";
+import { useStudio } from "@/hooks/useStudio";
 import { datasetStatusFromMatchweek, isUnofficialMatchweek } from "@/lib/football-dataset";
 import { groupMatchesByUkDate } from "@/lib/matchweek";
 
 export function MatchweekBoard() {
   const { data, isLoading, isError } = useCurrentMatchweek();
   const matches = data?.matches ?? [];
+  const matchIds = matches.map((m) => m.id);
+  const { data: comparison } = useStudio(matchIds);
+  const comparisonById = new Map((comparison?.matches ?? []).map((row) => [row.matchId, row]));
   const days = groupMatchesByUkDate(matches);
   const status = datasetStatusFromMatchweek(data, isError);
   const subtitle = isUnofficialMatchweek(data)
@@ -43,7 +47,12 @@ export function MatchweekBoard() {
                 {day.label}
               </h3>
               {day.matches.map((match) => (
-                <MatchCard key={match.id} match={match} />
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  comparison={comparisonById.get(match.id)}
+                  filteringToFollows={comparison?.filteringToFollows}
+                />
               ))}
             </section>
           ))}
@@ -58,7 +67,12 @@ export function MatchweekBoard() {
                 {day.label}
               </h3>
               {day.matches.map((match) => (
-                <MatchCard key={match.id} match={match} />
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  comparison={comparisonById.get(match.id)}
+                  filteringToFollows={comparison?.filteringToFollows}
+                />
               ))}
             </section>
           ))}

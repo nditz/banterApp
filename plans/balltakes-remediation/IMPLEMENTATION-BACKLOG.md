@@ -39,7 +39,7 @@ UX/IA cleanup after Phase 1 football integrity. Studio stays central. No sports-
 | P2-03 | Welcome tour | **Done** | Home carousel is 3 slides (picks → feed → Studio). Full tour remains on `/rules`. | `HOME_WELCOME_SLIDES`, `HomeWelcomePanel` |
 | P2-04 | WC docs/pack | **Done** | Archived under `docs/_archive/world-cup/`. `/brackets` redirect kept. | `docs/_archive/world-cup/` |
 | P2-05 | `supabase/seed.sql` | **Done** | Intentionally empty; documents do-not-use. Local mock / live sync own fixtures. | `supabase/seed.sql`, `supabase/README.md` |
-| P2-06 | Orphan prediction UI | **Done** | Removed `CountrySelector`, `PlayerSelector`, `useUserPredictions`. Backend `UserPrediction` APIs kept. | frontend predictions + hooks |
+| P2-06 | Orphan prediction UI | **Done (no route)** | No page imports. Unused files still on disk (`CountrySelector`, `PlayerSelector`, `useUserPredictions`). Backend `UserPrediction` APIs kept. | frontend predictions + hooks |
 | P2-07 | Studio sitemap | **Done** | `/studio` priority **0.9** (same as matchweek). Table demoted to 0.6. | `sitemap-routes.ts` |
 | P2-08 | Studio pundit copy | **Done** | vs-pundits tab: “sourced pundit predictions”. | `StudioPage` |
 
@@ -53,15 +53,19 @@ UX/IA cleanup after Phase 1 football integrity. Studio stays central. No sports-
 
 ## Phase 3 - Pundits & Comparison
 
-| ID | Item | Action |
-|---|---|---|
-| P3-01 | Follow model | `PunditFollow` (user/anon → pundit). Do not invent a second pundit table. |
-| P3-02 | Follow UX | Browse/follow on existing pundit list APIs; use follows to filter Studio + feed. |
-| P3-03 | Matchweek comparison | Before/after: user pick vs followed Source `PunditPrediction`s. Reuse `StudioEndpoints` DTO shape. |
-| P3-04 | Attribution | Keep `PunditDisplayResolver`; never fabricate quotes. |
-| P3-05 | Ingest quality | Ensure extract jobs produce match-linked `PunditPrediction`s; admin review stays. |
+| ID | Item | Status today | Action | Files / services |
+|---|---|---|---|---|
+| P3-01 | Follow model | **Done (local)** | `PunditFollow` on existing `Pundit`. User or anon, unique, Source only. | `PunditFollow`, migration `AddPunditFollows` |
+| P3-02 | Follow UX | **Done (local)** | `/pundits` browse/follow; overflow + Me. Follows filter Studio + pundit feed when any follows exist. | `PunditsDirectory`, `PunditFollowService`, `PersonalizedFeedService` |
+| P3-03 | Matchweek comparison | **Done (local)** | Before/after on MatchCard via `GET /api/studio/comparison?matchIds=`. Reuses Studio DTO. | `StudioComparisonService`, `MatchPunditComparison` |
+| P3-04 | Attribution | **Done** | Still `PunditDisplayResolver`. Source URL on directory + picks. No fabricated quotes. | resolver, Studio/directory UI |
+| P3-05 | Ingest quality | **Done (local)** | Hide unreviewed/rejected from comparison. Approve backfills match-linked `PunditPrediction`. Health counts. Admin review stays. | `PunditMatchPredictionSync`, `AdminReviewService`, `AdminHealthService` |
 
-**Depends on:** Phase 1 data actually containing matches (otherwise comparison is empty).
+**Depends on:** Phase 1 matches in prod (already true). Production **migration + API deploy** required before the follow graph exists live.
+
+**Phase 3 gate:** follow + comparison + attribution in production. Start Phase 4 only after that verify pass.
+
+**Out of scope:** receipts (Phase 4), Studio content packs (Phase 5), CMP, Aura persistence.
 
 ---
 

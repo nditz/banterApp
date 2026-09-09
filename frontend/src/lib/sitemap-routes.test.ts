@@ -11,4 +11,9 @@ describe("sitemap routes", () => {
       SITEMAP_ROUTES.find((r) => r.path === "/table")?.priority ?? 0
     );
   });
+
+  it("lists the pundit browse route", () => {
+    const pundits = SITEMAP_ROUTES.find((r) => r.path === "/pundits");
+    expect(pundits?.priority).toBe(0.8);
+  });
 });

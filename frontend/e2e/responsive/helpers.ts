@@ -37,6 +37,7 @@ export const publicRoutes = [
   { path: "/#rankings", name: "rankings section" },
   { path: "/predictions/history", name: "prediction history" },
   { path: "/studio", name: "studio" },
+  { path: "/pundits", name: "pundits" },
   { path: "/matchweek", name: "matchweek" },
   { path: "/awards", name: "season calls" },
   { path: "/me", name: "me" },

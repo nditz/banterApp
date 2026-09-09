@@ -16,41 +16,51 @@ public static class PersonalizedFeedService
         AppDbContext db,
         IUserContext user,
         int maxItems,
-        CancellationToken ct)
+        IReadOnlyList<Guid>? followedPunditIds = null,
+        CancellationToken ct = default)
     {
         var hasAccountPredictions = user.IsAuthenticated &&
             await db.Predictions.AnyAsync(p => p.UserId == user.UserId, ct);
 
         if (hasAccountPredictions)
         {
-            var personal = await BuildPersonalFeedAsync(db, user, maxItems, ct);
+            var personal = await BuildPersonalFeedAsync(db, user, maxItems, followedPunditIds, ct);
             return ("personal", personal);
         }
 
-        var pundit = await BuildPunditFeedAsync(db, maxItems, ct);
+        var pundit = await BuildPunditFeedAsync(db, maxItems, followedPunditIds, ct);
         return ("pundit", pundit);
     }
 
     private static async Task<List<FeedItemResponse>> BuildPunditFeedAsync(
         AppDbContext db,
         int maxItems,
+        IReadOnlyList<Guid>? followedPunditIds,
         CancellationToken ct)
     {
-        var sourceOpinions = await LoadSourcePunditOpinionFeedAsync(db, maxItems, ct);
+        var sourceOpinions = await LoadSourcePunditOpinionFeedAsync(db, maxItems, followedPunditIds, ct);
         return sourceOpinions;
     }
 
     private static async Task<List<FeedItemResponse>> LoadSourcePunditOpinionFeedAsync(
         AppDbContext db,
         int maxItems,
+        IReadOnlyList<Guid>? followedPunditIds,
         CancellationToken ct)
     {
-        var opinions = await db.PunditOpinions
+        var query = db.PunditOpinions
             .AsNoTracking()
             .Include(o => o.Pundit)
             .Include(o => o.SourceItem)
             .ThenInclude(i => i.MediaSource)
-            .Where(o => o.Pundit.Kind == PunditKind.Source && !o.NeedsHumanReview && o.ReviewStatus != "rejected")
+            .Where(o => o.Pundit.Kind == PunditKind.Source && !o.NeedsHumanReview && o.ReviewStatus != "rejected");
+
+        if (followedPunditIds is { Count: > 0 })
+        {
+            query = query.Where(o => followedPunditIds.Contains(o.PunditId));
+        }
+
+        var opinions = await query
             .OrderByDescending(o => o.SourceItem.PublishedAt ?? o.CreatedAt)
             .Take(maxItems)
             .ToListAsync(ct);
@@ -64,6 +74,7 @@ public static class PersonalizedFeedService
         AppDbContext db,
         IUserContext user,
         int maxItems,
+        IReadOnlyList<Guid>? followedPunditIds,
         CancellationToken ct)
     {
         var predictions = await db.Predictions
@@ -105,7 +116,7 @@ public static class PersonalizedFeedService
             {
                 var scoreline = MatchOutcomeHelper.FormatScoreline(match);
                 var hit = prediction.PointsAwarded > 0;
-                var punditContrast = await GetPunditContrastAsync(db, match.Id, ct);
+                var punditContrast = await GetPunditContrastAsync(db, match.Id, followedPunditIds, ct);
 
                 var body = hit
                     ? $"You nailed {pickLabel}. Final: {scoreline}. +{prediction.PointsAwarded} pts in the bag.{punditContrast}"
@@ -140,9 +151,14 @@ public static class PersonalizedFeedService
     private static async Task<string> GetPunditContrastAsync(
         AppDbContext db,
         string matchId,
+        IReadOnlyList<Guid>? followedPunditIds,
         CancellationToken ct)
     {
-        var context = await MatchFeedContextBuilder.BuildPunditContextAsync(db, matchId, cancellationToken: ct);
+        var context = await MatchFeedContextBuilder.BuildPunditContextAsync(
+            db,
+            matchId,
+            followedPunditIds: followedPunditIds,
+            cancellationToken: ct);
         return string.IsNullOrWhiteSpace(context) ? string.Empty : $" {context}";
     }
 }
