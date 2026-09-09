@@ -1,4 +1,5 @@
 using BanterApp.Api.Data;
+using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.SportsData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -40,10 +41,30 @@ public static class HealthEndpoints
                 var isPostgres = db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
                 var matchCount = await db.Matches.CountAsync(ct);
                 var newsCount = await db.NewsFeedItems.CountAsync(ct);
+                var lastScoreSync = await db.SyncRuns
+                    .Where(r => r.JobName == ScoreSyncJob.JobId)
+                    .OrderByDescending(r => r.StartedAt)
+                    .Select(r => new { r.Status, r.FinishedAt, r.ErrorMessage, r.ItemsProcessed })
+                    .FirstOrDefaultAsync(ct);
+                var overdueUnfinished = await db.Matches
+                    .WherePremierLeague()
+                    .AnyAsync(
+                        m => m.KickoffTime <= DateTimeOffset.UtcNow &&
+                             m.Status != "FT" &&
+                             m.Status != "AET" &&
+                             m.Status != "PEN" &&
+                             m.Status != "WO" &&
+                             m.Status != "CANC" &&
+                             m.Status != "ABD" &&
+                             m.Status != "LIVE" &&
+                             m.Status != "1H" &&
+                             m.Status != "2H" &&
+                             m.Status != "HT",
+                        ct);
 
                 return Results.Ok(new
                 {
-                    status = "ok",
+                    status = overdueUnfinished || sportsMode == "apifootball-mock-fallback" ? "degraded" : "ok",
                     database = new
                     {
                         connected = true,
@@ -55,7 +76,12 @@ public static class HealthEndpoints
                     {
                         provider = sports.Provider,
                         mode = sportsMode,
-                        syncIntervalMinutes = sports.SyncIntervalMinutes
+                        syncIntervalMinutes = sports.SyncIntervalMinutes,
+                        lastScoreSyncStatus = lastScoreSync?.Status,
+                        lastScoreSyncAt = lastScoreSync?.FinishedAt,
+                        lastScoreSyncError = lastScoreSync?.ErrorMessage,
+                        lastScoreSyncItems = lastScoreSync?.ItemsProcessed,
+                        overdueUnfinishedFixtures = overdueUnfinished
                     }
                 });
             }

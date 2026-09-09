@@ -23,6 +23,7 @@ export interface AdminJob {
   nextRunAt: string | null;
   lastSuccessAt: string | null;
   lastFailureAt: string | null;
+  lastErrorMessage?: string | null;
   averageDurationMs: number | null;
   failureCount: number;
   successCount: number;

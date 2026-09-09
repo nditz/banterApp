@@ -41,7 +41,8 @@ public sealed record AdminJobDto(
     bool Paused,
     bool CanRunManually,
     bool CanPause,
-    bool IsStub);
+    bool IsStub,
+    string? LastErrorMessage = null);
 
 public interface IJobRegistryService
 {
@@ -266,7 +267,7 @@ public sealed class JobRegistryService(
             Status: status,
             Schedule: state?.Schedule ?? def.DefaultSchedule,
             LastRunAt: lastRun?.StartedAt,
-            NextRunAt: null,
+            NextRunAt: GetHangfireNextRun(def.HangfireJobId),
             LastSuccessAt: lastSuccess?.FinishedAt,
             LastFailureAt: lastFailure?.FinishedAt,
             AverageDurationMs: completedRuns.Count == 0
@@ -278,7 +279,8 @@ public sealed class JobRegistryService(
             Paused: paused,
             CanRunManually: def.CanRunManually,
             CanPause: def.CanPause,
-            IsStub: def.IsStub);
+            IsStub: def.IsStub,
+            LastErrorMessage: lastFailure?.ErrorMessage);
     }
 
     private static string ResolveStatus(
@@ -309,6 +311,29 @@ public sealed class JobRegistryService(
         }
 
         return "idle";
+    }
+
+    private static DateTimeOffset? GetHangfireNextRun(string hangfireJobId)
+    {
+        try
+        {
+            using var connection = JobStorage.Current.GetConnection();
+            var recurring = connection.GetRecurringJobs()
+                .FirstOrDefault(j => string.Equals(j.Id, hangfireJobId, StringComparison.OrdinalIgnoreCase));
+            if (recurring?.NextExecution is DateTime next)
+            {
+                var utc = next.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(next, DateTimeKind.Utc)
+                    : next.ToUniversalTime();
+                return new DateTimeOffset(utc);
+            }
+        }
+        catch
+        {
+            // Hangfire monitoring may be unavailable in tests.
+        }
+
+        return null;
     }
 
     private static HashSet<string> GetRunningHangfireJobIds()

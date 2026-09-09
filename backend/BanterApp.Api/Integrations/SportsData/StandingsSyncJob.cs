@@ -3,8 +3,10 @@ using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.SportsData.Dtos;
+using BanterApp.Api.Services;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BanterApp.Api.Integrations.SportsData;
 
@@ -20,6 +22,7 @@ public sealed class StandingsSyncJob
     private readonly IEnumerable<ISportsDataFallbackProvider> _fallbacks;
     private readonly AppDbContext _db;
     private readonly SyncRunTracker _tracker;
+    private readonly SportsDataOptions _options;
     private readonly ILogger<StandingsSyncJob> _logger;
 
     public StandingsSyncJob(
@@ -27,16 +30,18 @@ public sealed class StandingsSyncJob
         IEnumerable<ISportsDataFallbackProvider> fallbacks,
         AppDbContext db,
         SyncRunTracker tracker,
+        IOptions<SportsDataOptions> options,
         ILogger<StandingsSyncJob> logger)
     {
         _enrichment = enrichment;
         _db = db;
         _tracker = tracker;
+        _options = options.Value;
         _logger = logger;
         _fallbacks = fallbacks;
     }
 
-    [AutomaticRetry(Attempts = 1, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
+    [AutomaticRetry(Attempts = 1, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
     public async Task SyncAsync(CancellationToken cancellationToken)
     {
         var run = await _tracker.StartAsync(Provider, JobId, cancellationToken);
@@ -45,7 +50,23 @@ public sealed class StandingsSyncJob
 
         try
         {
-            var standings = await _enrichment.GetAllStandingsAsync(cancellationToken);
+            IReadOnlyDictionary<string, IReadOnlyList<StandingDto>> standings =
+                new Dictionary<string, IReadOnlyList<StandingDto>>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                standings = await _enrichment.GetAllStandingsAsync(cancellationToken);
+            }
+            catch (SportsDataUnavailableException ex)
+            {
+                _logger.LogWarning(ex, "Live standings provider failed; computing from stored fixtures if possible.");
+                await _tracker.LogErrorAsync(
+                    Provider,
+                    JobId,
+                    "standings",
+                    ex.Message,
+                    run.Id,
+                    ct: cancellationToken);
+            }
             if (!standings.ContainsKey("PL") || standings["PL"].Count == 0)
             {
                 foreach (var fallback in _fallbacks.Where(f => f.IsConfigured))
@@ -72,6 +93,11 @@ public sealed class StandingsSyncJob
                             new TeamDto(r.TeamCode, r.TeamName, r.TeamCode, r.TeamCode, r.LogoUrl),
                             r.Played, r.Won, r.Drawn, r.Lost, r.GoalsFor, r.GoalsAgainst, r.GoalDiff, r.Points)).ToList()
                     };
+                }
+                else if (!FootballDatasetStatus.IsMockProvider(_options.Provider))
+                {
+                    throw new SportsDataUnavailableException(
+                        "Standings sync fetched no Premier League table from the live provider or computed results.");
                 }
             }
 
@@ -154,6 +180,7 @@ public sealed class StandingsSyncJob
         {
             _logger.LogError(ex, "Standings sync job failed.");
             await _tracker.FailAsync(run, created, updated, ex, cancellationToken);
+            throw;
         }
     }
 }

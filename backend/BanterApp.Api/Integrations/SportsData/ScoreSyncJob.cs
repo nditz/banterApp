@@ -2,9 +2,11 @@ using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.Common;
+using BanterApp.Api.Integrations.SportsData.Dtos;
 using BanterApp.Api.Services;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BanterApp.Api.Integrations.SportsData;
 
@@ -24,6 +26,7 @@ public sealed class ScoreSyncJob
     private readonly CompetitionCatalogService _catalog;
     private readonly PredictionRescoreService _rescore;
     private readonly MatchweekBonusService _matchweekBonuses;
+    private readonly SportsDataOptions _options;
     private readonly ILogger<ScoreSyncJob> _logger;
 
     public ScoreSyncJob(
@@ -34,6 +37,7 @@ public sealed class ScoreSyncJob
         CompetitionCatalogService catalog,
         PredictionRescoreService rescore,
         MatchweekBonusService matchweekBonuses,
+        IOptions<SportsDataOptions> options,
         ILogger<ScoreSyncJob> logger)
     {
         _provider = provider;
@@ -43,10 +47,11 @@ public sealed class ScoreSyncJob
         _catalog = catalog;
         _rescore = rescore;
         _matchweekBonuses = matchweekBonuses;
+        _options = options.Value;
         _logger = logger;
     }
 
-    [AutomaticRetry(Attempts = 2, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
+    [AutomaticRetry(Attempts = 2, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
     public async Task SyncAsync(CancellationToken cancellationToken)
     {
         var run = await _tracker.StartAsync(Provider, JobId, cancellationToken);
@@ -56,8 +61,39 @@ public sealed class ScoreSyncJob
         try
         {
             var season = await _catalog.EnsureCurrentPremierLeagueAsync(cancellationToken);
-            var all = await _provider.GetAllFixturesAsync(cancellationToken);
-            var live = await _provider.GetLiveFixturesAsync(cancellationToken);
+            IReadOnlyList<MatchDto> all = [];
+            try
+            {
+                all = await _provider.GetAllFixturesAsync(cancellationToken);
+            }
+            catch (SportsDataUnavailableException ex)
+            {
+                _logger.LogWarning(ex, "Canonical sports provider returned no fixtures.");
+                await _tracker.LogErrorAsync(
+                    Provider,
+                    JobId,
+                    "fixture",
+                    ex.Message,
+                    run.Id,
+                    ct: cancellationToken);
+            }
+
+            IReadOnlyList<MatchDto> live = [];
+            try
+            {
+                live = await _provider.GetLiveFixturesAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Live fixture poll failed; continuing with the full fixture list.");
+                await _tracker.LogErrorAsync(
+                    Provider,
+                    JobId,
+                    "live-fixture",
+                    ex.Message,
+                    run.Id,
+                    ct: cancellationToken);
+            }
 
             if (all.Count == 0)
             {
@@ -81,8 +117,9 @@ public sealed class ScoreSyncJob
 
             if (all.Count == 0)
             {
+                var usingMock = FootballDatasetStatus.IsMockProvider(_options.Provider);
                 var hasPremierLeague = await _db.Matches.WherePremierLeague().AnyAsync(cancellationToken);
-                if (!hasPremierLeague)
+                if (usingMock && !hasPremierLeague)
                 {
                     all = await new MockSportsDataProvider().GetAllFixturesAsync(cancellationToken);
                     await _tracker.LogErrorAsync(
@@ -92,6 +129,11 @@ public sealed class ScoreSyncJob
                         "Canonical fixtures empty; seeded mock Premier League fixtures.",
                         run.Id,
                         ct: cancellationToken);
+                }
+                else if (!usingMock)
+                {
+                    throw new SportsDataUnavailableException(
+                        "Score sync fetched 0 Premier League fixtures from the live sports provider.");
                 }
             }
 
@@ -167,6 +209,7 @@ public sealed class ScoreSyncJob
         {
             _logger.LogError(ex, "Score sync job failed.");
             await _tracker.FailAsync(run, added, updated, ex, cancellationToken);
+            throw;
         }
     }
 

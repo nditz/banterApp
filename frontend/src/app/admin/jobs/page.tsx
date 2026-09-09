@@ -89,6 +89,14 @@ export default function AdminJobsPage() {
             <AdminMobileCardRow label="Last run">
               {job.lastRunAt ? new Date(job.lastRunAt).toLocaleString() : "—"}
             </AdminMobileCardRow>
+            <AdminMobileCardRow label="Next run">
+              {job.nextRunAt ? new Date(job.nextRunAt).toLocaleString() : "—"}
+            </AdminMobileCardRow>
+            {job.lastErrorMessage ? (
+              <AdminMobileCardRow label="Last error">
+                <span className="break-anywhere text-red-400">{job.lastErrorMessage}</span>
+              </AdminMobileCardRow>
+            ) : null}
             <AdminMobileCardRow label="Success / Fail">
               {job.successCount} / {job.failureCount}
             </AdminMobileCardRow>
@@ -104,6 +112,7 @@ export default function AdminJobsPage() {
             <th className="px-4 py-3">Status</th>
             <th className="hidden px-4 py-3 md:table-cell">Schedule</th>
             <th className="px-4 py-3">Last run</th>
+            <th className="hidden px-4 py-3 lg:table-cell">Next run</th>
             <th className="hidden px-4 py-3 lg:table-cell">Success / Fail</th>
             <th className="px-4 py-3">Actions</th>
           </tr>
@@ -120,7 +129,13 @@ export default function AdminJobsPage() {
               </td>
               <td className="hidden px-4 py-3 font-mono text-xs md:table-cell">{job.schedule ?? "—"}</td>
               <td className="px-4 py-3 text-xs text-zinc-400">
-                {job.lastRunAt ? new Date(job.lastRunAt).toLocaleString() : "—"}
+                <p>{job.lastRunAt ? new Date(job.lastRunAt).toLocaleString() : "—"}</p>
+                {job.lastErrorMessage ? (
+                  <p className="mt-1 max-w-xs break-anywhere text-red-400">{job.lastErrorMessage}</p>
+                ) : null}
+              </td>
+              <td className="hidden px-4 py-3 text-xs text-zinc-400 lg:table-cell">
+                {job.nextRunAt ? new Date(job.nextRunAt).toLocaleString() : "—"}
               </td>
               <td className="hidden px-4 py-3 tabular-nums lg:table-cell">
                 {job.successCount} / {job.failureCount}

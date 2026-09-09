@@ -1,0 +1,22 @@
+# Production Readiness Checklist
+
+- [ ] Current matchweek resolves correctly
+- [ ] Fixtures render
+- [ ] Fixture failures show proper error state
+- [ ] Predictions persist
+- [ ] Predictions lock correctly
+- [ ] Results settle exactly once
+- [ ] Aura updates correctly
+- [ ] Receipts generate
+- [ ] Pundit comparisons render
+- [ ] Studio can open from a receipt
+- [ ] Studio generates a content pack
+- [ ] Copy/export works
+- [ ] Background jobs visible in admin
+- [ ] Failed jobs visible
+- [ ] No stale World Cup primary UI
+- [ ] Ad placeholders collapse on no-fill
+- [ ] Consent respected
+- [ ] Mobile routes usable
+- [ ] Error logging enabled
+- [ ] Production build succeeds

@@ -150,8 +150,10 @@ public sealed class MockSportsDataProvider : ISportsDataProvider, ISportsDataEnr
         var sun = Team("SUN", "Sunderland", "SUN");
         var tot = Team("TOT", "Tottenham Hotspur", "TOT");
 
-        // Official 2026/27 Premier League matchweeks 1–2 (BBC Sport / Premier League).
-        var week1 = new (TeamDto Home, TeamDto Away, int Year, int Month, int Day, int Hour, int Minute, string Venue, int? Hs, int? As)[]
+        // Matchweeks 1–2 follow the published 2026/27 opening rounds (BBC Sport / Premier League).
+        // Weeks 3–4 are a plausible local/dev continuation so current-week resolution can move past
+        // 31 Aug 2026. They are not official fixtures — APIs must set official=false for mock data.
+        var week1 = new (TeamDto Home, TeamDto Away, int Year, int Month, int Day, int Hour, int Minute, string Venue, int Hs, int As)[]
         {
             (ars, cov, 2026, 8, 21, 20, 0, "Emirates Stadium", 3, 0),
             (hul, mun, 2026, 8, 22, 12, 30, "MKM Stadium", 2, 0),
@@ -162,45 +164,95 @@ public sealed class MockSportsDataProvider : ISportsDataProvider, ISportsDataEnr
             (bha, avl, 2026, 8, 23, 14, 0, "American Express Stadium", 4, 0),
             (mci, bou, 2026, 8, 23, 14, 0, "Etihad Stadium", 2, 1),
             (neu, liv, 2026, 8, 23, 16, 30, "St James' Park", 2, 2),
-            (ful, che, 2026, 8, 24, 20, 0, "Craven Cottage", null, null),
+            (ful, che, 2026, 8, 24, 20, 0, "Craven Cottage", 0, 2),
         };
 
-        var week2 = new (TeamDto Home, TeamDto Away, int Year, int Month, int Day, int Hour, int Minute, string Venue)[]
+        var week2 = new (TeamDto Home, TeamDto Away, int Year, int Month, int Day, int Hour, int Minute, string Venue, int Hs, int As)[]
         {
-            (cry, mci, 2026, 8, 28, 20, 0, "Selhurst Park"),
-            (liv, nfo, 2026, 8, 29, 12, 30, "Anfield"),
-            (bou, eve, 2026, 8, 29, 15, 0, "Vitality Stadium"),
-            (cov, hul, 2026, 8, 29, 15, 0, "Coventry Building Society Arena"),
-            (tot, neu, 2026, 8, 29, 17, 30, "Tottenham Hotspur Stadium"),
-            (che, bha, 2026, 8, 30, 14, 0, "Stamford Bridge"),
-            (lee, bre, 2026, 8, 30, 14, 0, "Elland Road"),
-            (sun, ful, 2026, 8, 30, 14, 0, "Stadium of Light"),
-            (mun, ips, 2026, 8, 30, 16, 30, "Old Trafford"),
-            (avl, ars, 2026, 8, 31, 20, 0, "Villa Park"),
+            (cry, mci, 2026, 8, 28, 20, 0, "Selhurst Park", 1, 2),
+            (liv, nfo, 2026, 8, 29, 12, 30, "Anfield", 3, 0),
+            (bou, eve, 2026, 8, 29, 15, 0, "Vitality Stadium", 1, 1),
+            (cov, hul, 2026, 8, 29, 15, 0, "Coventry Building Society Arena", 0, 2),
+            (tot, neu, 2026, 8, 29, 17, 30, "Tottenham Hotspur Stadium", 2, 1),
+            (che, bha, 2026, 8, 30, 14, 0, "Stamford Bridge", 2, 1),
+            (lee, bre, 2026, 8, 30, 14, 0, "Elland Road", 1, 1),
+            (sun, ful, 2026, 8, 30, 14, 0, "Stadium of Light", 0, 1),
+            (mun, ips, 2026, 8, 30, 16, 30, "Old Trafford", 1, 0),
+            (avl, ars, 2026, 8, 31, 20, 0, "Villa Park", 1, 2),
+        };
+
+        var week3 = new (TeamDto Home, TeamDto Away, int Year, int Month, int Day, int Hour, int Minute, string Venue)[]
+        {
+            (liv, ars, 2026, 9, 12, 12, 30, "Anfield"),
+            (avl, eve, 2026, 9, 12, 15, 0, "Villa Park"),
+            (nfo, bre, 2026, 9, 12, 15, 0, "City Ground"),
+            (lee, ips, 2026, 9, 12, 15, 0, "Elland Road"),
+            (cry, ful, 2026, 9, 12, 15, 0, "Selhurst Park"),
+            (bou, cov, 2026, 9, 12, 15, 0, "Vitality Stadium"),
+            (sun, hul, 2026, 9, 12, 15, 0, "Stadium of Light"),
+            (mci, che, 2026, 9, 12, 17, 30, "Etihad Stadium"),
+            (tot, bha, 2026, 9, 13, 14, 0, "Tottenham Hotspur Stadium"),
+            (mun, neu, 2026, 9, 13, 16, 30, "Old Trafford"),
+        };
+
+        var week4 = new (TeamDto Home, TeamDto Away, int Year, int Month, int Day, int Hour, int Minute, string Venue)[]
+        {
+            (ars, mci, 2026, 9, 19, 12, 30, "Emirates Stadium"),
+            (che, liv, 2026, 9, 19, 15, 0, "Stamford Bridge"),
+            (neu, avl, 2026, 9, 19, 15, 0, "St James' Park"),
+            (bha, mun, 2026, 9, 19, 15, 0, "American Express Stadium"),
+            (eve, tot, 2026, 9, 19, 15, 0, "Hill Dickinson Stadium"),
+            (bre, lee, 2026, 9, 19, 15, 0, "Gtech Community Stadium"),
+            (ips, nfo, 2026, 9, 19, 15, 0, "Portman Road"),
+            (ful, bou, 2026, 9, 19, 17, 30, "Craven Cottage"),
+            (cov, sun, 2026, 9, 20, 14, 0, "Coventry Building Society Arena"),
+            (hul, cry, 2026, 9, 20, 16, 30, "MKM Stadium"),
         };
 
         var fixtures = new List<MatchDto>();
-        for (var i = 0; i < week1.Length; i++)
-        {
-            var (home, away, y, mo, d, h, mi, venue, hs, ascore) = week1[i];
-            var kickoff = KickoffUk(y, mo, d, h, mi);
-            if (hs is int homeScore && ascore is int awayScore)
-            {
-                fixtures.Add(Finished($"pl26-mw1-{i + 1}", home, away, kickoff, 1, venue, homeScore, awayScore));
-            }
-            else
-            {
-                fixtures.Add(Upcoming($"pl26-mw1-{i + 1}", home, away, kickoff, 1, venue));
-            }
-        }
-
-        for (var i = 0; i < week2.Length; i++)
-        {
-            var (home, away, y, mo, d, h, mi, venue) = week2[i];
-            fixtures.Add(Upcoming($"pl26-mw2-{i + 1}", home, away, KickoffUk(y, mo, d, h, mi), 2, venue));
-        }
-
+        AppendFinished(fixtures, week1, 1);
+        AppendFinished(fixtures, week2, 2);
+        AppendUpcoming(fixtures, week3, 3);
+        AppendUpcoming(fixtures, week4, 4);
         return fixtures;
+    }
+
+    private static void AppendFinished(
+        List<MatchDto> fixtures,
+        (TeamDto Home, TeamDto Away, int Year, int Month, int Day, int Hour, int Minute, string Venue, int Hs, int As)[] week,
+        int matchweek)
+    {
+        for (var i = 0; i < week.Length; i++)
+        {
+            var (home, away, y, mo, d, h, mi, venue, hs, ascore) = week[i];
+            fixtures.Add(Finished(
+                $"pl26-mw{matchweek}-{i + 1}",
+                home,
+                away,
+                KickoffUk(y, mo, d, h, mi),
+                matchweek,
+                venue,
+                hs,
+                ascore));
+        }
+    }
+
+    private static void AppendUpcoming(
+        List<MatchDto> fixtures,
+        (TeamDto Home, TeamDto Away, int Year, int Month, int Day, int Hour, int Minute, string Venue)[] week,
+        int matchweek)
+    {
+        for (var i = 0; i < week.Length; i++)
+        {
+            var (home, away, y, mo, d, h, mi, venue) = week[i];
+            fixtures.Add(Upcoming(
+                $"pl26-mw{matchweek}-{i + 1}",
+                home,
+                away,
+                KickoffUk(y, mo, d, h, mi),
+                matchweek,
+                venue));
+        }
     }
 
     /// <summary>

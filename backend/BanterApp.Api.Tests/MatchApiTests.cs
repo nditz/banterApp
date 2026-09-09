@@ -21,7 +21,7 @@ public class MatchApiTests : IClassFixture<BanterAppWebApplicationFactory>
     public MatchApiTests(BanterAppWebApplicationFactory factory) => _factory = factory;
 
     [Fact]
-    public async Task CurrentMatchweek_ReturnsOpenOfficialRound()
+    public async Task CurrentMatchweek_ReturnsOpenRound()
     {
         using var client = _factory.CreateClient();
         var response = await client.GetAsync("/api/matchweeks/current");
@@ -29,11 +29,13 @@ public class MatchApiTests : IClassFixture<BanterAppWebApplicationFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var payload = await response.Content.ReadFromJsonAsync<CurrentMatchweekPayload>(JsonOptions);
         Assert.NotNull(payload);
-        Assert.Equal(2, payload.Number);
+        Assert.Equal(3, payload.Number);
         Assert.Equal(10, payload.Matches.Count);
         Assert.Contains(
             payload.Matches,
-            m => m.TeamA == "Crystal Palace" && m.TeamB == "Manchester City");
+            m => m.TeamA == "Liverpool" && m.TeamB == "Arsenal");
+        Assert.Equal("ok", payload.Status);
+        Assert.False(payload.Official);
     }
 
     [Fact]
@@ -75,21 +77,28 @@ public class MatchApiTests : IClassFixture<BanterAppWebApplicationFactory>
         var response = await client.GetAsync("/api/standings");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var table = await response.Content.ReadFromJsonAsync<List<StandingPayload>>(JsonOptions);
-        Assert.NotNull(table);
-        Assert.Equal(20, table.Count);
-        Assert.Equal("BHA", table[0].TeamCode);
-        Assert.Equal(0, table.Single(r => r.TeamCode == "CHE").Played);
-        Assert.All(table, row =>
+        var payload = await response.Content.ReadFromJsonAsync<StandingsApiPayload>(JsonOptions);
+        Assert.NotNull(payload);
+        Assert.Equal("ok", payload.Status);
+        Assert.Equal(20, payload.Rows.Count);
+        Assert.Equal("ARS", payload.Rows[0].TeamCode);
+        Assert.Equal(2, payload.Rows.Single(r => r.TeamCode == "CHE").Played);
+        Assert.All(payload.Rows, row =>
         {
             Assert.False(string.IsNullOrWhiteSpace(row.LogoUrl));
             Assert.DoesNotContain("flagcdn.com", row.LogoUrl, StringComparison.OrdinalIgnoreCase);
         });
     }
 
-    private sealed record CurrentMatchweekPayload(int Number, List<MatchPayload> Matches);
+    private sealed record CurrentMatchweekPayload(
+        int Number,
+        List<MatchPayload> Matches,
+        string? Status,
+        bool Official);
 
     private sealed record MatchPayload(string TeamA, string TeamB, string? Status);
 
     private sealed record StandingPayload(string TeamCode, int Played, string? LogoUrl);
+
+    private sealed record StandingsApiPayload(string Status, List<StandingPayload> Rows);
 }

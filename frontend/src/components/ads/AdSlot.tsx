@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { ADSENSE_CLIENT, ADSENSE_ENABLED, resolveAdSlotId } from "@/lib/ads";
+import { ADSENSE_CLIENT, canRequestAds, resolveAdSlotId } from "@/lib/ads";
 
 type AdPlacement = "sidebar" | "feed" | "inline" | "skyscraper";
 
@@ -33,7 +33,7 @@ export function AdSlot({ placement, className, slotId, fill = false }: AdSlotPro
   const pushedRef = useRef(false);
 
   const adUnitId = resolveAdSlotId(slotId);
-  const isLiveAd = ADSENSE_ENABLED && Boolean(adUnitId);
+  const isLiveAd = canRequestAds() && Boolean(adUnitId);
 
   useEffect(() => {
     const element = ref.current;

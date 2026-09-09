@@ -1,3 +1,5 @@
+import { hasAdvertisingConsent } from "./advertising-consent";
+
 /**
  * Google AdSense configuration.
  *
@@ -5,17 +7,19 @@
  * serves responsive units, so a single loader script + responsive <ins> tags
  * cover every breakpoint.
  *
- * To turn the existing placeholder slots into live ad units:
- *   1. Create ad units in the AdSense dashboard for this publisher.
- *   2. Map each internal slot key below to its numeric ad-unit id.
- * Until a key has a numeric id, that slot renders a placeholder (and Auto Ads
- * from the loader script can still fill the page).
+ * Ads must not load before advertising consent (GDPR/ePrivacy). Terms consent
+ * is not advertising consent.
  */
 
 export const ADSENSE_CLIENT =
   process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-5886846159925642";
 
 export const ADSENSE_ENABLED = ADSENSE_CLIENT.length > 0;
+
+/** True only when AdSense is configured AND the user has granted advertising consent. */
+export function canRequestAds(): boolean {
+  return ADSENSE_ENABLED && hasAdvertisingConsent();
+}
 
 /** Loader script URL used sitewide. */
 export const ADSENSE_SCRIPT_SRC = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`;
@@ -80,4 +84,8 @@ export const AD_SLOT_IDS: Record<string, string> = {
 export function resolveAdSlotId(slotKey?: string): string | undefined {
   if (!slotKey) return undefined;
   return AD_SLOT_IDS[slotKey];
+}
+
+export function hasConfiguredAdSlot(slotKey?: string): boolean {
+  return Boolean(resolveAdSlotId(slotKey));
 }
