@@ -82,6 +82,8 @@ builder.Services.AddScoped<BanterContextEnricher>();
 builder.Services.AddScoped<UsernameService>();
 builder.Services.AddScoped<IAuthorizationHandler, AdminAuthorizationHandler>();
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient(nameof(SafeHttpClient))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {

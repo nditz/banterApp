@@ -113,7 +113,7 @@ export const TOURNAMENT_BONUS_RULES = [
 export const TOURNAMENT_BONUS_ELIGIBILITY = {
   minCustomLeagueMembers: 3,
   summary:
-    "Anyone with an active session can save season awards before the first kickoff. Award points only count on private league leaderboards with at least 3 members, after you've made at least one match pick. Global and Country leagues never include award points.",
+    "Anyone with an active session can save season calls before the first kickoff. Call points only count on private league leaderboards with at least 3 members, after you've made at least one match pick. Global and Country leagues never include season-call points.",
 } as const;
 
 export const CONCEPT_SLIDES = [
@@ -151,7 +151,7 @@ export const CONCEPT_SLIDES = [
     id: "scoring",
     title: "Points that actually mean something",
     subtitle: "How you eat",
-    body: "Result +3 · exact score +7 · double chance +2. Nail a perfect matchweek for +5. Private leagues unlock season awards for extra swings.",
+    body: "Result +3 · exact score +7 · double chance +2. Nail a perfect matchweek for +5. Private leagues unlock season calls for extra swings.",
     accent: "pitch",
     backgroundImage: "/images/score-points-your-way.png",
     highlights: ["+7 exact score", "Perfect week bonus", "Big league swings"],
@@ -159,7 +159,7 @@ export const CONCEPT_SLIDES = [
   },
   {
     id: "bonuses",
-    title: "Season awards for the bold",
+    title: "Season calls for the bold",
     subtitle: "High risk · high flex",
     body: "League winner, Golden Boot, relegation, Player of the Season — lock them before the campaign runs away. Only scores in custom leagues with 3+ people actually playing.",
     accent: "flare",
@@ -192,12 +192,31 @@ export const HOME_WELCOME_SLIDES = [
   {
     id: "welcome",
     title: "Think you know ball? Prove it.",
-    subtitle: "Premier League · free to play",
-    body: "Predict the Premier League. Beat your mates. Come back next matchweek.",
-    accent: "brand",
+    subtitle: "Live picks · this matchweek",
+    body: "Lock this week's fixtures, then scroll the feed. That's the product — picks, banter, then Studio.",
+    accent: "brand" as const,
     backgroundImage: "/images/welcome-hero-panel.png",
-    highlights: ["No account needed", "38 matchweeks"],
+    highlights: ["This week's picks", "No account needed"],
     stickerImage: "/reactions/locked-in.svg",
   },
-  ...CONCEPT_SLIDES,
+  {
+    id: "banter",
+    title: "Scroll banter that hits different",
+    subtitle: "The feed",
+    body: "GIFs, pundit receipts and matchday chaos sit under the picks. Watch the timeline — don't wait for a tutorial.",
+    accent: "brand" as const,
+    backgroundImage: "/images/banter-feed-hero.png",
+    highlights: ["GIF reactions", "Pundit receipts", "Picks vs reality"],
+    stickerImage: "/reactions/receipts-found.svg",
+  },
+  {
+    id: "content",
+    title: "Then take it to Studio",
+    subtitle: "Create",
+    body: "Studio turns your slate into a post-ready script — not a blank prompt. Compare, copy, export.",
+    accent: "gold" as const,
+    backgroundImage: "/images/baller-scripts.png",
+    highlights: ["You vs pundits", "Copy & export", "Studio stays central"],
+    stickerImage: "/reactions/script-writer.svg",
+  },
 ] as const;

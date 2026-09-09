@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using BanterApp.Api.Tests.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace BanterApp.Api.Tests;
@@ -53,6 +54,13 @@ public class HealthAndBotProtectionTests : IClassFixture<BanterAppWebApplication
         var response = await client.GetAsync("/api/feed");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BanterApp.Api.Data.AppDbContext>();
+        var botInternal = db.OperationalErrors.ToList()
+            .Where(e => e.ErrorCode == "INTERNAL_SERVER_ERROR" && e.JobKey == "bot_blocked")
+            .ToList();
+        Assert.Empty(botInternal);
     }
 
     private HttpClient CurlClient()

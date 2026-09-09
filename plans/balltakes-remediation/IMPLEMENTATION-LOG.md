@@ -1,80 +1,62 @@
 # Implementation Log
 
 ## Phase
-Phase 1 — Production Integrity
+Phase 2 — Product Cleanup
 
 ## Date
 2026-09-09
 
 ## Existing Implementation Found
-- Sports pipeline already exists: `ScoreSyncJob`, `StandingsSyncJob`, `CurrentMatchweek.Resolve`, `ApiFootballProvider`, `MockSportsDataProvider`.
-- Production `/api/health` reports `SportsData.provider=apifootball` and `mode=apifootball-live`.
-- Production still only has **20** `pl26-*` mock fixtures (MW1–2). Current matchweek is **2**, all MW2 rows `NS` with kickoffs 28–31 Aug 2026 (overdue). Standings exist (20 rows) but reflect MW1 only (Chelsea/Fulham played 0).
-- Root cause: live API-Football calls falling back to mock fixtures, then Hangfire completing without rethrowing.
-- `AdSlot` / `PageWithSideAds` / `AdSenseLoader` already exist. No advertising CMP. Terms consent is not ad consent.
-- Admin jobs UI already existed; `NextRunAt` was always null and exhausted Hangfire retries were deleted.
+- Desktop `AppShell` listed Home, Matchweek, Table, Awards, Leagues, Studio, Rules, History. Mobile bottom was Home, Picks, Table, Leagues, Studio.
+- `/awards` already hosted `TournamentBonusBoard`; copy still said Season awards.
+- Homepage welcome was an 8-slide autoplay tour (`HOME_WELCOME_SLIDES` spread all `CONCEPT_SLIDES`).
+- Studio already in desktop + mobile nav; sitemap priority was 0.5. vs-pundits tab said “fictional pundit desk personas”.
+- `CountrySelector` / `PlayerSelector` / `useUserPredictions` had no route. Season calls already use `TournamentBonus*` APIs.
+- WC docs and `supabase/seed.sql` still described World Cup 2026 group fixtures. `/brackets` redirect and `WorldCupLegacyPurge` already exist.
 
 ## Changes Made
-- Stopped silent mock substitution when API-Football has a key; live fixture/standings failures throw `SportsDataUnavailableException`.
-- Score/standings jobs: `FailAsync` then **rethrow**; `AttemptsExceededAction.Fail` instead of `Delete`; do not seed mock into a live-provider database.
-- Extended mock calendar through MW4 (Sep 2026) for local/dev, marked `official=false`.
-- Current matchweek and standings APIs now return `status` (`ok` / `empty` / `error` / `stale`) instead of looking official when data is overdue or mock.
-- Frontend no longer swaps in demo fixtures on API failure; empty vs error vs stale copy is distinct.
-- AdSense loader/slots do not run without explicit advertising consent (defaults unset). Side rails collapse when slots or consent are missing.
-- Admin jobs populate `nextRunAt` from Hangfire and `lastErrorMessage` from `sync_runs`.
-- Production startup requires `SportsData:ApiKey` when provider is `apifootball`. Health/launch checklist expose mock vs live and overdue fixtures.
-- Completion-loop (2026-09-09): match list/read endpoints no longer live-substitute fixtures when a Premier League calendar is already stored. Client infers `stale` and unofficial `pl26-*` even if the API omits `status`/`official`.
+- Shared nav config: Predict / Banter / Studio / Leagues as the spine. Desktop adds Season Calls + More (Table, History, Rules). Mobile bottom is Predict / Banter / Studio (center) / Leagues / Me. Table is overflow-only.
+- Added `/me` hub (history, season calls, table, Studio, Aura rankings). Account control remains the signed-in profile.
+- Reframed Awards as Season Calls in nav, page title, rules, leagues, and bonus board. URL stays `/awards`. No API rename.
+- Homepage welcome is three slides (picks, feed, Studio) with Lock a pick / Watch the feed / Open Studio. Full concept tour stays on `/rules`.
+- Archived World Cup docs to `docs/_archive/world-cup/`. Seed SQL is a do-not-use notice. Live/mock providers still own fixtures.
+- Removed orphan prediction selectors and the unused UserPrediction client hook. Backend UserPrediction endpoints kept.
+- Studio sitemap priority 0.9. vs-pundits copy now refers to sourced pundit predictions.
 
 ## Files Changed
-- Backend: `MockSportsDataProvider`, `ApiFootballProvider`, `ScoreSyncJob`, `StandingsSyncJob`, `MatchEndpoints`, `MatchDtos`, `JobRegistryService`, `ProductionStartupValidator`, `HealthEndpoints`, `AdminHealthService`, plus `SportsDataUnavailableException` and `FootballDatasetStatus`.
-- Frontend: `useMatches`, `MatchweekBoard`, `PredictionCenter`, `LeagueTable`, `AdSlot`, `AdSenseLoader`, `PageWithSideAds`, `ads.ts`, `advertising-consent.ts`, `football-dataset.ts`, admin jobs page.
-- Tests: matchweek/standings/startup/dataset tests; `MatchReadPathTests`; frontend dataset/consent tests.
-- Docs: this log; `IMPLEMENTATION-BACKLOG.md` Phase 1 statuses.
+- Frontend: `navigation.ts`, `AppShell`, `MobileBottomNav`, `HomeQuickNav`, `HomeWelcomePanel`, `MeHub`, `/me`, `sitemap-routes.ts`, `StudioPage`, awards/rules/leagues copy, `TournamentBonusBoard`, `scoring-rules.ts`.
+- Removed: `CountrySelector`, `PlayerSelector`, `useUserPredictions`, `useFootballReference`.
+- Docs/seed: `docs/_archive/world-cup/*`, `supabase/seed.sql`, `supabase/README.md`, `docs/MEDIA-FEED-INTEGRATION.md`, `docs/DATA-SOURCES-INTERNAL.md`.
+- Tests: `navigation.test.ts`, `sitemap-routes.test.ts`, `scoring-rules.test.ts`.
 
 ## Database / Migration Changes
-None.
+None. `TournamentBonus*` tables/routes unchanged.
 
 ## API Changes
-- `GET /api/matchweeks/current` adds `status`, `source`, `official`, `error` (keeps `number` + `matches`).
-- `GET /api/standings` is now `{ status, source, lastSyncedAt, error, rows }` instead of a bare array.
-- `GET /api/health` adds score-sync fields and `overdueUnfinishedFixtures`; status may be `degraded`.
-- Admin jobs DTO adds `lastErrorMessage`; `nextRunAt` is populated when Hangfire has a schedule.
-- Admin health/launch checklist add live-provider and overdue-fixture checks.
+None.
 
 ## Tests Added/Updated
-- Backend: 307 passed (`PremierLeagueMatchweekTests`, `MatchApiTests`, `MatchReadPathTests`, `FootballDatasetStatusTests`, `ProductionStartupValidatorTests`).
-- Frontend Vitest: 21 passed.
-- Lint: eslint clean. Typecheck: `tsc --noEmit` clean. Production build: Next.js 16 succeeded.
+- Frontend Vitest: **31 passed** (nav IA, welcome length, sitemap Studio priority).
+- Lint: eslint clean (`--max-warnings 0`). Typecheck: `tsc --noEmit` clean.
+- Production build: Next.js 16 succeeded; `/me` and `/studio` in the route list.
+- Local `next start` SSR: home has Start here / Lock a pick / Watch the feed / Season Calls; awards h1 is Season Calls; `/brackets` still 308; sitemap `/studio` priority 0.9.
+- Backend tests not re-run (no API/code changes).
 
 ## Risks / Follow-up
-- **Blocked on live fixture ingest:** production DB still holds 20 mock rows until a successful API-Football `fixtures?league=39&season=2026` response arrives. After this deploy, failed syncs should show in admin instead of rewriting mock data. If API-Football has no 2026/27 calendar yet, current week stays stale by design.
-- Do not delete `pl26-*` rows automatically — predictions may reference them. Optional later purge after live `apifb-*` rows exist.
-- Advertising CMP UI is Phase 8; Phase 1 stopgap is “no consent → no ads”.
-- Standings clients must read `rows` (frontend updated). Any external client expecting a bare array will break.
+- `/awards` URL is unchanged; bookmarks still work. A later rename migration is optional.
+- Backend `/api/user/predictions` is unused by the UI. Leave until a dedicated cleanup; do not confuse with match `Prediction` or tournament bonuses.
+- Interactive 375/1440 click-through of the new bottom nav was not done in a real browser (no browser tools this run). SSR + unit tests cover labels and routes.
+- Do not restore archived WC docs into live product paths. Do not run old WC INSERT statements in production SQL Editor.
 
 ## Verification Results
-- Completion-loop report: `plans/balltakes-remediation/VERIFICATION-REPORT.md`.
-- Production re-run (2026-09-09, **after `main` `#38` / `b8ed852`**):
-  - `GET https://api.balltakes.com/api/health` → `status=degraded`, `matchCount=20`, `lastScoreSyncStatus=completed`, `lastScoreSyncItems=0`, `lastScoreSyncError=null`, `overdueUnfinishedFixtures=true`.
-  - `GET /api/matchweeks/current` → number **2**, envelope `status=stale`, `source=mock`, `official=false`, 10× `pl26-mw2-*` all `NS`. No `fd-*` / `apifb-*`.
-  - `GET /api/standings` → envelope `{ status, rows }`, `status=stale`, 20 clubs, Chelsea/Fulham played 0.
-  - `GET /api/matches/upcoming` → **[]** (stored PL calendar exists; overdue NS rows are not upcoming).
-  - Public `/` HTML: Open picks **0**; Studio present; no World Cup copy; no `adsbygoogle.js`.
-  - Vercel production READY on `b8ed852` (`dpl_6fKfh4LeXxmb7diAZ1zvBHQG6F4M`).
-- Local: backend 327 passed (working tree); frontend Vitest 21 passed. Football-data mapper (`Group=PL`) is local only — not on Render.
-- Interactive browser walkthrough of stale banners / ad rails was not done (R3).
+- Local production server: `/`, `/awards`, `/studio`, `/me`, `/matchweek`, `/table`, `/sitemap.xml` returned 200.
+- Home no longer includes the long “Quick tour” / “Beat the board” slides.
+- Studio HTML no longer contains “fictional pundit” / “pundit desk”.
+- `/brackets` remains a redirect.
 
 ## Acceptance Criteria Status
-- [ ] Passed
-- [x] Partial — honesty path deployed (stale visible, no mock-fill); live current matchweek still blocked; score-sync now `completed` with 0 items (R4)
-- [x] Blocked — R2 live ingest (0 PL fixtures persisted). Previous R1 (not deployed) is closed.
+- [x] Passed — Phase 2 IA/copy/cleanup (nav coherent; Studio central; no stale WC UI in PL flows; `/awards` reframed; tests for changed paths; log updated)
+- [ ] Partial — visual click-through of mobile bottom nav / More menu not done in a browser
+- [ ] Blocked
 
-**Phase complete:** no. Do not start Phase 2 until live `fd-*` / `apifb-*` MW≥3 exists **or** stale mock + empty score-sync is explicitly accepted as the integrity end state.
-
-Football data (this phase):
-- Current matchweek resolver reused (not rewritten).
-- Fixtures display or fail/stale visibly after deploy.
-- Standings display or fail/stale visibly.
-- Jobs observable; failures no longer deleted from Hangfire.
-- Ad placeholders collapse without consent/slot ids.
-- Consent respected for ads (no request before grant).
+**Phase complete:** yes for Phase 2 product cleanup. Start Phase 3 (Pundits & Comparison) only in a new deliberate task.

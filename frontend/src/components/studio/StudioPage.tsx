@@ -36,7 +36,7 @@ const tabs: { id: Tab; label: string; icon: React.ReactNode; description: string
     id: "vs_pundits",
     label: "vs Pundits",
     icon: <Mic2 className="size-3.5" />,
-    description: "Your picks side-by-side with fictional pundit desk personas",
+    description: "Your picks side-by-side with sourced pundit predictions",
   },
   {
     id: "script",

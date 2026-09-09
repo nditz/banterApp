@@ -75,13 +75,6 @@ public sealed class ScoreSyncJob
             catch (SportsDataUnavailableException ex)
             {
                 _logger.LogWarning(ex, "Canonical sports provider returned no fixtures.");
-                await _tracker.LogErrorAsync(
-                    SyncProviderName,
-                    JobId,
-                    "fixture",
-                    ex.Message,
-                    run.Id,
-                    ct: cancellationToken);
             }
 
             IReadOnlyList<MatchDto> live = [];
@@ -92,13 +85,6 @@ public sealed class ScoreSyncJob
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Live fixture poll failed; continuing with the full fixture list.");
-                await _tracker.LogErrorAsync(
-                    SyncProviderName,
-                    JobId,
-                    "live-fixture",
-                    ex.Message,
-                    run.Id,
-                    ct: cancellationToken);
             }
 
             var usingMock = FootballDatasetStatus.IsMockProvider(_options.Provider);

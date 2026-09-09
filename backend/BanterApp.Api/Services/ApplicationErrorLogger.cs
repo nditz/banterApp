@@ -40,10 +40,11 @@ public sealed class ApplicationErrorLogger(IServiceScopeFactory scopeFactory) : 
         Guid? syncRunId = null,
         CancellationToken ct = default)
     {
+        var isBot = ErrorCategoryMapper.IsBot(source, category);
         return TrackAsync(new ErrorTrackRequest
         {
             Source = source,
-            ErrorCode = MapCategoryToCode(category, source),
+            ErrorCode = ErrorCategoryMapper.Map(source, category),
             MessageSafe = message,
             MessageInternal = detail,
             Route = requestPath,
@@ -51,7 +52,9 @@ public sealed class ApplicationErrorLogger(IServiceScopeFactory scopeFactory) : 
             StatusCode = statusCode,
             JobKey = category,
             JobRunId = syncRunId,
-            Provider = MapProvider(source, category)
+            Provider = ErrorCategoryMapper.MapProvider(source, category),
+            Severity = isBot ? "warning" : "error",
+            SkipPersistence = isBot
         }, ct);
     }
 
@@ -68,14 +71,14 @@ public sealed class ApplicationErrorLogger(IServiceScopeFactory scopeFactory) : 
         return TrackExceptionAsync(new ErrorTrackRequest
         {
             Source = source,
-            ErrorCode = MapCategoryToCode(category, source),
+            ErrorCode = ErrorCategoryMapper.Map(source, category),
             MessageSafe = "An unexpected error occurred.",
             Route = requestPath,
             Method = requestMethod,
             StatusCode = statusCode ?? StatusCodes.Status500InternalServerError,
             JobKey = category,
             JobRunId = syncRunId,
-            Provider = MapProvider(source, category)
+            Provider = ErrorCategoryMapper.MapProvider(source, category)
         }, exception, ct);
     }
 
@@ -91,62 +94,5 @@ public sealed class ApplicationErrorLogger(IServiceScopeFactory scopeFactory) : 
         await using var scope = scopeFactory.CreateAsyncScope();
         var tracking = scope.ServiceProvider.GetRequiredService<IErrorTrackingService>();
         await tracking.TrackExceptionAsync(request, exception, ct);
-    }
-
-    private static string MapCategoryToCode(string? category, string source)
-    {
-        if (string.Equals(source, "background", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(source, "job", StringComparison.OrdinalIgnoreCase))
-        {
-            return ErrorCodes.JobFailed;
-        }
-
-        if (string.Equals(source, "frontend", StringComparison.OrdinalIgnoreCase))
-        {
-            return ErrorCodes.UnknownError;
-        }
-
-        if (category?.Contains("openai", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            return ErrorCodes.OpenAiApiError;
-        }
-
-        if (category?.Contains("youtube", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            return ErrorCodes.YouTubeApiError;
-        }
-
-        if (category?.Contains("rss", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            return ErrorCodes.RssFetchError;
-        }
-
-        return ErrorCodes.InternalServerError;
-    }
-
-    private static string? MapProvider(string source, string? category)
-    {
-        if (category?.Contains("openai", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            return "openai";
-        }
-
-        if (category?.Contains("youtube", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            return "youtube";
-        }
-
-        if (category?.Contains("rss", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            return "rss";
-        }
-
-        return source switch
-        {
-            "api" or "backend" => "app",
-            "background" or "job" => "job",
-            "frontend" => "app",
-            _ => "unknown"
-        };
     }
 }

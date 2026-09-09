@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using BanterApp.Api.Integrations.Rss;
 using BanterApp.Api.Services;
 
 namespace BanterApp.Api.Integrations.Pundits;
@@ -23,6 +24,12 @@ public sealed partial class ArticleContentFetcher : IArticleContentFetcher
     {
         if (string.IsNullOrWhiteSpace(url))
         {
+            return null;
+        }
+
+        if (RssSourcePolicy.IsDisallowed(url))
+        {
+            _logger.LogInformation("Skipping disallowed article host {Url}.", url);
             return null;
         }
 

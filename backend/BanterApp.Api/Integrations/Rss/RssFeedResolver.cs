@@ -30,6 +30,17 @@ public sealed class RssFeedResolver(
 
         foreach (var feed in feeds)
         {
+            if (RssSourcePolicy.IsDisallowed(feed.RssUrl))
+            {
+                if (feed.IsActive)
+                {
+                    Deactivate(feed, "Disallowed source host");
+                    deactivated++;
+                }
+
+                continue;
+            }
+
             var wasActive = feed.IsActive;
             try
             {

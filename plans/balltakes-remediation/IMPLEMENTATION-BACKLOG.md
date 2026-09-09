@@ -12,17 +12,17 @@ P0 items that make the live product look empty or silently broken.
 
 | ID | Item | Status today | Action | Files / services |
 |---|---|---|---|---|
-| P1-01 | Live sports provider | **Deployed honesty; live ingest still empty** | Production is `apifootball-live`. Latest score-sync **completed** with **0** items and did **not** mock-fill. DB still 20 `pl26-*`. football-data fallback is dropping `fd-*` rows (`Group` empty) until the local mapper ships. | Render env, `ApiFootballProvider`, `FootballDataFixtureMapper`, `ScoreSyncJob` |
-| P1-02 | Current matchweek fixtures | **Stale visible in prod** | Envelope `status=stale`, `source=mock`, unofficial MW2. Do **not** rewrite `CurrentMatchweek.Resolve`. | `MatchEndpoints.GetCurrentMatchweek`, `CurrentMatchweek` |
-| P1-03 | Mock calendar ceiling | **Done** | Mock calendar extended through MW4 (Sep 2026) and marked unofficial. Prod DB still MW1–2 only. | `MockSportsDataProvider.BuildFixtures` |
-| P1-04 | Standings empty vs failed | **Done in prod** | Envelope `{ status, rows, error }` with `status=stale`. UI distinguishes empty / error / stale. | `GetStandings`, `LeagueTable` |
-| P1-05 | Score/standings Hangfire silence | **Partial in prod** | Health still `degraded` (overdue). Latest score-sync is `completed` / 0 items / null error (weaker than previous `failed`). Admin jobs UI 401 without auth. | `ScoreSyncJob`, `StandingsSyncJob`, `JobRegistryService` |
-| P1-06 | Frontend empty/error/stale | **Deployed; not click-verified** | Stopped silent mock fallback. Stale copy in production JS. | `MatchweekBoard`, `PredictionCenter`, `LeagueTable`, `useMatches`, `football-dataset.ts` |
-| P1-07 | AdSense without consent | **Done (stopgap)** | Do not load `AdSenseLoader` / slots until advertising consent is granted. No CMP UI (Phase 8). | `AdSenseLoader`, `AdSlot`, `advertising-consent.ts` |
-| P1-08 | Dead ad rails | **Done (not click-verified)** | Collapse `PageWithSideAds` when slots or consent are missing. | `PageWithSideAds`, `AdSlot` |
-| P1-09 | Production data proof | **Done** | Re-verified 2026-09-09 after `main` `#38` / `b8ed852`. See `VERIFICATION-REPORT.md`. | Admin `/admin/jobs`, `/admin/health`, `/api/health` |
+| P1-01 | Live sports provider | **Pass in prod** | Production is `football-data-live`. 380 `fd-*` matches; current week is official MW4. | Render env, `FootballDataProvider`, `FootballDataFixtureMapper`, `ScoreSyncJob` |
+| P1-02 | Current matchweek fixtures | **Pass in prod** | Envelope `status=ok`, `source=database`, `official=true`, MW4. Do **not** rewrite `CurrentMatchweek.Resolve`. | `MatchEndpoints.GetCurrentMatchweek`, `CurrentMatchweek` |
+| P1-03 | Mock calendar ceiling | **Done** | Mock calendar still in code for local/dev. Prod `pl26-*` rows purged via SQL Editor. | `MockSportsDataProvider.BuildFixtures`, `scripts/purge-leftover-pl26-mock.sql` |
+| P1-04 | Standings empty vs failed | **Pass in prod** | Envelope `{ status, rows }` with `status=ok`, 20 clubs, Forest=`NOT`. | `GetStandings`, `LeagueTable`, `PremierLeagueStandingsCalculator` |
+| P1-05 | Score/standings Hangfire silence | **Pass in prod** | Score-sync `completed`. Health `ok`; `overdueUnfinishedFixtures=false`. Admin jobs UI 401 without auth. | `ScoreSyncJob`, `StandingsSyncJob`, `JobRegistryService` |
+| P1-06 | Frontend empty/error/stale | **Deployed; not click-verified** | Current week and standings APIs are `ok`. | `MatchweekBoard`, `PredictionCenter`, `LeagueTable`, `useMatches`, `football-dataset.ts` |
+| P1-07 | AdSense without consent | **Changed in prod** | Ads load unless consent is `"denied"`. `adsbygoogle.js` is in production HTML. No first-party CMP UI (Phase 8). | `AdSenseLoader`, `AdSlot`, `advertising-consent.ts` |
+| P1-08 | Dead ad rails | **Done (not click-verified)** | Default display slot `6603089832`; rails collapse only when ads are not allowed. | `PageWithSideAds`, `AdSlot` |
+| P1-09 | Production data proof | **Done** | Re-verified 2026-09-09 after mock purge. See `VERIFICATION-REPORT.md`. | Admin `/admin/jobs`, `/admin/health`, `/api/health` |
 
-**Phase 1 gate:** integrity deploy **passed** (stale/error visible; no mock-fill). **Not complete:** live ingest still returns 0 PL fixtures (R2). Do not start Phase 2 until live `fd-*` / `apifb-*` MW≥3 exists **or** stale mock + failed/empty score-sync is explicitly accepted as the integrity end state.
+**Phase 1 gate:** live ingest **passed**. Leftover `pl26-*` **purged**. P0/P1 football integrity **complete**. Start Phase 2 only in a new deliberate task.
 
 **Out of scope:** follow pundits, receipts, Studio packs, nav IA, design polish.
 
@@ -30,18 +30,24 @@ P0 items that make the live product look empty or silently broken.
 
 ## Phase 2 - Product Cleanup
 
-| ID | Item | Action |
-|---|---|---|
-| P2-01 | Navigation IA | Align with Predict / Banter / Studio / Leagues / Me. Keep Studio central. Demote Table from mobile primary. Expose Awards as Season Calls (desktop + overflow). |
-| P2-02 | Awards → Season Calls | UX/copy rename. Keep `TournamentBonus*` APIs until a later rename migration is justified. |
-| P2-03 | Welcome tour | Shorten `HomeWelcomePanel` / `HOME_WELCOME_SLIDES`. Lead with live picks + feed. |
-| P2-04 | WC docs/pack | Archive `docs/worldcup-edgy-reactions-pack`, `docs/BRACKETS.md`, `docs/WORLD_CUP_*`. |
-| P2-05 | `supabase/seed.sql` | Replace WC2026 group fixtures with PL seed or document “do not use”. |
-| P2-06 | Orphan prediction UI | Remove or merge `CountrySelector` / `PlayerSelector` / unused `UserPrediction` client path. |
-| P2-07 | Studio sitemap | Raise `/studio` priority from 0.5. |
-| P2-08 | Studio pundit copy | Stop saying “fictional pundit desk personas” on vs-pundits tab if Source predictions are shown. |
+UX/IA cleanup after Phase 1 football integrity. Studio stays central. No sports-pipeline or scoring changes.
+
+| ID | Item | Status today | Action | Files / services |
+|---|---|---|---|---|
+| P2-01 | Navigation IA | **Done** | Desktop: Predict / Banter / Studio / Leagues / Season Calls + More. Mobile bottom: Predict / Banter / Studio / Leagues / Me. Table demoted to overflow. | `navigation.ts`, `AppShell`, `MobileBottomNav`, `HomeQuickNav`, `/me` |
+| P2-02 | Awards → Season Calls | **Done** | User-facing copy/nav/title. URL remains `/awards`. `TournamentBonus*` APIs unchanged. | `awards/page.tsx`, `TournamentBonusBoard`, `rules`, `leagues`, `scoring-rules.ts` |
+| P2-03 | Welcome tour | **Done** | Home carousel is 3 slides (picks → feed → Studio). Full tour remains on `/rules`. | `HOME_WELCOME_SLIDES`, `HomeWelcomePanel` |
+| P2-04 | WC docs/pack | **Done** | Archived under `docs/_archive/world-cup/`. `/brackets` redirect kept. | `docs/_archive/world-cup/` |
+| P2-05 | `supabase/seed.sql` | **Done** | Intentionally empty; documents do-not-use. Local mock / live sync own fixtures. | `supabase/seed.sql`, `supabase/README.md` |
+| P2-06 | Orphan prediction UI | **Done** | Removed `CountrySelector`, `PlayerSelector`, `useUserPredictions`. Backend `UserPrediction` APIs kept. | frontend predictions + hooks |
+| P2-07 | Studio sitemap | **Done** | `/studio` priority **0.9** (same as matchweek). Table demoted to 0.6. | `sitemap-routes.ts` |
+| P2-08 | Studio pundit copy | **Done** | vs-pundits tab: “sourced pundit predictions”. | `StudioPage` |
 
 **Preserve:** `/brackets` redirect, `WorldCupLegacyPurge`, PL match scope filters.
+
+**Phase 2 gate:** nav IA + Season Calls copy + shortened welcome + WC archive + empty seed + orphan UI gone + Studio sitemap/copy. Start Phase 3 only in a new deliberate task.
+
+**Out of scope:** follow pundits, receipts, Studio packs, CMP, Aura persistence.
 
 ---
 

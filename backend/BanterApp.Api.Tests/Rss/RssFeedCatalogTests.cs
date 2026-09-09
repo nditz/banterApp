@@ -96,6 +96,47 @@ public class RssFeedCatalogTests
     }
 
     [Fact]
+    public async Task Seed_DeactivatesInactiveCatalogEntries()
+    {
+        await using var db = TestDbContextFactory.Create();
+        db.RssFeeds.Add(new RssFeed
+        {
+            Id = Guid.NewGuid(),
+            Slug = "website-bbc-sport-premier-league",
+            Name = "BBC Sport Premier League",
+            Kind = RssFeedKind.Website,
+            RssUrl = "https://feeds.bbci.co.uk/sport/football/premier-league/rss.xml",
+            Priority = 100,
+            UseForNews = true,
+            UseForPundit = true,
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var catalog = CreateCatalog(
+            db,
+            new RssFeedSeedEntry
+            {
+                Name = "BBC Sport Premier League",
+                Kind = RssFeedKind.Website,
+                RssUrl = "https://feeds.bbci.co.uk/sport/football/premier-league/rss.xml",
+                UseForMediaIngest = false,
+                UseForNews = false,
+                UseForPundit = false,
+                IsActive = false
+            });
+
+        await catalog.SeedAsync();
+
+        var feed = Assert.Single(db.RssFeeds);
+        Assert.False(feed.IsActive);
+        Assert.False(feed.UseForNews);
+        Assert.False(feed.UseForPundit);
+        Assert.Empty(await catalog.GetActiveForPunditAsync());
+    }
+
+    [Fact]
     public async Task GetActiveForNews_OrdersByPriorityDescending()
     {
         await using var db = TestDbContextFactory.Create();

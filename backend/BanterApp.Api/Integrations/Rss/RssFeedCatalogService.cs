@@ -39,7 +39,8 @@ public sealed class RssFeedCatalogService(AppDbContext db, IRssFeedCatalogSeed s
                     entry.ExtractPredictions,
                     entry.UseForMediaIngest,
                     entry.UseForNews,
-                    entry.UseForPundit),
+                    entry.UseForPundit,
+                    entry.IsActive),
                 usedSlugs,
                 ct);
         }
@@ -84,6 +85,7 @@ public sealed class RssFeedCatalogService(AppDbContext db, IRssFeedCatalogSeed s
             existing.UseForMediaIngest = catalogSeed.UseForMediaIngest;
             existing.UseForNews = catalogSeed.UseForNews;
             existing.UseForPundit = catalogSeed.UseForPundit;
+            existing.IsActive = catalogSeed.IsActive;
             existing.UpdatedAt = DateTimeOffset.UtcNow;
 
             if (string.IsNullOrWhiteSpace(existing.RssUrl))
@@ -110,7 +112,7 @@ public sealed class RssFeedCatalogService(AppDbContext db, IRssFeedCatalogSeed s
             UseForMediaIngest = catalogSeed.UseForMediaIngest,
             UseForNews = catalogSeed.UseForNews,
             UseForPundit = catalogSeed.UseForPundit,
-            IsActive = true,
+            IsActive = catalogSeed.IsActive,
             CreatedAt = DateTimeOffset.UtcNow
         });
     }
@@ -178,5 +180,6 @@ public sealed class RssFeedCatalogService(AppDbContext db, IRssFeedCatalogSeed s
         bool ExtractPredictions,
         bool UseForMediaIngest,
         bool UseForNews,
-        bool UseForPundit);
+        bool UseForPundit,
+        bool IsActive);
 }

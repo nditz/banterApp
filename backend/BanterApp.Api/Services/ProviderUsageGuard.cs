@@ -11,6 +11,7 @@ public interface IProviderUsageGuard
     Task RecordFailureAsync(string provider, string message, CancellationToken ct = default);
     Task<ProviderUsageSummary> GetTodaySummaryAsync(string provider, CancellationToken ct = default);
     bool IsCircuitOpen(string provider);
+    void OpenCircuit(string provider);
 }
 
 public sealed record ProviderUsageSummary(
@@ -95,6 +96,12 @@ public sealed class ProviderUsageGuard(
     {
         var state = GetCircuit(provider);
         return state.OpenUntil.HasValue && state.OpenUntil > DateTimeOffset.UtcNow;
+    }
+
+    public void OpenCircuit(string provider)
+    {
+        var minutes = configuration.GetValue($"ProviderUsage:{provider}:CircuitBreakMinutes", 10);
+        GetCircuit(provider).OpenUntil = DateTimeOffset.UtcNow.AddMinutes(Math.Max(1, minutes));
     }
 
     private async Task UpsertUsageAsync(

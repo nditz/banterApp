@@ -2,6 +2,7 @@ using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.Common;
+using BanterApp.Api.Services;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -12,6 +13,7 @@ public sealed class PunditExtractionJob
 {
     public const string JobId = "pundit-extraction";
     private const string Provider = "pundit-extraction";
+    private const string OpenAiProvider = "openai";
 
     private readonly AppDbContext _db;
     private readonly IPunditOpinionExtractor _extractor;
@@ -19,6 +21,8 @@ public sealed class PunditExtractionJob
     private readonly PunditIngestOptions _options;
     private readonly SyncRunTracker _tracker;
     private readonly IRecurringJobManager _recurringJobs;
+    private readonly IProviderUsageGuard _usage;
+    private readonly IErrorTrackingService _errorTracking;
     private readonly ILogger<PunditExtractionJob> _logger;
 
     public PunditExtractionJob(
@@ -28,6 +32,8 @@ public sealed class PunditExtractionJob
         IOptions<PunditIngestOptions> options,
         SyncRunTracker tracker,
         IRecurringJobManager recurringJobs,
+        IProviderUsageGuard usage,
+        IErrorTrackingService errorTracking,
         ILogger<PunditExtractionJob> logger)
     {
         _db = db;
@@ -36,6 +42,8 @@ public sealed class PunditExtractionJob
         _options = options.Value;
         _tracker = tracker;
         _recurringJobs = recurringJobs;
+        _usage = usage;
+        _errorTracking = errorTracking;
         _logger = logger;
     }
 
@@ -53,6 +61,13 @@ public sealed class PunditExtractionJob
 
         try
         {
+            if (!await _usage.CanInvokeAsync(OpenAiProvider, estimatedUnits: 1, cancellationToken))
+            {
+                _logger.LogWarning("Skipping pundit extraction; OpenAI usage guard is blocking calls.");
+                await _tracker.CompleteAsync(run, extracted, 0, failed, ct: cancellationToken);
+                return;
+            }
+
             var batchSize = Math.Clamp(_options.ExtractionBatchSize, 1, 20);
             var items = await _db.MediaItems
                 .Include(i => i.MediaSource)
@@ -103,6 +118,29 @@ public sealed class PunditExtractionJob
 
                     var count = await _persistence.PersistExtractionAsync(item, extraction, cancellationToken);
                     extracted += count;
+                    await _usage.RecordSuccessAsync(OpenAiProvider, estimatedUnits: 1, ct: cancellationToken);
+                }
+                catch (Exception ex) when (IsOpenAiRateLimit(ex))
+                {
+                    _logger.LogWarning(ex, "OpenAI rate-limited pundit extraction; stopping this batch.");
+                    await _usage.RecordFailureAsync(OpenAiProvider, ex.Message, cancellationToken);
+                    _usage.OpenCircuit(OpenAiProvider);
+                    await _errorTracking.TrackAsync(new ErrorTrackRequest
+                    {
+                        Source = "job",
+                        ErrorCode = ErrorCodes.RateLimited,
+                        MessageSafe = "OpenAI pundit extraction is rate-limited; remaining items will retry later.",
+                        Severity = "warning",
+                        JobKey = "openai.opinion.extract",
+                        JobRunId = run.Id,
+                        Provider = OpenAiProvider,
+                        IsRetryable = true,
+                        Metadata = new Dictionary<string, object?>
+                        {
+                            ["media_item_id"] = item.Id
+                        }
+                    }, cancellationToken);
+                    break;
                 }
                 catch (Exception ex)
                 {
@@ -118,6 +156,7 @@ public sealed class PunditExtractionJob
                         run.Id,
                         item.ExternalId,
                         cancellationToken);
+                    await _usage.RecordFailureAsync(OpenAiProvider, ex.Message, cancellationToken);
                 }
             }
 
@@ -136,6 +175,10 @@ public sealed class PunditExtractionJob
             throw;
         }
     }
+
+    public static bool IsOpenAiRateLimit(Exception ex) =>
+        ex is ProviderAppException provider &&
+        (provider.Code == ErrorCodes.RateLimited || provider.StatusCode == StatusCodes.Status429TooManyRequests);
 
     private static string MapSourceType(string sourceType) =>
         sourceType switch

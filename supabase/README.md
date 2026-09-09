@@ -1,6 +1,6 @@
 # BanterApp — Supabase Setup
 
-Phase 1 database schema for the World Cup Prediction Battle Platform.
+Postgres + Auth for the Premier League Ball Takes product.
 
 ## Prerequisites
 
@@ -43,15 +43,19 @@ supabase db push
 
 1. Open **SQL Editor** in the Supabase dashboard.
 2. Paste and run the contents of `migrations/20240611000000_initial_schema.sql`.
-3. Paste and run `seed.sql` for sample data.
+3. Do **not** use `seed.sql` for fixtures. It is intentionally empty.
 
-## 4. Load seed data
+## 4. Seed data (do not use for fixtures)
+
+`seed.sql` does **not** load matches. World Cup 2026 sample fixtures were removed.
+
+- **Production:** live football-data ingest via the API (`ScoreSyncJob`).
+- **Local/dev:** `MockSportsDataProvider` in `BanterApp.Api`.
 
 ```bash
+# This file is a no-op notice only — it will not populate a Premier League calendar.
 supabase db execute --file supabase/seed.sql
 ```
-
-Or run `seed.sql` in the SQL Editor after migrations.
 
 ## Schema overview
 
@@ -73,7 +77,7 @@ Or run `seed.sql` in the SQL Editor after migrations.
 
 ### UUID primary keys
 
-All tables use `uuid` with `gen_random_uuid()` (via `pgcrypto`). Seed data uses fixed UUIDs for idempotent re-runs.
+All tables use `uuid` with `gen_random_uuid()` (via `pgcrypto`). Do not re-run the old World Cup seed INSERTs; they were removed.
 
 ### Actor model (registered vs anonymous)
 

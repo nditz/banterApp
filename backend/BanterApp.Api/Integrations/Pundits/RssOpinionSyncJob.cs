@@ -155,6 +155,7 @@ public sealed class RssOpinionSyncJob
         if (catalog.Count > 0)
         {
             return catalog
+                .Where(f => !RssSourcePolicy.IsDisallowed(f.RssUrl))
                 .Select(f => (f.Name, Url: f.RssUrl.Trim()))
                 .GroupBy(f => f.Url, StringComparer.OrdinalIgnoreCase)
                 .Select(g => g.First())
@@ -162,7 +163,7 @@ public sealed class RssOpinionSyncJob
         }
 
         return _options.RssFeedUrls
-            .Where(u => !string.IsNullOrWhiteSpace(u))
+            .Where(u => !string.IsNullOrWhiteSpace(u) && !RssSourcePolicy.IsDisallowed(u))
             .Select(u => (Name: ResolvePublicationName(u.Trim()), Url: u.Trim()))
             .GroupBy(f => f.Url, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
