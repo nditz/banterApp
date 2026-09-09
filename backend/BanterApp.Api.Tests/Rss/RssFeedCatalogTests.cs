@@ -223,7 +223,7 @@ public class RssFeedResolverTests
             HttpStatusCode.OK,
             "https://feeds.megaphone.fm/GLT8847082992");
 
-        var resolver = new RssFeedResolver(db, http, NullLogger<RssFeedResolver>.Instance);
+        var resolver = new RssFeedResolver(db, http, NullRssUrlDiscovery.Instance, NullLogger<RssFeedResolver>.Instance);
         var result = await resolver.ResolveAsync();
 
         var feed = Assert.Single(db.RssFeeds);
@@ -244,7 +244,7 @@ public class RssFeedResolverTests
         http.Responses["https://gone.example/rss"] = new SafeHttpResponse(
             string.Empty, "text/plain", HttpStatusCode.Gone, "https://gone.example/rss");
 
-        var result = await new RssFeedResolver(db, http, NullLogger<RssFeedResolver>.Instance).ResolveAsync();
+        var result = await new RssFeedResolver(db, http, NullRssUrlDiscovery.Instance, NullLogger<RssFeedResolver>.Instance).ResolveAsync();
 
         Assert.False(Assert.Single(db.RssFeeds).IsActive);
         Assert.Equal(1, result.Deactivated);
@@ -260,7 +260,7 @@ public class RssFeedResolverTests
         var http = new StubSafeHttpClient();
         http.Responses["https://missing.example/rss"] = new SafeHttpResponse(
             string.Empty, "text/plain", HttpStatusCode.NotFound, "https://missing.example/rss");
-        var resolver = new RssFeedResolver(db, http, NullLogger<RssFeedResolver>.Instance);
+        var resolver = new RssFeedResolver(db, http, NullRssUrlDiscovery.Instance, NullLogger<RssFeedResolver>.Instance);
 
         await resolver.ResolveAsync();
         await resolver.ResolveAsync();
@@ -286,11 +286,97 @@ public class RssFeedResolverTests
             HttpStatusCode.OK,
             "https://html.example/rss");
 
-        await new RssFeedResolver(db, http, NullLogger<RssFeedResolver>.Instance).ResolveAsync();
+        await new RssFeedResolver(db, http, NullRssUrlDiscovery.Instance, NullLogger<RssFeedResolver>.Instance).ResolveAsync();
 
         var feed = Assert.Single(db.RssFeeds);
         Assert.True(feed.IsActive);
         Assert.Equal(0, feed.ConsecutiveFailures);
+    }
+
+    [Fact]
+    public async Task Resolve_SkipHealthyWithin_DoesNotReprobe()
+    {
+        await using var db = TestDbContextFactory.Create();
+        db.RssFeeds.Add(new RssFeed
+        {
+            Id = Guid.NewGuid(),
+            Slug = "website-test",
+            Name = "Test",
+            Kind = RssFeedKind.Website,
+            RssUrl = "https://healthy.example/rss",
+            Priority = 100,
+            IsActive = true,
+            UseForNews = true,
+            ConsecutiveFailures = 0,
+            LastCheckedAt = DateTimeOffset.UtcNow,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var http = new StubSafeHttpClient();
+        http.Responses["https://healthy.example/rss"] = new SafeHttpResponse(
+            "<rss><channel><title>ok</title></channel></rss>",
+            "application/rss+xml",
+            HttpStatusCode.OK,
+            "https://healthy.example/rss");
+
+        var resolver = new RssFeedResolver(db, http, NullRssUrlDiscovery.Instance, NullLogger<RssFeedResolver>.Instance);
+        await resolver.ResolveAsync(skipHealthyWithin: TimeSpan.FromMinutes(20));
+
+        Assert.Equal(0, http.Calls);
+    }
+
+    [Fact]
+    public async Task Resolve_OpenAiSuggestion_ReplacesBrokenUrlAfterSuccessfulProbe()
+    {
+        await using var db = TestDbContextFactory.Create();
+        db.RssFeeds.Add(ActiveWebsite("https://broken.example/rss"));
+        await db.SaveChangesAsync();
+
+        var http = new StubSafeHttpClient();
+        http.Responses["https://broken.example/rss"] = new SafeHttpResponse(
+            "<html>moved</html>",
+            "text/html",
+            HttpStatusCode.OK,
+            "https://broken.example/rss");
+        http.Responses["https://feeds.example.com/football.xml"] = new SafeHttpResponse(
+            "<rss><channel><title>ok</title></channel></rss>",
+            "application/rss+xml",
+            HttpStatusCode.OK,
+            "https://feeds.example.com/football.xml");
+
+        var resolver = new RssFeedResolver(
+            db,
+            http,
+            new StubRssUrlDiscovery("https://feeds.example.com/football.xml"),
+            NullLogger<RssFeedResolver>.Instance);
+
+        var result = await resolver.ResolveAsync();
+
+        var feed = Assert.Single(db.RssFeeds);
+        Assert.Equal("https://feeds.example.com/football.xml", feed.RssUrl);
+        Assert.Equal(1, result.Updated);
+        Assert.Equal(0, feed.ConsecutiveFailures);
+        Assert.True(feed.IsActive);
+    }
+
+    [Fact]
+    public async Task Resolve_EnsureUrls_DoesNotCallOpenAi()
+    {
+        await using var db = TestDbContextFactory.Create();
+        db.RssFeeds.Add(ActiveWebsite("https://broken.example/rss"));
+        await db.SaveChangesAsync();
+
+        var http = new StubSafeHttpClient();
+        http.Responses["https://broken.example/rss"] = new SafeHttpResponse(
+            string.Empty, "text/plain", HttpStatusCode.NotFound, "https://broken.example/rss");
+        var discovery = new StubRssUrlDiscovery("https://feeds.example.com/football.xml");
+
+        var resolver = new RssFeedResolver(db, http, discovery, NullLogger<RssFeedResolver>.Instance);
+        await resolver.EnsureUrlsAsync();
+
+        Assert.Equal(0, discovery.Calls);
+        Assert.Equal("https://broken.example/rss", Assert.Single(db.RssFeeds).RssUrl);
     }
 
     private static RssFeed ActiveWebsite(string url) => new()
@@ -309,11 +395,27 @@ public class RssFeedResolverTests
     private sealed class StubSafeHttpClient : ISafeHttpClient
     {
         public Dictionary<string, SafeHttpResponse?> Responses { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public int Calls { get; private set; }
 
         public Task<SafeHttpResponse?> GetStringAsync(string url, CancellationToken ct = default)
         {
+            Calls++;
             Responses.TryGetValue(url, out var response);
             return Task.FromResult(response);
+        }
+    }
+
+    private sealed class StubRssUrlDiscovery(string? url) : IRssUrlDiscovery
+    {
+        public int Calls { get; private set; }
+
+        public Task<string?> SuggestFeedUrlAsync(
+            RssFeed feed,
+            string failureReason,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            return Task.FromResult(url);
         }
     }
 }

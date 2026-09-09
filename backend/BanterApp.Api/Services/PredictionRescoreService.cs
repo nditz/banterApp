@@ -1,10 +1,14 @@
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Receipts;
 using Microsoft.EntityFrameworkCore;
 
 namespace BanterApp.Api.Services;
 
-public sealed class PredictionRescoreService(AppDbContext db, ScoringService scoring)
+public sealed class PredictionRescoreService(
+    AppDbContext db,
+    ScoringService scoring,
+    ReceiptSettlementService receipts)
 {
     public async Task<int> RescoreFinishedMatchesAsync(CancellationToken cancellationToken)
     {
@@ -43,7 +47,9 @@ public sealed class PredictionRescoreService(AppDbContext db, ScoringService sco
             }
         }
 
-        if (changed > 0)
+        var emitted = await receipts.EmitForPredictionsAsync(predictions, cancellationToken);
+
+        if (changed > 0 || emitted > 0)
         {
             await db.SaveChangesAsync(cancellationToken);
         }

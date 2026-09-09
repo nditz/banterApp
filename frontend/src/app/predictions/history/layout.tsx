@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Prediction History",
+  title: "Receipts",
   robots: { index: false, follow: true },
   alternates: { canonical: "/predictions/history" },
 };

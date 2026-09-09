@@ -20,7 +20,7 @@ test.describe("Phase 2 product IA", () => {
     await expect(menu).toBeAttached();
     await expect(menu.getByText("Pundits", { exact: true })).toBeAttached();
     await expect(menu.getByText("Table", { exact: true })).toBeAttached();
-    await expect(menu.getByText("History", { exact: true })).toBeAttached();
+    await expect(menu.getByText("Receipts", { exact: true })).toBeAttached();
     await expect(menu.getByText("Rules", { exact: true })).toBeAttached();
   });
 

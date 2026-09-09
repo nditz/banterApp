@@ -52,6 +52,15 @@ describe("product navigation IA", () => {
     expect(DESKTOP_OVERFLOW_NAV.find((l) => l.label === "Pundits")?.href).toBe("/pundits");
   });
 
+  it("exposes Receipts in overflow at the history route", () => {
+    expect(labels(DESKTOP_OVERFLOW_NAV)).toContain("Receipts");
+    expect(labels(MOBILE_OVERFLOW_NAV)).toContain("Receipts");
+    expect(DESKTOP_OVERFLOW_NAV.find((l) => l.label === "Receipts")?.href).toBe(
+      "/predictions/history"
+    );
+  });
+
+
   it("demotes Table from mobile primary", () => {
     expect(labels(MOBILE_BOTTOM_NAV)).not.toContain("Table");
     expect(labels(DESKTOP_OVERFLOW_NAV)).toContain("Table");

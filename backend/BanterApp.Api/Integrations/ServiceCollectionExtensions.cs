@@ -153,6 +153,8 @@ public static class ServiceCollectionExtensions
         {
             services.AddHttpClient<IContentGenerator, OpenAiContentGenerator>();
             services.AddHttpClient<IPunditOpinionExtractor, OpenAiPunditOpinionExtractor>();
+            services.AddHttpClient<IRssUrlDiscovery, OpenAiRssUrlDiscovery>()
+                .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(30));
         }
         else
         {
@@ -163,6 +165,7 @@ public static class ServiceCollectionExtensions
 
             services.TryAddSingleton<IContentGenerator, StubContentGenerator>();
             services.TryAddSingleton<IPunditOpinionExtractor, StubPunditOpinionExtractor>();
+            services.TryAddSingleton<IRssUrlDiscovery, NullRssUrlDiscovery>();
         }
 
         // Reaction GIF provider: AI picks the reaction phrase, Giphy (or legacy Tenor) supplies a live GIF.

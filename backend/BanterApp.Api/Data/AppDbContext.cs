@@ -16,6 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SeasonTeam> SeasonTeams => Set<SeasonTeam>();
     public DbSet<MatchweekBonus> MatchweekBonuses => Set<MatchweekBonus>();
     public DbSet<Prediction> Predictions => Set<Prediction>();
+    public DbSet<PredictionReceipt> PredictionReceipts => Set<PredictionReceipt>();
+    public DbSet<ReceiptStoryCandidate> ReceiptStoryCandidates => Set<ReceiptStoryCandidate>();
     public DbSet<League> Leagues => Set<League>();
     public DbSet<LeagueMember> LeagueMembers => Set<LeagueMember>();
     public DbSet<Pundit> Pundits => Set<Pundit>();
@@ -219,6 +221,40 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.Match).WithMany(m => m.PunditPredictions).HasForeignKey(x => x.MatchId)
                 .IsRequired(false);
         });
+
+        modelBuilder.Entity<PredictionReceipt>(e =>
+        {
+            e.ToTable("prediction_receipts", t => t.HasCheckConstraint(
+                "CK_prediction_receipts_owner",
+                "(\"UserId\" IS NOT NULL AND \"AnonymousUserId\" IS NULL) OR (\"UserId\" IS NULL AND \"AnonymousUserId\" IS NOT NULL)"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.MatchId).HasMaxLength(64);
+            e.Property(x => x.ResultHash).HasMaxLength(32);
+            e.Property(x => x.PredictionValue).HasMaxLength(64);
+            e.Property(x => x.MatchStatus).HasMaxLength(16);
+            e.Property(x => x.StoryType).HasMaxLength(32);
+            e.HasIndex(x => new { x.PredictionId, x.ResultHash }).IsUnique();
+            e.HasIndex(x => x.UserId);
+            e.HasIndex(x => x.AnonymousUserId);
+            e.HasIndex(x => x.MatchId);
+            e.HasIndex(x => x.SettledAt);
+            e.HasOne(x => x.Prediction).WithMany(p => p.Receipts).HasForeignKey(x => x.PredictionId);
+            e.HasOne(x => x.Match).WithMany(m => m.Receipts).HasForeignKey(x => x.MatchId);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
+            e.HasOne(x => x.AnonymousUser).WithMany().HasForeignKey(x => x.AnonymousUserId);
+        });
+
+        modelBuilder.Entity<ReceiptStoryCandidate>(e =>
+        {
+            e.ToTable("receipt_story_candidates");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.StoryType).HasMaxLength(32);
+            e.Property(x => x.Summary).HasMaxLength(400);
+            e.HasIndex(x => new { x.ReceiptId, x.Rank });
+            e.HasOne(x => x.Receipt).WithMany(r => r.StoryCandidates).HasForeignKey(x => x.ReceiptId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
 
         modelBuilder.Entity<PunditFollow>(e =>
         {

@@ -93,7 +93,8 @@ public sealed class SyncRunTracker(
         string message,
         Guid? syncRunId = null,
         string? entityId = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool trackOperationalError = true)
     {
         db.SyncErrors.Add(new SyncError
         {
@@ -107,6 +108,11 @@ public sealed class SyncRunTracker(
             OccurredAt = DateTimeOffset.UtcNow
         });
         await SaveChangesSafeAsync(ct);
+
+        if (!trackOperationalError)
+        {
+            return;
+        }
 
         var jobKey = ResolveJobKey(jobName);
         await errorTracking.TrackAsync(new ErrorTrackRequest

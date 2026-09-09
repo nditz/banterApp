@@ -20,6 +20,7 @@ public sealed class MediaIngestJob
     private readonly IYouTubeProvider _youtube;
     private readonly IRssFeedProvider _rss;
     private readonly IRssFeedCatalog _catalog;
+    private readonly RssFeedResolver _resolver;
     private readonly AppDbContext _db;
     private readonly MediaIngestOptions _options;
     private readonly SyncRunTracker _tracker;
@@ -29,6 +30,7 @@ public sealed class MediaIngestJob
         IYouTubeProvider youtube,
         IRssFeedProvider rss,
         IRssFeedCatalog catalog,
+        RssFeedResolver resolver,
         AppDbContext db,
         IOptions<MediaIngestOptions> options,
         SyncRunTracker tracker,
@@ -37,6 +39,7 @@ public sealed class MediaIngestJob
         _youtube = youtube;
         _rss = rss;
         _catalog = catalog;
+        _resolver = resolver;
         _db = db;
         _options = options.Value;
         _tracker = tracker;
@@ -44,6 +47,7 @@ public sealed class MediaIngestJob
     }
 
     [AutomaticRetry(Attempts = 0)]
+    [DisableConcurrentExecution(60 * 30)]
     public async Task IngestAsync(CancellationToken cancellationToken)
     {
         if (!_options.Enabled)
@@ -58,6 +62,8 @@ public sealed class MediaIngestJob
 
         try
         {
+            await RefreshFeedUrlsAsync(cancellationToken);
+
             foreach (var channel in ResolveYouTubeSources())
             {
                 if (!channel.ExtractPredictions)
@@ -102,10 +108,51 @@ public sealed class MediaIngestJob
                     siteUrl: podcast.SiteUrl,
                     ct: cancellationToken);
 
-                var episodes = await _rss.FetchFeedAsync(
-                    podcast.RssUrl,
-                    _options.MaxItemsPerSource,
-                    cancellationToken);
+                IReadOnlyList<Dtos.MediaItemDto> episodes;
+                try
+                {
+                    var fetched = await _rss.FetchFeedAsync(
+                        podcast.RssUrl,
+                        _options.MaxItemsPerSource,
+                        cancellationToken);
+                    if (fetched.Failure is not null)
+                    {
+                        failed++;
+                        _logger.LogWarning(
+                            "Podcast RSS fetch failed for {Name} ({Url}): {Reason} {Detail}",
+                            podcast.Name,
+                            podcast.RssUrl,
+                            fetched.Failure.Reason,
+                            fetched.Failure.Detail ?? fetched.Failure.SafeMessage);
+                        await _tracker.LogErrorAsync(
+                            Provider,
+                            JobId,
+                            "rss_feed",
+                            $"{fetched.Failure.SafeMessage} reason={fetched.Failure.Reason} url={podcast.RssUrl}",
+                            run.Id,
+                            FeedHost(podcast.RssUrl),
+                            cancellationToken,
+                            trackOperationalError: false);
+                        continue;
+                    }
+
+                    episodes = fetched.Items;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    _logger.LogWarning(ex, "Podcast RSS fetch threw for {Name} ({Url}).", podcast.Name, podcast.RssUrl);
+                    await _tracker.LogErrorAsync(
+                        Provider,
+                        JobId,
+                        "rss_feed",
+                        $"RSS fetch threw for {podcast.RssUrl}: {ex.Message}",
+                        run.Id,
+                        FeedHost(podcast.RssUrl),
+                        cancellationToken,
+                        trackOperationalError: false);
+                    continue;
+                }
 
                 foreach (var episode in episodes)
                 {
@@ -126,10 +173,51 @@ public sealed class MediaIngestJob
                     siteUrl: website.SiteUrl,
                     ct: cancellationToken);
 
-                var articles = await _rss.FetchFeedAsync(
-                    website.RssUrl,
-                    _options.MaxItemsPerSource,
-                    cancellationToken);
+                IReadOnlyList<Dtos.MediaItemDto> articles;
+                try
+                {
+                    var fetched = await _rss.FetchFeedAsync(
+                        website.RssUrl,
+                        _options.MaxItemsPerSource,
+                        cancellationToken);
+                    if (fetched.Failure is not null)
+                    {
+                        failed++;
+                        _logger.LogWarning(
+                            "Website RSS fetch failed for {Name} ({Url}): {Reason} {Detail}",
+                            website.Name,
+                            website.RssUrl,
+                            fetched.Failure.Reason,
+                            fetched.Failure.Detail ?? fetched.Failure.SafeMessage);
+                        await _tracker.LogErrorAsync(
+                            Provider,
+                            JobId,
+                            "rss_feed",
+                            $"{fetched.Failure.SafeMessage} reason={fetched.Failure.Reason} url={website.RssUrl}",
+                            run.Id,
+                            FeedHost(website.RssUrl),
+                            cancellationToken,
+                            trackOperationalError: false);
+                        continue;
+                    }
+
+                    articles = fetched.Items;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    _logger.LogWarning(ex, "Website RSS fetch threw for {Name} ({Url}).", website.Name, website.RssUrl);
+                    await _tracker.LogErrorAsync(
+                        Provider,
+                        JobId,
+                        "rss_feed",
+                        $"RSS fetch threw for {website.RssUrl}: {ex.Message}",
+                        run.Id,
+                        FeedHost(website.RssUrl),
+                        cancellationToken,
+                        trackOperationalError: false);
+                    continue;
+                }
 
                 foreach (var article in articles)
                 {
@@ -193,6 +281,24 @@ public sealed class MediaIngestJob
                 $"https://www.youtube.com/channel/{id}",
                 null,
                 true);
+        }
+    }
+
+    private async Task RefreshFeedUrlsAsync(CancellationToken ct)
+    {
+        try
+        {
+            var result = await _resolver.EnsureUrlsAsync(ct);
+            _logger.LogInformation(
+                "RSS URL refresh before {JobId}: {Updated} updated, {Failed} failed, {Deactivated} deactivated.",
+                JobId,
+                result.Updated,
+                result.Failed,
+                result.Deactivated);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "RSS URL refresh before {JobId} failed; continuing with catalog URLs.", JobId);
         }
     }
 
@@ -414,4 +520,9 @@ public sealed class MediaIngestJob
     {
         return StringLimits.Truncate(value, maxLength);
     }
+
+    private static string FeedHost(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && !string.IsNullOrWhiteSpace(uri.Host)
+            ? uri.Host
+            : url;
 }

@@ -25,21 +25,28 @@ public sealed class StudioComparisonService(
         var followedIds = await follows.GetFollowedPunditIdsAsync(user, ct);
         var filteringToFollows = followedIds.Count > 0;
 
-        IQueryable<Prediction> myPredQuery = user.IsAuthenticated
-            ? db.Predictions.Where(p => p.UserId == user.UserId)
-            : user.IsAnonymous
-                ? db.Predictions.Where(p => p.AnonymousUserId == user.AnonymousUserId)
-                : Enumerable.Empty<Prediction>().AsQueryable();
-
-        if (matchweekMode)
+        List<Prediction> myPreds;
+        if (user.IsAuthenticated || user.IsAnonymous)
         {
-            myPredQuery = myPredQuery.Where(p => requestedIds.Contains(p.MatchId));
+            IQueryable<Prediction> myPredQuery = user.IsAuthenticated
+                ? db.Predictions.Where(p => p.UserId == user.UserId)
+                : db.Predictions.Where(p => p.AnonymousUserId == user.AnonymousUserId);
+
+            if (matchweekMode)
+            {
+                myPredQuery = myPredQuery.Where(p => requestedIds.Contains(p.MatchId));
+            }
+
+            myPreds = await myPredQuery
+                .Include(p => p.Match)
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync(ct);
+        }
+        else
+        {
+            myPreds = [];
         }
 
-        var myPreds = await myPredQuery
-            .Include(p => p.Match)
-            .OrderByDescending(p => p.CreatedAt)
-            .ToListAsync(ct);
 
         if (!matchweekMode && myPreds.Count == 0)
         {

@@ -63,14 +63,15 @@ public sealed class ErrorTrackingService(
 
         logger.Log(
             MapLogLevel(request.Severity),
-            "Error tracked [{ErrorCode}] source={Source} route={Route} requestId={RequestId} provider={Provider} jobKey={JobKey}: {Message}",
+            "Error tracked [{ErrorCode}] source={Source} route={Route} requestId={RequestId} provider={Provider} jobKey={JobKey}: {Message} metadata={Metadata}",
             request.ErrorCode,
             request.Source,
             request.Route,
             request.RequestId,
             request.Provider,
             request.JobKey,
-            messageSafe);
+            messageSafe,
+            metadataJson);
 
         if (request.SkipPersistence)
         {

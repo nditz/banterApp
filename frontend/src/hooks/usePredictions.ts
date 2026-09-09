@@ -42,6 +42,7 @@ export function usePredictions() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["predictions"] });
+      queryClient.invalidateQueries({ queryKey: ["receipts"] });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
     },
   });
@@ -60,6 +61,7 @@ export function usePredictions() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["predictions"] });
+      queryClient.invalidateQueries({ queryKey: ["receipts"] });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
     },
   });

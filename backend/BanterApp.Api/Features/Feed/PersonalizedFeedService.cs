@@ -9,6 +9,7 @@ namespace BanterApp.Api.Features.Feed;
 
 /// <summary>
 /// Builds feed cards from pundit takes (guests) or the signed-in user's picks (registered).
+/// Does not query <c>prediction_receipts</c> — those stay owner-scoped and off the public timeline.
 /// </summary>
 public static class PersonalizedFeedService
 {
@@ -120,7 +121,7 @@ public static class PersonalizedFeedService
 
                 var body = hit
                     ? $"You nailed {pickLabel}. Final: {scoreline}. +{prediction.PointsAwarded} pts in the bag.{punditContrast}"
-                    : $"You called {pickLabel}. Final: {scoreline}. Receipts are public — run the burn script.{punditContrast}";
+                    : $"You called {pickLabel}. Final: {scoreline}. Your private receipt is ready.{punditContrast}";
 
                 var media = FeedMediaMapper.FromGifMood(
                     hit ? "celebrate" : "facepalm",

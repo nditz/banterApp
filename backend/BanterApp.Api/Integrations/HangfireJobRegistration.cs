@@ -61,14 +61,14 @@ public static class HangfireJobRegistration
         recurring.Trigger(ScoreSyncJob.JobId);
         recurring.Trigger(StandingsSyncJob.JobId);
         recurring.Trigger(FootballPlayersSyncJob.JobId);
-        recurring.Trigger(NewsIngestJob.JobId);
-        recurring.Trigger(RssFeedResolveJob.JobId);
-        recurring.Trigger(MediaIngestJob.JobId);
         recurring.Trigger(AiReactionJob.JobId);
         recurring.Trigger(FeedBanterEnrichmentJob.JobId);
-        recurring.Trigger(RssOpinionSyncJob.JobId);
         recurring.Trigger(ContentEnrichmentJob.JobId);
         recurring.Trigger(PunditExtractionJob.JobId);
+
+        // Resolve working RSS URLs first; that job then enqueues opinion/media/news ingest.
+        var backgroundJobs = app.Services.GetRequiredService<IBackgroundJobClient>();
+        backgroundJobs.Enqueue<RssFeedResolveJob>(job => job.ResolveAsync(CancellationToken.None));
     }
 
     public static void RegisterSingleJob(IRecurringJobManager recurring, string hangfireJobId, BackgroundJobsOptions jobs)

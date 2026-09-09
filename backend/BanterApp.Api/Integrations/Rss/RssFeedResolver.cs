@@ -2,6 +2,7 @@ using System.Net;
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,11 +13,19 @@ public sealed record RssFeedResolveResult(int Checked, int Updated, int Deactiva
 public sealed class RssFeedResolver(
     AppDbContext db,
     ISafeHttpClient http,
+    IRssUrlDiscovery urlDiscovery,
     ILogger<RssFeedResolver> logger)
 {
     public const int ConsecutiveFailuresToDisable = 3;
+    public const int HealthySkipMinutes = 20;
 
-    public async Task<RssFeedResolveResult> ResolveAsync(CancellationToken ct = default)
+    public Task<RssFeedResolveResult> EnsureUrlsAsync(CancellationToken ct = default) =>
+        ResolveAsync(ct, TimeSpan.FromMinutes(HealthySkipMinutes), allowAiDiscovery: false);
+
+    public async Task<RssFeedResolveResult> ResolveAsync(
+        CancellationToken ct = default,
+        TimeSpan? skipHealthyWithin = null,
+        bool allowAiDiscovery = true)
     {
         var feeds = await db.RssFeeds
             .Where(f => f.IsActive || f.ApplePodcastId != null)
@@ -30,6 +39,11 @@ public sealed class RssFeedResolver(
 
         foreach (var feed in feeds)
         {
+            if (ShouldSkipHealthy(feed, skipHealthyWithin))
+            {
+                continue;
+            }
+
             if (RssSourcePolicy.IsDisallowed(feed.RssUrl))
             {
                 if (feed.IsActive)
@@ -44,7 +58,7 @@ public sealed class RssFeedResolver(
             var wasActive = feed.IsActive;
             try
             {
-                var changed = await ResolveOneAsync(feed, ct);
+                var changed = await ResolveOneAsync(feed, allowAiDiscovery, ct);
                 if (changed)
                 {
                     updated++;
@@ -58,7 +72,12 @@ public sealed class RssFeedResolver(
             catch (Exception ex)
             {
                 failed++;
-                logger.LogWarning(ex, "RSS feed resolve failed for {Slug} ({Url}).", feed.Slug, feed.RssUrl);
+                logger.LogWarning(
+                    ex,
+                    "RSS feed resolve failed for {Slug} ({Url}) job={JobId}.",
+                    feed.Slug,
+                    feed.RssUrl,
+                    RssFeedResolveJob.JobId);
             }
         }
 
@@ -66,76 +85,157 @@ public sealed class RssFeedResolver(
         return new RssFeedResolveResult(feeds.Count, updated, deactivated, failed);
     }
 
-    private async Task<bool> ResolveOneAsync(RssFeed feed, CancellationToken ct)
+    private async Task<bool> ResolveOneAsync(RssFeed feed, bool allowAiDiscovery, CancellationToken ct)
     {
         var urlChanged = false;
         var previousUrl = feed.RssUrl;
 
         if (feed.ApplePodcastId is > 0)
         {
-            var lookup = await http.GetStringAsync(ApplePodcastLookup.LookupUrl(feed.ApplePodcastId.Value), ct);
-            var appleUrl = ApplePodcastLookup.ParseFeedUrl(lookup?.Content);
-            if (RssUrlNormalizer.IsAbsoluteHttpUrl(appleUrl) &&
-                !RssUrlNormalizer.EqualsUrl(feed.RssUrl, appleUrl))
+            try
             {
-                logger.LogInformation(
-                    "RSS feed {Slug} Apple lookup updated URL {Old} -> {New}.",
+                var lookup = await http.FetchAsync(ApplePodcastLookup.LookupUrl(feed.ApplePodcastId.Value), ct);
+                if (lookup.FailureKind is not SafeHttpFailureKind.None)
+                {
+                    logger.LogWarning(
+                        "Apple Podcasts lookup failed for {Slug} id={AppleId}: {Kind} {Reason}.",
+                        feed.Slug,
+                        feed.ApplePodcastId,
+                        lookup.FailureKind,
+                        lookup.FailureReason);
+                }
+
+                var appleUrl = ApplePodcastLookup.ParseFeedUrl(lookup.Response?.Content);
+                if (RssUrlNormalizer.IsAbsoluteHttpUrl(appleUrl) &&
+                    !RssUrlNormalizer.EqualsUrl(feed.RssUrl, appleUrl))
+                {
+                    logger.LogInformation(
+                        "RSS feed {Slug} Apple lookup updated URL {Old} -> {New}.",
+                        feed.Slug,
+                        feed.RssUrl,
+                        appleUrl);
+                    feed.RssUrl = StringLimits.Truncate(appleUrl, 512) ?? appleUrl!;
+                    urlChanged = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Apple Podcasts lookup threw for {Slug} id={AppleId}.",
                     feed.Slug,
-                    feed.RssUrl,
-                    appleUrl);
-                feed.RssUrl = StringLimits.Truncate(appleUrl, 512) ?? appleUrl!;
-                urlChanged = true;
+                    feed.ApplePodcastId);
             }
         }
 
         if (!RssUrlNormalizer.IsAbsoluteHttpUrl(feed.RssUrl))
         {
+            if (allowAiDiscovery &&
+                await TryApplyDiscoveredUrlAsync(feed, previousUrl, "missing_or_invalid_url", ct))
+            {
+                return true;
+            }
+
             feed.LastCheckedAt = DateTimeOffset.UtcNow;
             return urlChanged;
         }
 
-        var response = await http.GetStringAsync(feed.RssUrl, ct);
+        var fetch = await http.FetchAsync(feed.RssUrl, RssFeedProvider.MaxResponseBytes, ct);
         feed.LastCheckedAt = DateTimeOffset.UtcNow;
         feed.UpdatedAt = DateTimeOffset.UtcNow;
 
-        if (response is null)
+        if (IsHealthyProbe(fetch))
         {
-            return urlChanged;
+            return await CompleteHealthyProbeAsync(feed, fetch, previousUrl, urlChanged, ct);
         }
 
-        feed.LastHttpStatus = (int)response.StatusCode;
+        var failureReason = DescribeProbeFailure(fetch);
+        logger.LogWarning(
+            "RSS feed probe failed for {Slug} ({Url}): {Reason}.",
+            feed.Slug,
+            feed.RssUrl,
+            failureReason);
 
-        if (response.StatusCode == HttpStatusCode.Gone)
+        if (allowAiDiscovery &&
+            await TryApplyDiscoveredUrlAsync(feed, previousUrl, failureReason, ct))
         {
-            Deactivate(feed, "HTTP 410 Gone");
-            return urlChanged;
+            return true;
         }
 
-        if (!IsSuccess(response.StatusCode))
-        {
-            feed.ConsecutiveFailures++;
-            if (feed.ConsecutiveFailures >= ConsecutiveFailuresToDisable)
-            {
-                Deactivate(feed, $"HTTP {(int)response.StatusCode} x{feed.ConsecutiveFailures}");
-            }
+        RecordProbeFailure(feed, fetch);
+        return urlChanged;
+    }
 
-            return urlChanged;
+    private async Task<bool> TryApplyDiscoveredUrlAsync(
+        RssFeed feed,
+        string previousUrl,
+        string failureReason,
+        CancellationToken ct)
+    {
+        string? suggested;
+        try
+        {
+            suggested = await urlDiscovery.SuggestFeedUrlAsync(feed, failureReason, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "RSS URL discovery threw for {Slug}.", feed.Slug);
+            return false;
         }
 
-        if (!RssUrlNormalizer.LooksLikeFeed(response.Content))
+        if (!RssUrlNormalizer.IsAbsoluteHttpUrl(suggested) ||
+            RssUrlNormalizer.EqualsUrl(suggested, feed.RssUrl) ||
+            RssSourcePolicy.IsDisallowed(suggested))
+        {
+            return false;
+        }
+
+        var fetch = await http.FetchAsync(suggested!, RssFeedProvider.MaxResponseBytes, ct);
+        if (!IsHealthyProbe(fetch))
         {
             logger.LogWarning(
-                "RSS feed {Slug} returned HTTP {Status} that is not RSS/Atom.",
+                "OpenAI-suggested RSS URL failed probe for {Slug}: {Url} ({Reason}).",
                 feed.Slug,
-                (int)response.StatusCode);
-            return urlChanged;
+                suggested,
+                DescribeProbeFailure(fetch));
+            return false;
         }
 
+        logger.LogInformation(
+            "RSS feed {Slug} OpenAI discovery updated URL {Old} -> {New}.",
+            feed.Slug,
+            feed.RssUrl,
+            suggested);
+        feed.RssUrl = StringLimits.Truncate(suggested, 512) ?? suggested!;
+        await CompleteHealthyProbeAsync(feed, fetch, previousUrl, urlChanged: true, ct);
+        return true;
+    }
+
+    private async Task<bool> CompleteHealthyProbeAsync(
+        RssFeed feed,
+        SafeHttpFetchResult fetch,
+        string previousUrl,
+        bool urlChanged,
+        CancellationToken ct)
+    {
+        var response = fetch.Response!;
+        feed.LastCheckedAt = DateTimeOffset.UtcNow;
+        feed.UpdatedAt = DateTimeOffset.UtcNow;
+        feed.LastHttpStatus = (int)response.StatusCode;
         feed.ConsecutiveFailures = 0;
-        if (!feed.IsActive && feed.ApplePodcastId is > 0)
+        if (!feed.IsActive)
         {
             feed.IsActive = true;
-            logger.LogInformation("RSS feed {Slug} reactivated after a healthy Apple/probe check.", feed.Slug);
+            logger.LogInformation("RSS feed {Slug} reactivated after a healthy probe.", feed.Slug);
+        }
+
+        if (fetch.FailureKind == SafeHttpFailureKind.Oversized)
+        {
+            logger.LogWarning(
+                "RSS feed probe truncated for {Slug} ({Url}): {Reason}.",
+                feed.Slug,
+                feed.RssUrl,
+                fetch.FailureReason);
         }
 
         if (!string.IsNullOrWhiteSpace(response.FinalUrl) &&
@@ -157,6 +257,85 @@ public sealed class RssFeedResolver(
         }
 
         return urlChanged;
+    }
+
+    private void RecordProbeFailure(RssFeed feed, SafeHttpFetchResult fetch)
+    {
+        var response = fetch.Response;
+        if (response is not null)
+        {
+            feed.LastHttpStatus = (int)response.StatusCode;
+        }
+
+        if (response?.StatusCode == HttpStatusCode.Gone)
+        {
+            Deactivate(feed, "HTTP 410 Gone");
+            return;
+        }
+
+        if (fetch.FailureKind == SafeHttpFailureKind.Oversized)
+        {
+            return;
+        }
+
+        if (fetch.FailureKind == SafeHttpFailureKind.None &&
+            response is not null &&
+            IsSuccess(response.StatusCode) &&
+            !RssUrlNormalizer.LooksLikeFeed(response.Content))
+        {
+            return;
+        }
+
+        feed.ConsecutiveFailures++;
+        if (feed.ConsecutiveFailures >= ConsecutiveFailuresToDisable)
+        {
+            Deactivate(feed, $"{DescribeProbeFailure(fetch)} x{feed.ConsecutiveFailures}");
+        }
+    }
+
+    private static bool IsHealthyProbe(SafeHttpFetchResult fetch)
+    {
+        var response = fetch.Response;
+        if (response is null || string.IsNullOrWhiteSpace(response.Content))
+        {
+            return false;
+        }
+
+        if (fetch.FailureKind is not SafeHttpFailureKind.None and not SafeHttpFailureKind.Oversized
+            and not SafeHttpFailureKind.HttpStatus)
+        {
+            return false;
+        }
+
+        if (fetch.FailureKind == SafeHttpFailureKind.HttpStatus && !IsSuccess(response.StatusCode))
+        {
+            return false;
+        }
+
+        if (!IsSuccess(response.StatusCode) && fetch.FailureKind != SafeHttpFailureKind.Oversized)
+        {
+            return false;
+        }
+
+        return RssUrlNormalizer.LooksLikeFeed(response.Content);
+    }
+
+    private static string DescribeProbeFailure(SafeHttpFetchResult fetch)
+    {
+        if (fetch.Response?.StatusCode == HttpStatusCode.Gone)
+        {
+            return "http_410";
+        }
+
+        if (fetch.FailureKind == SafeHttpFailureKind.None &&
+            fetch.Response is { } response &&
+            IsSuccess(response.StatusCode) &&
+            !RssUrlNormalizer.LooksLikeFeed(response.Content))
+        {
+            return "not_rss_or_atom";
+        }
+
+        return fetch.FailureReason ?? fetch.FailureKind.ToString();
     }
 
     private async Task SyncMediaSourceUrlsAsync(string previousUrl, string newUrl, CancellationToken ct)
@@ -181,6 +360,31 @@ public sealed class RssFeedResolver(
 
         feed.IsActive = false;
         feed.UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    private static bool ShouldSkipHealthy(RssFeed feed, TimeSpan? skipHealthyWithin)
+    {
+        if (skipHealthyWithin is not { } window || window <= TimeSpan.Zero)
+        {
+            return false;
+        }
+
+        if (!feed.IsActive || feed.ConsecutiveFailures > 0)
+        {
+            return false;
+        }
+
+        if (feed.LastCheckedAt is not { } checkedAt)
+        {
+            return false;
+        }
+
+        if (!RssUrlNormalizer.IsAbsoluteHttpUrl(feed.RssUrl))
+        {
+            return false;
+        }
+
+        return DateTimeOffset.UtcNow - checkedAt < window;
     }
 
     private static bool IsSuccess(HttpStatusCode status) =>

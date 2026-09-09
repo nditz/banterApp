@@ -10,12 +10,12 @@ namespace BanterApp.Api.Integrations.Media;
 
 public interface IRssFeedProvider
 {
-    Task<IReadOnlyList<MediaItemDto>> FetchFeedAsync(
+    Task<RssFeedFetchResult> FetchFeedAsync(
         string feedUrl,
         int maxItems,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<MediaItemDto>> FetchFeedAsync(
+    Task<RssFeedFetchResult> FetchFeedAsync(
         string feedUrl,
         int maxItems,
         string? publicationName,
@@ -28,6 +28,8 @@ public interface IRssFeedProvider
 /// </summary>
 public sealed class RssFeedProvider : IRssFeedProvider
 {
+    public const int MaxResponseBytes = 20 * 1024 * 1024;
+
     private readonly ISafeHttpClient _safeHttpClient;
     private readonly ILogger<RssFeedProvider> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -42,13 +44,13 @@ public sealed class RssFeedProvider : IRssFeedProvider
         _scopeFactory = scopeFactory;
     }
 
-    public Task<IReadOnlyList<MediaItemDto>> FetchFeedAsync(
+    public Task<RssFeedFetchResult> FetchFeedAsync(
         string feedUrl,
         int maxItems,
         CancellationToken cancellationToken = default) =>
         FetchFeedAsync(feedUrl, maxItems, publicationName: null, includeFullContent: false, cancellationToken);
 
-    public async Task<IReadOnlyList<MediaItemDto>> FetchFeedAsync(
+    public async Task<RssFeedFetchResult> FetchFeedAsync(
         string feedUrl,
         int maxItems,
         string? publicationName,
@@ -57,55 +59,104 @@ public sealed class RssFeedProvider : IRssFeedProvider
     {
         if (string.IsNullOrWhiteSpace(feedUrl))
         {
-            return [];
+            return RssFeedFetchResult.Empty(feedUrl ?? string.Empty);
         }
 
         if (RssSourcePolicy.IsDisallowed(feedUrl))
         {
             _logger.LogInformation("Skipping disallowed RSS host {Url}.", feedUrl);
-            return [];
+            return RssFeedFetchResult.Empty(feedUrl);
         }
 
         try
         {
-            var fetch = await _safeHttpClient.FetchAsync(feedUrl, cancellationToken);
+            var fetch = await _safeHttpClient.FetchAsync(feedUrl, MaxResponseBytes, cancellationToken);
             var response = fetch.Response;
-            if (response is null || string.IsNullOrWhiteSpace(response.Content))
+            if (fetch.FailureKind == SafeHttpFailureKind.Oversized &&
+                !string.IsNullOrWhiteSpace(response?.Content))
+            {
+                var salvaged = TryParsePartialFeed(
+                    response.Content,
+                    feedUrl,
+                    maxItems,
+                    publicationName,
+                    includeFullContent);
+                if (salvaged.Count > 0)
+                {
+                    _logger.LogWarning(
+                        "RSS feed {Url} exceeded size limit ({Reason}); parsed {Count} complete items from the truncated body.",
+                        feedUrl,
+                        fetch.FailureReason,
+                        salvaged.Count);
+                    return RssFeedFetchResult.Ok(salvaged, feedUrl);
+                }
+            }
+
+            if (response is null || string.IsNullOrWhiteSpace(response.Content) ||
+                fetch.FailureKind is not SafeHttpFailureKind.None)
             {
                 var ssrfBlocked = fetch.FailureKind == SafeHttpFailureKind.Ssrf;
                 var reason = MapFetchFailureReason(fetch.FailureKind);
                 _logger.LogWarning(
-                    "RSS fetch failed for {Url}: {Reason} ({Kind}).",
+                    "RSS fetch failed for {Url}: {Reason} ({Kind}) detail={Detail} jobKey={JobKey}.",
                     feedUrl,
                     fetch.FailureReason ?? reason,
-                    fetch.FailureKind);
-                await TrackRssErrorAsync(
-                    reason,
+                    fetch.FailureKind,
+                    fetch.FailureReason,
+                    HangfireJobAmbientContext.Current?.JobKey);
+                var mappedReason = ssrfBlocked && !string.IsNullOrWhiteSpace(fetch.FailureReason)
+                    ? fetch.FailureReason
+                    : reason;
+                var failure = await TrackRssErrorAsync(
+                    mappedReason,
                     feedUrl,
                     (int?)response?.StatusCode,
                     ssrfBlocked,
+                    fetch.FailureReason,
                     cancellationToken);
-                return [];
+                return RssFeedFetchResult.Failed(feedUrl, failure);
             }
 
-            return ParseFeed(response.Content, feedUrl, maxItems, publicationName, includeFullContent);
+            return RssFeedFetchResult.Ok(
+                ParseFeed(response.Content, feedUrl, maxItems, publicationName, includeFullContent),
+                feedUrl);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "RSS fetch failed for {Url}.", feedUrl);
+            _logger.LogWarning(
+                ex,
+                "RSS fetch failed for {Url} jobKey={JobKey}.",
+                feedUrl,
+                HangfireJobAmbientContext.Current?.JobKey);
             await TrackRssExceptionAsync(ex, feedUrl, cancellationToken);
-            return [];
+            return RssFeedFetchResult.Failed(
+                feedUrl,
+                new RssFeedFetchFailure(
+                    "unavailable",
+                    "We could not load this feed right now.",
+                    ex.Message,
+                    SsrfBlocked: false,
+                    StatusCode: null));
         }
     }
 
-    private async Task TrackRssErrorAsync(
+    private async Task<RssFeedFetchFailure> TrackRssErrorAsync(
         string reason,
         string feedUrl,
         int? statusCode,
         bool ssrfBlocked,
+        string? detail,
         CancellationToken ct)
     {
         var mapped = ProviderErrorMapper.MapRss(reason, statusCode, feedUrl, ssrfBlocked: ssrfBlocked);
+        var ambient = HangfireJobAmbientContext.Current;
+        var metadata = new Dictionary<string, object?>(mapped.Metadata ?? new Dictionary<string, object?>())
+        {
+            ["failure_detail"] = detail,
+            ["hangfire_job_id"] = ambient?.HangfireJobId,
+            ["job_type"] = ambient?.JobTypeName
+        };
+
         await using var scope = _scopeFactory.CreateAsyncScope();
         var tracking = scope.ServiceProvider.GetRequiredService<IErrorTrackingService>();
         await tracking.TrackAsync(new ErrorTrackRequest
@@ -113,27 +164,96 @@ public sealed class RssFeedProvider : IRssFeedProvider
             Source = "provider",
             ErrorCode = mapped.Code,
             MessageSafe = mapped.SafeMessage,
+            MessageInternal = detail ?? mapped.SafeMessage,
             Severity = "warning",
             Provider = "rss",
+            JobKey = ambient?.JobKey,
+            Route = feedUrl,
             IsRetryable = mapped.IsRetryable,
-            Metadata = mapped.Metadata
+            Metadata = metadata
         }, ct);
+
+        return new RssFeedFetchFailure(
+            reason,
+            mapped.SafeMessage,
+            detail,
+            ssrfBlocked,
+            statusCode);
     }
 
     private async Task TrackRssExceptionAsync(Exception ex, string feedUrl, CancellationToken ct)
     {
+        var ambient = HangfireJobAmbientContext.Current;
         await using var scope = _scopeFactory.CreateAsyncScope();
         var tracking = scope.ServiceProvider.GetRequiredService<IErrorTrackingService>();
         await tracking.TrackExceptionAsync(new ErrorTrackRequest
         {
             Source = "provider",
             ErrorCode = ErrorCodes.RssFetchError,
-            MessageSafe = "We could not load this feed right now.",
+            MessageSafe = ProviderErrorMapper.MapRss("unavailable", feedUrl: feedUrl).SafeMessage,
             Severity = "error",
             Provider = "rss",
+            JobKey = ambient?.JobKey,
+            Route = feedUrl,
             IsRetryable = true,
-            Metadata = new Dictionary<string, object?> { ["feed_url"] = feedUrl }
+            Metadata = new Dictionary<string, object?>
+            {
+                ["feed_url"] = feedUrl,
+                ["hangfire_job_id"] = ambient?.HangfireJobId,
+                ["job_type"] = ambient?.JobTypeName
+            }
         }, ex, ct);
+    }
+
+    public static IReadOnlyList<MediaItemDto> TryParsePartialFeed(
+        string xml,
+        string feedUrl,
+        int maxItems,
+        string? publicationName,
+        bool includeFullContent)
+    {
+        var truncated = TruncateToCompleteItems(xml);
+        if (string.IsNullOrWhiteSpace(truncated))
+        {
+            return [];
+        }
+
+        try
+        {
+            return ParseFeed(truncated, feedUrl, maxItems, publicationName, includeFullContent);
+        }
+        catch (Exception)
+        {
+            return [];
+        }
+    }
+
+    public static string? TruncateToCompleteItems(string xml)
+    {
+        if (string.IsNullOrWhiteSpace(xml))
+        {
+            return null;
+        }
+
+        var itemStart = xml.IndexOf("<item", StringComparison.OrdinalIgnoreCase);
+        var itemEnd = xml.LastIndexOf("</item>", StringComparison.OrdinalIgnoreCase);
+        if (itemStart >= 0 && itemEnd > itemStart)
+        {
+            return "<?xml version=\"1.0\" encoding=\"utf-8\"?><rss version=\"2.0\"><channel>"
+                   + xml[itemStart..(itemEnd + "</item>".Length)]
+                   + "</channel></rss>";
+        }
+
+        var entryStart = xml.IndexOf("<entry", StringComparison.OrdinalIgnoreCase);
+        var entryEnd = xml.LastIndexOf("</entry>", StringComparison.OrdinalIgnoreCase);
+        if (entryStart >= 0 && entryEnd > entryStart)
+        {
+            return "<?xml version=\"1.0\" encoding=\"utf-8\"?><feed xmlns=\"http://www.w3.org/2005/Atom\">"
+                   + xml[entryStart..(entryEnd + "</entry>".Length)]
+                   + "</feed>";
+        }
+
+        return null;
     }
 
     private static IReadOnlyList<MediaItemDto> ParseFeed(
