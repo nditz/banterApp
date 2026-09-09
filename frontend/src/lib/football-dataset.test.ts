@@ -39,9 +39,12 @@ describe("advertising consent", () => {
 });
 
 describe("ad slots", () => {
-  it("maps feed-* and rail-* keys onto the shared display unit", () => {
-    expect(resolveAdSlotId("feed-2")).toBe(resolveAdSlotId("feed"));
-    expect(resolveAdSlotId("rail-left")).toBe(resolveAdSlotId("rail-right"));
+  it("uses the ball-take-ads display unit everywhere by default", () => {
+    expect(resolveAdSlotId()).toBe("6603089832");
+    expect(resolveAdSlotId("feed-2")).toBe("6603089832");
+    expect(resolveAdSlotId("rail-left")).toBe("6603089832");
+    expect(resolveAdSlotId("rail-right")).toBe("6603089832");
+    expect(resolveAdSlotId("sidebar-main")).toBe("6603089832");
   });
 });
 

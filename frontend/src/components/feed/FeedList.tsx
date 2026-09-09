@@ -55,13 +55,13 @@ export function FeedList({ embedded = false, autoLoad = false }: FeedListProps) 
         <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
           <h2 className="text-sm font-semibold">Latest</h2>
           {isError && (
-            <span className="text-xs text-muted-foreground">Demo feed</span>
+            <span className="text-xs text-muted-foreground">Couldn&apos;t load the feed</span>
           )}
         </div>
       )}
 
       {embedded && isError && (
-        <p className="text-xs text-muted-foreground">Demo feed shown</p>
+        <p className="text-xs text-muted-foreground">Couldn&apos;t load the feed</p>
       )}
 
       {items.length === 0 && (

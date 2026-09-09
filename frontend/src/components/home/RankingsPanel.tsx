@@ -54,7 +54,7 @@ export function RankingsPanel() {
         accent="gold"
       >
         {standingsError && (
-          <p className="mb-2 text-xs text-muted-foreground">Demo standings shown</p>
+          <p className="mb-2 text-xs text-muted-foreground">Couldn&apos;t load standings.</p>
         )}
         <LeaderboardTable
           entries={standings?.entries ?? []}

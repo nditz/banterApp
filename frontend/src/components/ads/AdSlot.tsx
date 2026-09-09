@@ -88,9 +88,9 @@ export function AdSlot({ placement, className, slotId, fill = false }: AdSlotPro
       {visible ? (
         <ins
           className="adsbygoogle"
-          style={{ display: "block", width: "100%", height: "100%" }}
+          style={{ display: "block", width: "100%" }}
           data-ad-client={ADSENSE_CLIENT}
-          {...(adUnitId ? { "data-ad-slot": adUnitId } : {})}
+          data-ad-slot={adUnitId}
           data-ad-format="auto"
           data-full-width-responsive="true"
         />

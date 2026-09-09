@@ -1,19 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { normalizeLeaderboardView } from "@/lib/leaderboard";
-import {
-  mockFriendsLeaderboard,
-  mockGlobalLeaderboard,
-  mockLeagueLeaderboard,
-  mockSystemLeagues,
-  mockPunditLeaderboard,
-} from "@/lib/mock-data";
 import { detectCountryCode, getStoredCountryCode } from "@/lib/country";
 import { useSession } from "@/hooks/useSession";
 import type {
-  LeaderboardEntry,
   LeaderboardView,
   League,
   LeagueKind,
@@ -31,39 +23,9 @@ const endpoints: Record<LeaderboardTab, string> = {
   friends: "/api/leaderboards/friends",
 };
 
-const mockData: Record<LeaderboardTab, LeaderboardEntry[]> = {
-  league: mockLeagueLeaderboard,
-  global: mockGlobalLeaderboard,
-  pundits: mockPunditLeaderboard,
-  friends: mockFriendsLeaderboard,
-};
-
-function mockView(tab: LeaderboardTab): LeaderboardView {
-  const entries = mockData[tab];
-  return {
-    entries,
-    me: entries.find((e) => e.displayName === "You") ?? null,
-    totalPlayers: entries.length,
-  };
-}
-
 async function fetchLeaderboard(tab: LeaderboardTab): Promise<LeaderboardView> {
-  try {
-    const response = await apiFetch<unknown>(endpoints[tab]);
-    const view = normalizeLeaderboardView(response);
-    if (view.entries.length > 0 || tab === "pundits") {
-      return view;
-    }
-    return mockView(tab);
-  } catch (error) {
-    if (error instanceof ApiError && tab !== "pundits") {
-      return mockView(tab);
-    }
-    if (error instanceof ApiError) {
-      return { entries: [], me: null, totalPlayers: 0 };
-    }
-    throw error;
-  }
+  const response = await apiFetch<unknown>(endpoints[tab]);
+  return normalizeLeaderboardView(response);
 }
 
 export function useLeaderboard(tab: LeaderboardTab) {
@@ -76,15 +38,8 @@ export function useLeaderboard(tab: LeaderboardTab) {
 }
 
 async function fetchLeagueLeaderboard(leagueId: string): Promise<LeaderboardView> {
-  try {
-    const response = await apiFetch<unknown>(`/api/leaderboards/leagues/${leagueId}`);
-    return normalizeLeaderboardView(response);
-  } catch (error) {
-    if (error instanceof ApiError) {
-      return mockView("league");
-    }
-    throw error;
-  }
+  const response = await apiFetch<unknown>(`/api/leaderboards/leagues/${leagueId}`);
+  return normalizeLeaderboardView(response);
 }
 
 export function useLeagueLeaderboard(leagueId: string | null | undefined) {
@@ -146,22 +101,11 @@ export function useMyLeagues() {
   return useQuery({
     queryKey: ["leagues", session?.termsAccepted ? "member" : "guest", queryCountry],
     queryFn: async () => {
-      try {
-        const path = session?.termsAccepted
-          ? "/api/leagues"
-          : `/api/leagues?countryCode=${encodeURIComponent(queryCountry)}`;
-        const response = await apiFetch<unknown>(path);
-        const payload = normalizeMyLeaguesPayload(response);
-        if (payload.leagues.length > 0) {
-          return payload;
-        }
-        return { leagues: mockSystemLeagues, limits: DEFAULT_LIMITS };
-      } catch (error) {
-        if (error instanceof ApiError) {
-          return { leagues: mockSystemLeagues, limits: DEFAULT_LIMITS };
-        }
-        throw error;
-      }
+      const path = session?.termsAccepted
+        ? "/api/leagues"
+        : `/api/leagues?countryCode=${encodeURIComponent(queryCountry)}`;
+      const response = await apiFetch<unknown>(path);
+      return normalizeMyLeaguesPayload(response);
     },
     staleTime: 60_000,
     enabled: session !== undefined,
@@ -228,26 +172,10 @@ export function useLeaguePreview(inviteCode: string) {
 
 export function useCreateLeague() {
   return async (name: string) => {
-    try {
-      return await apiFetch<League>("/api/leagues/create", {
-        method: "POST",
-        body: JSON.stringify({ name }),
-      });
-    } catch (error) {
-      if (error instanceof ApiError && error.status >= 500) {
-        return {
-          id: `mock-${Date.now()}`,
-          name,
-          inviteCode: `WC${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-          memberCount: 1,
-          maxMembers: 50,
-          isAdmin: true,
-          myDisplayName: "player@example.com",
-          points: 0,
-        } satisfies League;
-      }
-      throw error;
-    }
+    return await apiFetch<League>("/api/leagues/create", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
   };
 }
 

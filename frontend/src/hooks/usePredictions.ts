@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { useSession } from "@/hooks/useSession";
 import { getTurnstileToken } from "@/lib/turnstile-token";
-import { mockPredictionHistory } from "@/lib/mock-data";
 import type { Prediction } from "@/lib/types";
 
 export interface CreatePredictionPayload {
@@ -19,7 +18,6 @@ function usePredictionHistoryQueryOptions() {
 
   return {
     enabled: !sessionLoading && termsAccepted,
-    placeholderData: termsAccepted ? undefined : mockPredictionHistory,
   };
 }
 

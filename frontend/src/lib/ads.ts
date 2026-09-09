@@ -15,6 +15,12 @@ import { hasAdvertisingConsent, readAdvertisingConsent } from "./advertising-con
 export const ADSENSE_CLIENT =
   process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-5886846159925642";
 
+/** Display unit "ball-take-ads" from the AdSense snippet. */
+export const ADSENSE_DISPLAY_SLOT =
+  slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_DISPLAY") ??
+  slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_FEED") ??
+  "6603089832";
+
 export const ADSENSE_ENABLED = ADSENSE_CLIENT.length > 0;
 
 /** True when AdSense is configured and the visitor has not denied ads. */
@@ -63,33 +69,17 @@ function slotFromEnv(name: string): string | undefined {
   return value ? value : undefined;
 }
 
-const DISPLAY_SLOT =
-  slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_DISPLAY") ??
-  slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_FEED");
-
 export const AD_SLOT_IDS: Record<string, string> = {
-  ...(slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_LEFT")
-    ? { "rail-left": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_LEFT")! }
-    : DISPLAY_SLOT
-      ? { "rail-left": DISPLAY_SLOT }
-      : {}),
-  ...(slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_RIGHT")
-    ? { "rail-right": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_RIGHT")! }
-    : DISPLAY_SLOT
-      ? { "rail-right": DISPLAY_SLOT }
-      : {}),
-  ...(slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR")
-    ? { "sidebar-main": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR")! }
-    : DISPLAY_SLOT
-      ? { "sidebar-main": DISPLAY_SLOT }
-      : {}),
-  ...(DISPLAY_SLOT ? { feed: DISPLAY_SLOT } : {}),
-  ...(DISPLAY_SLOT ? { display: DISPLAY_SLOT } : {}),
+  "rail-left": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_LEFT") ?? ADSENSE_DISPLAY_SLOT,
+  "rail-right": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_RIGHT") ?? ADSENSE_DISPLAY_SLOT,
+  "sidebar-main": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR") ?? ADSENSE_DISPLAY_SLOT,
+  feed: ADSENSE_DISPLAY_SLOT,
+  display: ADSENSE_DISPLAY_SLOT,
 };
 
-export function resolveAdSlotId(slotKey?: string): string | undefined {
+export function resolveAdSlotId(slotKey?: string): string {
   if (!slotKey) {
-    return DISPLAY_SLOT;
+    return ADSENSE_DISPLAY_SLOT;
   }
 
   if (AD_SLOT_IDS[slotKey]) {
@@ -97,14 +87,14 @@ export function resolveAdSlotId(slotKey?: string): string | undefined {
   }
 
   if (slotKey.startsWith("feed-")) {
-    return AD_SLOT_IDS.feed ?? DISPLAY_SLOT;
+    return AD_SLOT_IDS.feed;
   }
 
   if (slotKey.startsWith("rail-")) {
-    return AD_SLOT_IDS["rail-left"] ?? DISPLAY_SLOT;
+    return AD_SLOT_IDS["rail-left"];
   }
 
-  return DISPLAY_SLOT;
+  return ADSENSE_DISPLAY_SLOT;
 }
 
 export function hasConfiguredAdSlot(slotKey?: string): boolean {
