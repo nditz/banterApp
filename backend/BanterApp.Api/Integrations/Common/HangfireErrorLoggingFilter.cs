@@ -9,35 +9,48 @@ public sealed class HangfireErrorLoggingFilter(IServiceScopeFactory scopeFactory
 {
     public void OnPerforming(PerformingContext context)
     {
+        HangfireJobAmbientContext.Set(context);
     }
 
     public void OnPerformed(PerformedContext context)
     {
-        if (context.Exception is null)
+        try
         {
-            return;
-        }
-
-        using var scope = scopeFactory.CreateScope();
-        var errorTracking = scope.ServiceProvider.GetRequiredService<IErrorTrackingService>();
-        var hangfireJobId = context.BackgroundJob?.Job?.Type?.Name ?? "unknown";
-        var jobDefinition = JobRegistry.FindByHangfireId(hangfireJobId);
-        var jobKey = jobDefinition?.Key ?? hangfireJobId;
-
-        errorTracking.TrackExceptionAsync(new ErrorTrackRequest
-        {
-            Source = "job",
-            ErrorCode = ErrorCodes.JobFailed,
-            MessageSafe = "A background task failed.",
-            Severity = "error",
-            JobKey = jobKey,
-            Provider = "job",
-            IsRetryable = true,
-            Metadata = new Dictionary<string, object?>
+            if (context.Exception is null)
             {
-                ["hangfire_job_id"] = hangfireJobId,
-                ["retry_count"] = 0
+                return;
             }
-        }, context.Exception, context.CancellationToken.ShutdownToken).GetAwaiter().GetResult();
+
+            using var scope = scopeFactory.CreateScope();
+            var errorTracking = scope.ServiceProvider.GetRequiredService<IErrorTrackingService>();
+            var ambient = HangfireJobAmbientContext.Current;
+            var hangfireJobId = ambient?.HangfireJobId
+                ?? context.BackgroundJob?.Job?.Type?.Name
+                ?? "unknown";
+            var jobKey = ambient?.JobKey
+                ?? JobRegistry.FindByHangfireId(hangfireJobId)?.Key
+                ?? hangfireJobId;
+
+            errorTracking.TrackExceptionAsync(new ErrorTrackRequest
+            {
+                Source = "job",
+                ErrorCode = ErrorCodes.JobFailed,
+                MessageSafe = "A background task failed.",
+                Severity = "error",
+                JobKey = jobKey,
+                Provider = "job",
+                IsRetryable = true,
+                Metadata = new Dictionary<string, object?>
+                {
+                    ["hangfire_job_id"] = hangfireJobId,
+                    ["job_type"] = ambient?.JobTypeName,
+                    ["retry_count"] = 0
+                }
+            }, context.Exception, context.CancellationToken.ShutdownToken).GetAwaiter().GetResult();
+        }
+        finally
+        {
+            HangfireJobAmbientContext.Clear();
+        }
     }
 }

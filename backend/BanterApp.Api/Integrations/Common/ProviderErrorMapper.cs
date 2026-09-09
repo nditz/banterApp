@@ -82,7 +82,7 @@ public static class ProviderErrorMapper
         string? articleUrl = null,
         bool ssrfBlocked = false)
     {
-        var safeMessage = ssrfBlocked
+        var baseMessage = ssrfBlocked
             ? "Feed URL is not allowed."
             : reason switch
             {
@@ -94,6 +94,8 @@ public static class ProviderErrorMapper
                 "parse_failed" => "Article content could not be extracted.",
                 _ => "We could not load this feed right now."
             };
+
+        var safeMessage = AppendFeedContext(baseMessage, feedUrl, ssrfBlocked ? reason : null);
 
         var retryable = !ssrfBlocked && reason is "timeout" or "non_200" or "too_many_redirects" or "unavailable";
 
@@ -116,4 +118,22 @@ public static class ProviderErrorMapper
 
     public static int ComputeRetryDelaySeconds(int retryCount) =>
         Math.Min(3600, 30 * (int)Math.Pow(2, Math.Min(retryCount, 10)));
+
+    private static string AppendFeedContext(string message, string? feedUrl, string? blockReason)
+    {
+        var suffix = string.Empty;
+        if (!string.IsNullOrWhiteSpace(feedUrl))
+        {
+            suffix += $" ({feedUrl.Trim()})";
+        }
+
+        if (!string.IsNullOrWhiteSpace(blockReason) &&
+            !string.Equals(blockReason, "ssrf", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(blockReason, "blocked", StringComparison.OrdinalIgnoreCase))
+        {
+            suffix += $" [{blockReason}]";
+        }
+
+        return string.IsNullOrEmpty(suffix) ? message : message + suffix;
+    }
 }

@@ -27,4 +27,5 @@ public class Prediction
     public User? User { get; set; }
     public AnonymousUser? AnonymousUser { get; set; }
     public Match Match { get; set; } = null!;
+    public ICollection<PredictionReceipt> Receipts { get; set; } = [];
 }

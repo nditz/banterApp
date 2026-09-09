@@ -131,6 +131,33 @@ public sealed class StudioComparisonServiceTests
     }
 
     [Fact]
+    public async Task BuildAsync_guest_without_session_returns_pundits_for_matchIds()
+    {
+        await using var db = TestDbContextFactory.Create();
+        var match = new Match
+        {
+            Id = "fd-guest-cmp",
+            TeamA = "Arsenal",
+            TeamB = "Chelsea",
+            TeamACode = "ARS",
+            TeamBCode = "CHE",
+            KickoffTime = DateTimeOffset.UtcNow.AddHours(2),
+            Status = "NS",
+            Stage = "League",
+            Venue = "Emirates"
+        };
+        db.Matches.Add(match);
+        await SeedPunditPredictionAsync(db, match.Id, "HOME");
+        var service = CreateService(db);
+
+        var result = await service.BuildAsync(new UserContext(), match.Id, CancellationToken.None);
+
+        var row = Assert.Single(result.Matches);
+        Assert.Contains(row.Picks, p => p.Role == "pundit");
+        Assert.DoesNotContain(row.Picks, p => p.Role == "me");
+    }
+
+    [Fact]
     public async Task FormatPrediction_does_not_invent_quotes()
     {
         Assert.Equal("Home Win", StudioComparisonService.FormatPrediction("HOME", "result"));

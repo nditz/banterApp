@@ -56,30 +56,34 @@ UX/IA cleanup after Phase 1 football integrity. Studio stays central. No sports-
 | ID | Item | Status today | Action | Files / services |
 |---|---|---|---|---|
 | P3-01 | Follow model | **Done (local)** | `PunditFollow` on existing `Pundit`. User or anon, unique, Source only. | `PunditFollow`, migration `AddPunditFollows` |
-| P3-02 | Follow UX | **Done (local)** | `/pundits` browse/follow; overflow + Me. Follows filter Studio + pundit feed when any follows exist. | `PunditsDirectory`, `PunditFollowService`, `PersonalizedFeedService` |
-| P3-03 | Matchweek comparison | **Done (local)** | Before/after on MatchCard via `GET /api/studio/comparison?matchIds=`. Reuses Studio DTO. | `StudioComparisonService`, `MatchPunditComparison` |
+| P3-02 | Follow UX | **Done (local; prod first-paint bug fixed this run)** | `/pundits` browse/follow; overflow + Me. Directory uses `isPending` so SSR does not fake an empty ingest. | `PunditsDirectory`, `PunditFollowService`, `PersonalizedFeedService` |
+| P3-03 | Matchweek comparison | **Done (local; guest 500 fixed this run)** | Before/after on MatchCard via `GET /api/studio/comparison?matchIds=`. Guests without a session no longer 500. | `StudioComparisonService`, `MatchPunditComparison` |
 | P3-04 | Attribution | **Done** | Still `PunditDisplayResolver`. Source URL on directory + picks. No fabricated quotes. | resolver, Studio/directory UI |
 | P3-05 | Ingest quality | **Done (local)** | Hide unreviewed/rejected from comparison. Approve backfills match-linked `PunditPrediction`. Health counts. Admin review stays. | `PunditMatchPredictionSync`, `AdminReviewService`, `AdminHealthService` |
 
 **Depends on:** Phase 1 matches in prod (already true). Production **migration + API deploy** required before the follow graph exists live.
 
-**Phase 3 gate:** follow + comparison + attribution in production. Start Phase 4 only after that verify pass.
+**Phase 3 gate:** follow + comparison + attribution in production after this run's comparison/`isPending` deploy. Phase 4 implemented in the same requested loop.
 
-**Out of scope:** receipts (Phase 4), Studio content packs (Phase 5), CMP, Aura persistence.
+**Out of scope:** Studio content packs (Phase 5), CMP, Aura persistence.
 
 ---
 
 ## Phase 4 - Receipt Engine
 
-| ID | Item | Action |
-|---|---|---|
-| P4-01 | Receipt entity | Persistent structured receipt: user/anon, match, prediction, pundit take(s), result, points/Aura delta, provenance. |
-| P4-02 | Settlement emit | `PredictionRescoreService` / score-sync creates receipts **idempotently** (one per prediction+result version). |
-| P4-03 | History UI | Reframe `/predictions/history` as Receipts; reuse `PredictionReceiptCard` / `PredictionReactionCard`. |
-| P4-04 | Story candidates | Classify events (beat pundit, exact score, miss, majority-wrong) using existing banter scenario pieces where possible. |
-| P4-05 | Privacy | Public timeline never shows identifiable private receipts by default. |
+| ID | Item | Status today | Action | Files / services |
+|---|---|---|---|---|
+| P4-01 | Receipt entity | **Done (local)** | `PredictionReceipt` on existing prediction/match. Owner XOR. Unique prediction + result hash. | `PredictionReceipt`, migration `AddPredictionReceipts` |
+| P4-02 | Settlement emit | **Done (local)** | `PredictionRescoreService` emits idempotently via `ReceiptSettlementService`. | `ReceiptSettlementService`, `ScoreSyncJob` (unchanged call site) |
+| P4-03 | History UI | **Done (local)** | `/predictions/history` reframed as Receipts. Cards reused. Nav/Me label Receipts. | `predictions/history/page.tsx`, `useReceipts` |
+| P4-04 | Story candidates | **Done (local)** | Classified types + `receipt_story_candidates`. No invented quotes. | `ReceiptStoryClassifier` |
+| P4-05 | Privacy | **Done (local)** | Private by default. Owner-scoped API. Feed does not query receipts. | `ReceiptPrivacy`, `ReceiptEndpoints`, `PersonalizedFeedService` |
 
-**Depends on:** Phase 1 settlement actually running; Phase 3 if “vs pundit” receipts are required in the first receipt slice (can ship user-only receipts first).
+**Depends on:** Phase 1 settlement (already running). Vs-pundit snapshot included when reviewed Source picks exist.
+
+**Phase 4 gate:** receipts persist after FT, history is Receipts, public feed does not leak them. Start Phase 5 only after production verify.
+
+**Out of scope:** Studio content packs (Phase 5), CMP, Aura table.
 
 ---
 
@@ -198,7 +202,7 @@ P10 only after P5/P6 content exists
 |---|---|---|
 | Phase 1 | Avoid if possible | Prefer env + job/error handling. Mock fixture expansion is code, not schema. |
 | Phase 3 | `pundit_follows` | `UserId`/`AnonymousUserId` + `PunditId`, unique, RLS-safe via API only |
-| Phase 4 | `receipts` (+ optional `receipt_story_candidates`) | FK to prediction/match/pundit; idempotency key on prediction id + result hash |
+| Phase 4 | `prediction_receipts` + `receipt_story_candidates` | FK to prediction/match; unique `(PredictionId, ResultHash)`; RLS on; **apply in prod** |
 | Phase 5 | Extend `generated_content` types **or** `content_packs` | Prefer extend if JSON payload is enough |
 | Phase 7 | Aura persistence **only if** product decision says so | Default: map Aura UI to server points; no new currency |
 | Phase 8 | Consent log optional | Do not store unnecessary PII |

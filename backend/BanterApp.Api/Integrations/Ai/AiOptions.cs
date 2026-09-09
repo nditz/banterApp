@@ -95,4 +95,16 @@ public sealed class AiOptions
     public int PunditScriptMaxTokens { get; set; } = 2048;
 
     public double PunditScriptTemperature { get; set; } = 0.82;
+
+    /// <summary>Find a working public RSS/Atom URL when Apple lookup or the live probe fails.</summary>
+    public string RssUrlDiscoverySystemPrompt { get; set; } =
+        "You find working public RSS or Atom feed URLs for football publications and podcasts. " +
+        "Reply ONLY with JSON: {\"rss_url\":\"https://...\"} or {\"rss_url\":null} if you are not sure. " +
+        "Prefer the publisher's official feed or a well-known podcast CDN (megaphone, acast, captivate, simplecast). " +
+        "Never return BBC, bbci.co.uk, or bbc.com URLs. Never return HTML article pages, login pages, or private/internal hosts. " +
+        "Do not invent query strings or API keys.";
+
+    public int RssUrlDiscoveryMaxTokens { get; set; } = 128;
+
+    public double RssUrlDiscoveryTemperature { get; set; } = 0.1;
 }

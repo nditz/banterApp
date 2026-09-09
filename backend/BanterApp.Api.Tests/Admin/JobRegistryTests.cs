@@ -1,4 +1,6 @@
+using BanterApp.Api.Integrations.Common;
 using BanterApp.Api.Integrations.Jobs;
+using BanterApp.Api.Integrations.Pundits;
 using Xunit;
 
 namespace BanterApp.Api.Tests.Admin;
@@ -52,5 +54,16 @@ public class JobRegistryTests
 
         Assert.NotNull(job);
         Assert.Equal("openai.opinion.extract", job!.Key);
+    }
+
+    [Fact]
+    public void HangfireAmbientContext_ResolvesRssOpinionSyncJobKey()
+    {
+        var hangfireId = HangfireJobAmbientContext.ResolveHangfireJobId(
+            typeof(RssOpinionSyncJob),
+            nameof(RssOpinionSyncJob));
+
+        Assert.Equal(RssOpinionSyncJob.JobId, hangfireId);
+        Assert.Equal("rss.sync", JobRegistry.FindByHangfireId(hangfireId)?.Key);
     }
 }

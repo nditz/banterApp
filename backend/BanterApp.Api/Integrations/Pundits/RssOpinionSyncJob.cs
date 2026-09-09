@@ -17,6 +17,7 @@ public sealed class RssOpinionSyncJob
     private readonly AppDbContext _db;
     private readonly IRssFeedProvider _rss;
     private readonly IRssFeedCatalog _catalog;
+    private readonly RssFeedResolver _resolver;
     private readonly PunditMediaItemService _mediaItems;
     private readonly PunditIngestOptions _options;
     private readonly IFootballBanterConfigProvider _banterConfig;
@@ -27,6 +28,7 @@ public sealed class RssOpinionSyncJob
         AppDbContext db,
         IRssFeedProvider rss,
         IRssFeedCatalog catalog,
+        RssFeedResolver resolver,
         PunditMediaItemService mediaItems,
         IOptions<PunditIngestOptions> options,
         IFootballBanterConfigProvider banterConfig,
@@ -36,6 +38,7 @@ public sealed class RssOpinionSyncJob
         _db = db;
         _rss = rss;
         _catalog = catalog;
+        _resolver = resolver;
         _mediaItems = mediaItems;
         _options = options.Value;
         _banterConfig = banterConfig;
@@ -44,6 +47,7 @@ public sealed class RssOpinionSyncJob
     }
 
     [AutomaticRetry(Attempts = 1)]
+    [DisableConcurrentExecution(60 * 30)]
     public async Task SyncAsync(CancellationToken cancellationToken)
     {
         if (!_options.Enabled)
@@ -58,6 +62,8 @@ public sealed class RssOpinionSyncJob
 
         try
         {
+            await RefreshFeedUrlsAsync(cancellationToken);
+
             foreach (var feed in await ResolvePunditFeedsAsync(cancellationToken))
             {
                 var url = feed.Url;
@@ -75,10 +81,10 @@ public sealed class RssOpinionSyncJob
                         siteUrl: url,
                         ct: cancellationToken);
 
-                    IReadOnlyList<Media.Dtos.MediaItemDto> articles;
+                    RssFeedFetchResult fetched;
                     try
                     {
-                        articles = await _rss.FetchFeedAsync(
+                        fetched = await _rss.FetchFeedAsync(
                             url,
                             _options.MaxItemsPerSource,
                             publication,
@@ -88,10 +94,41 @@ public sealed class RssOpinionSyncJob
                     catch (Exception ex)
                     {
                         failed++;
-                        _logger.LogWarning(ex, "RSS feed fetch failed for {Url}.", url);
-                        await _tracker.LogErrorAsync(Provider, JobId, "rss_feed", ex.Message, run.Id, url, cancellationToken);
+                        _logger.LogWarning(ex, "RSS feed fetch threw for {Name} ({Url}) during {JobId}.", publication, url, JobId);
+                        await _tracker.LogErrorAsync(
+                            Provider,
+                            JobId,
+                            "rss_feed",
+                            $"RSS fetch threw for {url}: {ex.Message}",
+                            run.Id,
+                            FeedHost(url),
+                            cancellationToken,
+                            trackOperationalError: false);
                         continue;
                     }
+
+                    if (fetched.Failure is not null)
+                    {
+                        failed++;
+                        _logger.LogWarning(
+                            "RSS feed fetch failed for {Name} ({Url}): {Reason} {Detail}",
+                            publication,
+                            url,
+                            fetched.Failure.Reason,
+                            fetched.Failure.Detail ?? fetched.Failure.SafeMessage);
+                        await _tracker.LogErrorAsync(
+                            Provider,
+                            JobId,
+                            "rss_feed",
+                            $"{fetched.Failure.SafeMessage} reason={fetched.Failure.Reason} url={url}",
+                            run.Id,
+                            FeedHost(url),
+                            cancellationToken,
+                            trackOperationalError: false);
+                        continue;
+                    }
+
+                    var articles = fetched.Items;
 
                     foreach (var article in articles)
                     {
@@ -130,8 +167,15 @@ public sealed class RssOpinionSyncJob
                 {
                     failed++;
                     _db.ChangeTracker.Clear();
-                    _logger.LogWarning(ex, "RSS feed sync failed for {Url}.", url);
-                    await _tracker.LogErrorAsync(Provider, JobId, "rss_feed", ex.Message, run.Id, url, cancellationToken);
+                    _logger.LogWarning(ex, "RSS feed sync failed for {Name} ({Url}).", publication, url);
+                    await _tracker.LogErrorAsync(
+                        Provider,
+                        JobId,
+                        "rss_feed",
+                        $"RSS feed sync failed for {url}: {ex.Message}",
+                        run.Id,
+                        FeedHost(url),
+                        cancellationToken);
                 }
             }
 
@@ -146,6 +190,24 @@ public sealed class RssOpinionSyncJob
         {
             _logger.LogError(ex, "RSS opinion sync failed.");
             await _tracker.FailAsync(run, created, updated, ex, cancellationToken);
+        }
+    }
+
+    private async Task RefreshFeedUrlsAsync(CancellationToken ct)
+    {
+        try
+        {
+            var result = await _resolver.EnsureUrlsAsync(ct);
+            _logger.LogInformation(
+                "RSS URL refresh before {JobId}: {Updated} updated, {Failed} failed, {Deactivated} deactivated.",
+                JobId,
+                result.Updated,
+                result.Failed,
+                result.Deactivated);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "RSS URL refresh before {JobId} failed; continuing with catalog URLs.", JobId);
         }
     }
 
@@ -179,4 +241,9 @@ public sealed class RssOpinionSyncJob
 
         return "RSS Feed";
     }
+
+    private static string FeedHost(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && !string.IsNullOrWhiteSpace(uri.Host)
+            ? uri.Host
+            : url;
 }

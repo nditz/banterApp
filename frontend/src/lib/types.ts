@@ -33,6 +33,42 @@ export interface Prediction {
   match?: Match;
 }
 
+export interface ReceiptPunditTake {
+  punditId: string;
+  name: string;
+  prediction: string;
+  sourceUrl?: string | null;
+  sourcePlatform?: string | null;
+  wasCorrect: boolean;
+}
+
+export interface ReceiptStoryCandidate {
+  storyType: string;
+  rank: number;
+  summary: string;
+}
+
+export interface PredictionReceipt {
+  id: string;
+  predictionId: string;
+  matchId: string;
+  predictionType: PredictionType;
+  predictionValue: string;
+  pointsAwarded: number;
+  auraDelta: number;
+  homeScore?: number | null;
+  awayScore?: number | null;
+  matchStatus: string;
+  storyType: string;
+  storyTypes: string[];
+  punditTakes: ReceiptPunditTake[];
+  storyCandidates: ReceiptStoryCandidate[];
+  isPublic: boolean;
+  settledAt: string;
+  createdAt: string;
+  match?: Match;
+}
+
 export type FeedItemType =
   | "banter"
   | "meme"

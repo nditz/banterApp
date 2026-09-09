@@ -25,4 +25,5 @@ public class Match
     public Matchweek? Matchweek { get; set; }
     public ICollection<Prediction> Predictions { get; set; } = [];
     public ICollection<PunditPrediction> PunditPredictions { get; set; } = [];
+    public ICollection<PredictionReceipt> Receipts { get; set; } = [];
 }

@@ -6,7 +6,10 @@ public interface ISafeHttpClient
 {
     Task<SafeHttpResponse?> GetStringAsync(string url, CancellationToken ct = default);
 
-    async Task<SafeHttpFetchResult> FetchAsync(string url, CancellationToken ct = default)
+    Task<SafeHttpFetchResult> FetchAsync(string url, CancellationToken ct = default) =>
+        FetchAsync(url, maxResponseBytes: null, ct);
+
+    async Task<SafeHttpFetchResult> FetchAsync(string url, int? maxResponseBytes, CancellationToken ct = default)
     {
         var response = await GetStringAsync(url, ct);
         return response is null
@@ -54,9 +57,12 @@ public sealed class SafeHttpClient(
     public const int MaxResponseBytes = 5 * 1024 * 1024;
 
     public async Task<SafeHttpResponse?> GetStringAsync(string url, CancellationToken ct = default) =>
-        (await FetchAsync(url, ct)).Response;
+        (await FetchAsync(url, maxResponseBytes: null, ct)).Response;
 
-    public async Task<SafeHttpFetchResult> FetchAsync(string url, CancellationToken ct = default)
+    public Task<SafeHttpFetchResult> FetchAsync(string url, CancellationToken ct = default) =>
+        FetchAsync(url, maxResponseBytes: null, ct);
+
+    public async Task<SafeHttpFetchResult> FetchAsync(string url, int? maxResponseBytes, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(url))
         {
@@ -119,6 +125,8 @@ public sealed class SafeHttpClient(
                     $"http_{(int)response.StatusCode}");
             }
 
+            var limit = maxResponseBytes is > 0 ? maxResponseBytes.Value : MaxResponseBytes;
+            var contentLength = response.Content.Headers.ContentLength;
             await using var stream = await response.Content.ReadAsStreamAsync(ct);
             using var reader = new MemoryStream();
             var buffer = new byte[8192];
@@ -126,13 +134,32 @@ public sealed class SafeHttpClient(
             int read;
             while ((read = await stream.ReadAsync(buffer, ct)) > 0)
             {
-                total += read;
-                if (total > MaxResponseBytes)
+                if (total + read > limit)
                 {
-                    logger.LogWarning("Response exceeded max size for {Url}.", currentUrl);
-                    return SafeHttpFetchResult.Fail(SafeHttpFailureKind.Oversized, "oversized");
+                    var allowed = Math.Max(0, limit - total);
+                    if (allowed > 0)
+                    {
+                        await reader.WriteAsync(buffer.AsMemory(0, allowed), ct);
+                    }
+
+                    total += read;
+                    reader.Position = 0;
+                    using var partialReader = new StreamReader(reader, leaveOpen: true);
+                    var partial = await partialReader.ReadToEndAsync(ct);
+                    var partialContentType = response.Content.Headers.ContentType?.MediaType ?? "text/plain";
+                    logger.LogWarning(
+                        "Response exceeded max size for {Url}: read={Total} limit={Limit} contentLength={ContentLength}.",
+                        currentUrl,
+                        total,
+                        limit,
+                        contentLength);
+                    return new SafeHttpFetchResult(
+                        new SafeHttpResponse(partial, partialContentType, response.StatusCode, currentUrl),
+                        SafeHttpFailureKind.Oversized,
+                        $"oversized bytes_read={total} limit={limit} content_length={contentLength?.ToString() ?? "unknown"}");
                 }
 
+                total += read;
                 await reader.WriteAsync(buffer.AsMemory(0, read), ct);
             }
 

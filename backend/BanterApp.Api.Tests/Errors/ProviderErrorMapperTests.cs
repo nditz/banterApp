@@ -29,16 +29,24 @@ public class ProviderErrorMapperTests
     {
         var ex = ProviderErrorMapper.MapRss("invalid_xml", feedUrl: "https://example.com/feed");
         Assert.Equal(ErrorCodes.RssFetchError, ex.Code);
-        Assert.Equal("Feed returned invalid content.", ex.SafeMessage);
+        Assert.Equal("Feed returned invalid content. (https://example.com/feed)", ex.SafeMessage);
         Assert.False(ex.IsRetryable);
     }
 
     [Fact]
     public void MapRss_SsrfBlocked_IsNotRetryable()
     {
-        var ex = ProviderErrorMapper.MapRss("blocked", ssrfBlocked: true, feedUrl: "http://127.0.0.1/feed");
+        var ex = ProviderErrorMapper.MapRss("host_not_allowed", ssrfBlocked: true, feedUrl: "http://127.0.0.1/feed");
         Assert.Equal(ErrorCodes.RssFetchError, ex.Code);
-        Assert.Equal("Feed URL is not allowed.", ex.SafeMessage);
+        Assert.Equal("Feed URL is not allowed. (http://127.0.0.1/feed) [host_not_allowed]", ex.SafeMessage);
+        Assert.False(ex.IsRetryable);
+    }
+
+    [Fact]
+    public void MapRss_Oversized_IncludesFeedUrl()
+    {
+        var ex = ProviderErrorMapper.MapRss("oversized", feedUrl: "https://feeds.megaphone.fm/too-big");
+        Assert.Equal("Feed response was too large. (https://feeds.megaphone.fm/too-big)", ex.SafeMessage);
         Assert.False(ex.IsRetryable);
     }
 

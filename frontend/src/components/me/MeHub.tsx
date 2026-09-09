@@ -10,8 +10,8 @@ import { cn } from "@/lib/utils";
 const links = [
   {
     href: "/predictions/history",
-    label: "History",
-    description: "Your picks and receipts",
+    label: "Receipts",
+    description: "Settled picks you can reuse in Studio",
     icon: History,
   },
   {
@@ -51,8 +51,8 @@ export function MeHub() {
         <h1 className="mt-3 text-2xl font-bold sm:text-3xl">Me</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           {isSignedIn && greeting
-            ? `Signed in as ${greeting}. History, season calls and Aura live here.`
-            : "Guest play is saved to this device. History, season calls and Aura still count."}
+            ? `Signed in as ${greeting}. Receipts, season calls and Aura live here.`
+            : "Guest play is saved to this device. Receipts, season calls and Aura still count."}
         </p>
         {!isSignedIn && (
           <div className="mt-3 flex flex-wrap gap-2">

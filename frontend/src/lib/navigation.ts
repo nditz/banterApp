@@ -12,11 +12,11 @@ export const DESKTOP_PRIMARY_NAV: readonly AppNavLink[] = [
   { href: "/awards", label: "Season Calls" },
 ] as const;
 
-/** Desktop More: pundits, commodity table, history, rules. */
+/** Desktop More: pundits, commodity table, receipts, rules. */
 export const DESKTOP_OVERFLOW_NAV: readonly AppNavLink[] = [
   { href: "/pundits", label: "Pundits" },
   { href: "/table", label: "Table" },
-  { href: "/predictions/history", label: "History" },
+  { href: "/predictions/history", label: "Receipts" },
   { href: "/rules", label: "Rules" },
 ] as const;
 
@@ -37,7 +37,7 @@ export const MOBILE_OVERFLOW_NAV: readonly AppNavLink[] = [
   { href: "/awards", label: "Season Calls" },
   { href: "/pundits", label: "Pundits" },
   { href: "/table", label: "Table" },
-  { href: "/predictions/history", label: "History" },
+  { href: "/predictions/history", label: "Receipts" },
   { href: "/rules", label: "Rules" },
 ] as const;
 

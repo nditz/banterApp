@@ -9,7 +9,7 @@ import type { PunditDirectoryEntry } from "@/lib/types";
 import { getApiErrorMessage } from "@/lib/api";
 
 export function PunditsDirectory() {
-  const { data, isLoading, isError, error } = usePunditDirectory();
+  const { data, isPending, isError, error } = usePunditDirectory();
   const { follow, unfollow } = useFollowPundit();
   const pundits = data ?? [];
   const followedCount = pundits.filter((p) => p.isFollowed).length;
@@ -43,7 +43,7 @@ export function PunditsDirectory() {
         </p>
       ) : null}
 
-      {isLoading ? (
+      {isPending ? (
         <p className="text-sm text-muted-foreground">Loading sourced pundits…</p>
       ) : isError ? (
         <p role="alert" className="text-sm text-muted-foreground">

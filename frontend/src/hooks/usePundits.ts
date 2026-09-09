@@ -5,17 +5,15 @@ import { apiFetch } from "@/lib/api";
 import { useSession } from "@/hooks/useSession";
 import type { PunditDirectoryEntry } from "@/lib/types";
 
-function usePunditQueryEnabled() {
-  const { isLoading } = useSession();
-  return { enabled: !isLoading };
-}
-
 export function usePunditDirectory() {
-  const options = usePunditQueryEnabled();
+  const { data: session } = useSession();
   return useQuery({
-    queryKey: ["pundits", "directory"],
+    queryKey: [
+      "pundits",
+      "directory",
+      session?.userId ?? session?.anonymousUserId ?? "guest",
+    ],
     queryFn: () => apiFetch<PunditDirectoryEntry[]>("/api/pundits?kind=source&pageSize=50"),
-    ...options,
     staleTime: 30_000,
   });
 }

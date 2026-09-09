@@ -15,15 +15,18 @@ public sealed class RssNewsProvider
     private readonly IRssFeedProvider _rss;
     private readonly NewsOptions _options;
     private readonly IServiceScopeFactory _scopes;
+    private readonly ILogger<RssNewsProvider> _logger;
 
     public RssNewsProvider(
         IRssFeedProvider rss,
         IOptions<NewsOptions> options,
-        IServiceScopeFactory scopes)
+        IServiceScopeFactory scopes,
+        ILogger<RssNewsProvider> logger)
     {
         _rss = rss;
         _options = options.Value;
         _scopes = scopes;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<NewsArticleDto>> GetLatestArticlesAsync(
@@ -41,10 +44,28 @@ public sealed class RssNewsProvider
 
         foreach (var feed in feeds)
         {
-            var items = await _rss.FetchFeedAsync(feed.Url, perFeed, cancellationToken);
-            foreach (var item in items)
+            try
             {
-                articles.Add(MapItem(item, feed.Url, feed.Name));
+                var fetched = await _rss.FetchFeedAsync(feed.Url, perFeed, cancellationToken);
+                if (fetched.Failure is not null)
+                {
+                    _logger.LogWarning(
+                        "News RSS fetch failed for {Name} ({Url}): {Reason} {Detail}",
+                        feed.Name,
+                        feed.Url,
+                        fetched.Failure.Reason,
+                        fetched.Failure.Detail ?? fetched.Failure.SafeMessage);
+                    continue;
+                }
+
+                foreach (var item in fetched.Items)
+                {
+                    articles.Add(MapItem(item, feed.Url, feed.Name));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "News RSS fetch threw for {Name} ({Url}).", feed.Name, feed.Url);
             }
         }
 
