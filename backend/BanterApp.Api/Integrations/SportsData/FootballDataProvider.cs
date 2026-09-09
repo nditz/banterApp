@@ -1,12 +1,11 @@
 using System.Text.Json;
-using BanterApp.Api.Common;
 using BanterApp.Api.Integrations.SportsData.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace BanterApp.Api.Integrations.SportsData;
 
-public sealed class FootballDataProvider : ISportsDataFallbackProvider
+public sealed class FootballDataProvider : ISportsDataProvider, ISportsDataFallbackProvider
 {
     private readonly HttpClient _httpClient;
     private readonly FootballDataOptions _options;
@@ -25,6 +24,68 @@ public sealed class FootballDataProvider : ISportsDataFallbackProvider
     public string ProviderName => "football_data";
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_options.Token);
+
+    public Task<IReadOnlyList<MatchDto>> GetAllFixturesAsync(CancellationToken cancellationToken = default) =>
+        GetFixturesAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<MatchDto>> GetUpcomingFixturesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var cutoff = DateTimeOffset.UtcNow.AddHours(-3);
+        var fixtures = await GetFixturesAsync(cancellationToken);
+        return fixtures
+            .Where(m =>
+                (string.Equals(m.Status, "NS", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(m.Status, "PST", StringComparison.OrdinalIgnoreCase)) &&
+                m.KickoffUtc >= cutoff)
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<MatchDto>> GetResultsAsync(CancellationToken cancellationToken = default)
+    {
+        var fixtures = await GetFixturesAsync(cancellationToken);
+        return fixtures
+            .Where(m =>
+                string.Equals(m.Status, "FT", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(m.Status, "AET", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(m.Status, "PEN", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<MatchDto>> GetLiveFixturesAsync(CancellationToken cancellationToken = default)
+    {
+        var fixtures = await GetFixturesAsync(cancellationToken);
+        return fixtures
+            .Where(m => string.Equals(m.Status, "LIVE", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    public Task<MatchStatisticsDto?> GetMatchStatisticsAsync(
+        string matchId,
+        CancellationToken cancellationToken = default)
+    {
+        _ = matchId;
+        _ = cancellationToken;
+        return Task.FromResult<MatchStatisticsDto?>(null);
+    }
+
+    public async Task<IReadOnlyList<StandingDto>> GetStandingsAsync(
+        string group,
+        CancellationToken cancellationToken = default)
+    {
+        var tables = await GetStandingsAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(group) && tables.TryGetValue(group, out var rows))
+        {
+            return rows;
+        }
+
+        if (tables.TryGetValue("PL", out var premierLeague))
+        {
+            return premierLeague;
+        }
+
+        return tables.Values.FirstOrDefault() ?? [];
+    }
 
     public async Task<IReadOnlyList<MatchDto>> GetFixturesAsync(CancellationToken cancellationToken = default)
     {
@@ -48,7 +109,11 @@ public sealed class FootballDataProvider : ISportsDataFallbackProvider
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-            return MapMatches(document.RootElement);
+            var fixtures = FootballDataFixtureMapper.MapMatches(document.RootElement);
+            _logger.LogInformation(
+                "football-data.org returned {Count} Premier League fixtures.",
+                fixtures.Count);
+            return fixtures;
         }
         catch (Exception ex)
         {
@@ -79,118 +144,12 @@ public sealed class FootballDataProvider : ISportsDataFallbackProvider
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-            return MapStandings(document.RootElement);
+            return FootballDataFixtureMapper.MapStandings(document.RootElement);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "football-data.org standings request failed.");
             return new Dictionary<string, IReadOnlyList<StandingDto>>();
         }
-    }
-
-    private static IReadOnlyList<MatchDto> MapMatches(JsonElement root)
-    {
-        if (!root.TryGetProperty("matches", out var matches) || matches.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        var fixtures = new List<MatchDto>();
-        foreach (var match in matches.EnumerateArray())
-        {
-            if (!match.TryGetProperty("id", out var idEl))
-            {
-                continue;
-            }
-
-            var home = MapTeam(match.GetProperty("homeTeam"));
-            var away = MapTeam(match.GetProperty("awayTeam"));
-            var kickoff = match.TryGetProperty("utcDate", out var dateEl) &&
-                          DateTimeOffset.TryParse(dateEl.GetString(), out var parsed)
-                ? PostgresUtc.Normalize(parsed)
-                : DateTimeOffset.UtcNow;
-            var status = match.TryGetProperty("status", out var statusEl) ? statusEl.GetString() ?? "NS" : "NS";
-            int? homeScore = match.TryGetProperty("score", out var score) &&
-                             score.TryGetProperty("fullTime", out var ft) &&
-                             ft.TryGetProperty("home", out var homeGoals) &&
-                             homeGoals.ValueKind == JsonValueKind.Number
-                ? homeGoals.GetInt32()
-                : null;
-            int? awayScore = match.TryGetProperty("score", out var score2) &&
-                             score2.TryGetProperty("fullTime", out var ft2) &&
-                             ft2.TryGetProperty("away", out var awayGoals) &&
-                             awayGoals.ValueKind == JsonValueKind.Number
-                ? awayGoals.GetInt32()
-                : null;
-
-            fixtures.Add(new MatchDto(
-                $"fd-{idEl.GetInt32()}",
-                home,
-                away,
-                kickoff,
-                match.TryGetProperty("stage", out var stageEl) ? stageEl.GetString() ?? "Group" : "Group",
-                string.Empty,
-                match.TryGetProperty("venue", out var venueEl) ? venueEl.GetString() ?? string.Empty : string.Empty,
-                status == "FINISHED" ? "FT" : status,
-                homeScore,
-                awayScore));
-        }
-
-        return fixtures;
-    }
-
-    private static TeamDto MapTeam(JsonElement teamEl)
-    {
-        var id = teamEl.TryGetProperty("id", out var idEl) ? idEl.GetInt32().ToString() : "fd-team";
-        var name = teamEl.TryGetProperty("name", out var nameEl) ? nameEl.GetString() ?? "TBD" : "TBD";
-        var tla = teamEl.TryGetProperty("tla", out var tlaEl) && !string.IsNullOrWhiteSpace(tlaEl.GetString())
-            ? tlaEl.GetString()!.ToUpperInvariant()
-            : name.Length >= 3 ? name[..3].ToUpperInvariant() : "TBD";
-        var crest = teamEl.TryGetProperty("crest", out var crestEl) ? crestEl.GetString() : null;
-        return new TeamDto(id, name, tla, tla, crest);
-    }
-
-    private static IReadOnlyDictionary<string, IReadOnlyList<StandingDto>> MapStandings(JsonElement root)
-    {
-        var result = new Dictionary<string, List<StandingDto>>(StringComparer.OrdinalIgnoreCase);
-        if (!root.TryGetProperty("standings", out var standings) || standings.ValueKind != JsonValueKind.Array)
-        {
-            return result.ToDictionary(k => k.Key, v => (IReadOnlyList<StandingDto>)v.Value);
-        }
-
-        foreach (var table in standings.EnumerateArray())
-        {
-            if (!table.TryGetProperty("group", out var groupEl) ||
-                !table.TryGetProperty("table", out var rows) ||
-                rows.ValueKind != JsonValueKind.Array)
-            {
-                continue;
-            }
-
-            var groupKey = groupEl.GetString()?.Replace("GROUP_", "", StringComparison.OrdinalIgnoreCase) ?? "A";
-            var list = new List<StandingDto>();
-            foreach (var row in rows.EnumerateArray())
-            {
-                var team = MapTeam(row.GetProperty("team"));
-                list.Add(new StandingDto(
-                    row.GetProperty("position").GetInt32(),
-                    team,
-                    row.GetProperty("playedGames").GetInt32(),
-                    row.GetProperty("won").GetInt32(),
-                    row.GetProperty("draw").GetInt32(),
-                    row.GetProperty("lost").GetInt32(),
-                    row.GetProperty("goalsFor").GetInt32(),
-                    row.GetProperty("goalsAgainst").GetInt32(),
-                    row.GetProperty("goalDifference").GetInt32(),
-                    row.GetProperty("points").GetInt32()));
-            }
-
-            if (list.Count > 0)
-            {
-                result[groupKey] = list;
-            }
-        }
-
-        return result.ToDictionary(k => k.Key, v => (IReadOnlyList<StandingDto>)v.Value, StringComparer.OrdinalIgnoreCase);
     }
 }

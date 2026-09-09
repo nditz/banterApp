@@ -82,10 +82,12 @@ public class PremierLeagueMatchScopeTests
         var pl = new MatchDto("apifb-1", team, team, DateTimeOffset.UtcNow, "Regular Season - 1", "PL", "V", "NS", null, null, 1);
         var bare = new MatchDto("apifb-2", team, team, DateTimeOffset.UtcNow, "Group A - 1", "A", "V", "NS", null, null, null);
         var mock = new MatchDto("pl26-mw1-1", team, team, DateTimeOffset.UtcNow, "Regular Season - 1", "", "V", "NS", null, null, 1);
+        var footballData = new MatchDto("fd-497410", team, team, DateTimeOffset.UtcNow, "Regular Season - 1", "PL", "V", "NS", null, null, 1);
 
         Assert.True(PremierLeagueMatchScope.IsPremierLeagueDto(pl));
         Assert.False(PremierLeagueMatchScope.IsPremierLeagueDto(bare));
         Assert.True(PremierLeagueMatchScope.IsPremierLeagueDto(mock));
+        Assert.True(PremierLeagueMatchScope.IsPremierLeagueDto(footballData));
     }
 
     [Fact]

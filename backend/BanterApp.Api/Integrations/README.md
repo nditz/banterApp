@@ -24,8 +24,9 @@ See **`docs/BACKEND-CONFIGURATION.md`** for all keys and GitHub mapping.
 
 | Key | Values | Default | Effect |
 |-----|--------|---------|--------|
-| `SportsData:Provider` | `mock`, `apifootball` | `mock` | Selects sports data provider |
-| `SportsData:ApiKey` | API-Football key | _(empty)_ | Required for live API-Football calls |
+| `SportsData:Provider` | `footballdata`, `apifootball`, `mock` | `footballdata` | Canonical fixtures/standings come from football-data.org |
+| `SportsData:ApiKey` | API-Football key | _(empty)_ | Optional enrichment (lineups/events). Not required for fixtures |
+| `FootballData:Token` | football-data.org token | _(empty)_ | Required in production when provider is `footballdata` |
 | `News:ApiKey` | NewsAPI.org key | _(empty)_ | When set, uses NewsAPI; otherwise mock news |
 
 Copy `appsettings.Development.json.example` → `appsettings.Development.json` and fill in secrets.
@@ -34,16 +35,18 @@ Copy `appsettings.Development.json.example` → `appsettings.Development.json` a
 
 ### Sports data (`ISportsDataProvider`)
 
-1. Read `SportsData:Provider` from configuration (default: `mock`).
-2. **`mock`** — registers `MockSportsDataProvider` (Premier League 2026/27 matchweeks).
-3. **`apifootball`** — registers `ApiFootballProvider` via typed `HttpClient`. Reads `SportsData:ApiKey`. If the key is missing or API calls fail, each method gracefully falls back to mock data.
-4. Unknown values log a warning and fall back to mock.
+1. Read `SportsData:Provider` from configuration (default in `appsettings.json`: `footballdata`).
+2. **`footballdata`** — registers `FootballDataProvider` as the canonical `ISportsDataProvider`. Requires `FootballData:Token`. API-Football is enrichment-only when `SportsData:ApiKey` is set.
+3. **`mock`** — registers `MockSportsDataProvider` (local Premier League stubs).
+4. **`apifootball`** — legacy primary; registers `ApiFootballProvider`. Requires `SportsData:ApiKey`.
+5. Unknown values log a warning and fall back to mock.
+6. Sportmonks remains a fallback. football-data.org is not also registered as a fallback when it is already primary.
 
 Three **independent, staggered** Hangfire jobs run in the background (see `BackgroundJobs` in `appsettings.json`):
 
 | Job | Default interval | Purpose |
 |-----|------------------|---------|
-| `ScoreSyncJob` | 5 min | Live scores + fixtures via API-Football `fixtures?live=all` |
+| `ScoreSyncJob` | 5 min | Live scores + fixtures via football-data.org |
 | `AiReactionJob` | 20 min (offset :07) | AI pundit reactions to ingested news/match items |
 | `NewsIngestJob` | 120 min (offset :30) | Sports news, fixtures, results, live desk items |
 

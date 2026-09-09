@@ -1,4 +1,4 @@
-import { hasAdvertisingConsent } from "./advertising-consent";
+import { hasAdvertisingConsent, readAdvertisingConsent } from "./advertising-consent";
 
 /**
  * Google AdSense configuration.
@@ -7,8 +7,9 @@ import { hasAdvertisingConsent } from "./advertising-consent";
  * serves responsive units, so a single loader script + responsive <ins> tags
  * cover every breakpoint.
  *
- * Ads must not load before advertising consent (GDPR/ePrivacy). Terms consent
- * is not advertising consent.
+ * Ads load when the publisher id is set unless the visitor has denied
+ * advertising. Google Funding Choices / AdSense handles EEA consent in the
+ * AdSense dashboard. An explicit local deny still wins.
  */
 
 export const ADSENSE_CLIENT =
@@ -16,9 +17,9 @@ export const ADSENSE_CLIENT =
 
 export const ADSENSE_ENABLED = ADSENSE_CLIENT.length > 0;
 
-/** True only when AdSense is configured AND the user has granted advertising consent. */
+/** True when AdSense is configured and the visitor has not denied ads. */
 export function canRequestAds(): boolean {
-  return ADSENSE_ENABLED && hasAdvertisingConsent();
+  return ADSENSE_ENABLED && readAdvertisingConsent() !== "denied";
 }
 
 /** Loader script URL used sitewide. */
@@ -57,35 +58,57 @@ export const TURNSTILE_CSP = [
   "https://*.challenges.cloudflare.com",
 ];
 
-/**
- * Maps internal AdSlot `slotId` values to AdSense numeric ad-unit ids.
- * Prefer env vars so units can be wired without a code change.
- */
 function slotFromEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();
   return value ? value : undefined;
 }
 
+const DISPLAY_SLOT =
+  slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_DISPLAY") ??
+  slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_FEED");
+
 export const AD_SLOT_IDS: Record<string, string> = {
   ...(slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_LEFT")
     ? { "rail-left": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_LEFT")! }
-    : {}),
+    : DISPLAY_SLOT
+      ? { "rail-left": DISPLAY_SLOT }
+      : {}),
   ...(slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_RIGHT")
     ? { "rail-right": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_RIGHT")! }
-    : {}),
+    : DISPLAY_SLOT
+      ? { "rail-right": DISPLAY_SLOT }
+      : {}),
   ...(slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR")
     ? { "sidebar-main": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR")! }
-    : {}),
-  ...(slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_FEED")
-    ? { "feed-0": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_FEED")! }
-    : {}),
+    : DISPLAY_SLOT
+      ? { "sidebar-main": DISPLAY_SLOT }
+      : {}),
+  ...(DISPLAY_SLOT ? { feed: DISPLAY_SLOT } : {}),
+  ...(DISPLAY_SLOT ? { display: DISPLAY_SLOT } : {}),
 };
 
 export function resolveAdSlotId(slotKey?: string): string | undefined {
-  if (!slotKey) return undefined;
-  return AD_SLOT_IDS[slotKey];
+  if (!slotKey) {
+    return DISPLAY_SLOT;
+  }
+
+  if (AD_SLOT_IDS[slotKey]) {
+    return AD_SLOT_IDS[slotKey];
+  }
+
+  if (slotKey.startsWith("feed-")) {
+    return AD_SLOT_IDS.feed ?? DISPLAY_SLOT;
+  }
+
+  if (slotKey.startsWith("rail-")) {
+    return AD_SLOT_IDS["rail-left"] ?? DISPLAY_SLOT;
+  }
+
+  return DISPLAY_SLOT;
 }
 
 export function hasConfiguredAdSlot(slotKey?: string): boolean {
   return Boolean(resolveAdSlotId(slotKey));
 }
+
+export { hasAdvertisingConsent };

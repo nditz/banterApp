@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AdSenseLoader } from "@/components/ads/AdSenseLoader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { PageWithSideAds } from "@/components/layout/PageWithSideAds";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { TermsEntertainmentNotice } from "@/components/legal/TermsOfUseContent";
 import { SessionKeyRestore } from "@/components/session/SessionKeyRestore";
@@ -464,14 +465,15 @@ export function AppShell({ children }: AppShellProps) {
 
       <main
         className={cn(
-          "relative z-[1] flex-1 px-4 py-4 sm:px-6 sm:py-5",
-          !isAuthRoute && "main-with-bottom-nav"
+          "relative z-[1] flex-1 py-4 sm:py-5",
+          !isAuthRoute && "main-with-bottom-nav",
+          isAuthRoute && "px-4 sm:px-6"
         )}
       >
         <TurnstileProvider />
         <SignedInNotice />
         {!isAuthRoute && <TermsGate />}
-        {children}
+        {isAuthRoute ? children : <PageWithSideAds>{children}</PageWithSideAds>}
       </main>
 
       {!isAuthRoute && <MobileBottomNav />}

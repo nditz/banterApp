@@ -208,4 +208,31 @@ public static class GiphyResponseParser
         format.TryGetProperty("url", out var urlEl)
             ? urlEl.GetString()
             : null;
+
+    /// <summary>Parses Giphy <c>/trending/searches</c> or <c>/gifs/search/tags</c> phrase lists.</summary>
+    public static IReadOnlyList<string> ExtractSearchPhrases(JsonElement root)
+    {
+        if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var phrases = new List<string>();
+        foreach (var item in data.EnumerateArray())
+        {
+            var phrase = item.ValueKind switch
+            {
+                JsonValueKind.String => item.GetString(),
+                JsonValueKind.Object when item.TryGetProperty("name", out var name) => name.GetString(),
+                _ => null,
+            };
+
+            if (!string.IsNullOrWhiteSpace(phrase))
+            {
+                phrases.Add(phrase.Trim());
+            }
+        }
+
+        return phrases;
+    }
 }

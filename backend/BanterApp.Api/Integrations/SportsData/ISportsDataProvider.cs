@@ -10,7 +10,7 @@ public interface ISportsDataProvider
 
     Task<IReadOnlyList<MatchDto>> GetResultsAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>In-play fixtures from API-Football <c>fixtures?live=all</c> or equivalent.</summary>
+    /// <summary>In-play fixtures from the canonical sports provider (football-data.org or API-Football).</summary>
     Task<IReadOnlyList<MatchDto>> GetLiveFixturesAsync(CancellationToken cancellationToken = default);
 
     Task<MatchStatisticsDto?> GetMatchStatisticsAsync(string matchId, CancellationToken cancellationToken = default);

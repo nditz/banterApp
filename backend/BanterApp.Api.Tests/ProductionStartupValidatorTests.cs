@@ -38,7 +38,7 @@ public class ProductionStartupValidatorTests
     }
 
     [Fact]
-    public async Task Validate_Production_RequiresApiFootballKeyWhenProviderIsLive()
+    public async Task Validate_Production_RequiresApiFootballKeyWhenProviderIsApiFootball()
     {
         var values = ValidProduction();
         values["SportsData:Provider"] = "apifootball";
@@ -46,6 +46,28 @@ public class ProductionStartupValidatorTests
 
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => validator.ValidateAsync());
         Assert.Contains("SportsData:ApiKey", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Validate_Production_RequiresFootballDataTokenWhenProviderIsFootballData()
+    {
+        var values = ValidProduction();
+        values["SportsData:Provider"] = "footballdata";
+        var validator = Create(Environments.Production, values);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => validator.ValidateAsync());
+        Assert.Contains("FootballData:Token", error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("SportsData:ApiKey", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Validate_Production_AcceptsFootballDataWithoutApiFootballKey()
+    {
+        var values = ValidProduction();
+        values["SportsData:Provider"] = "footballdata";
+        values["FootballData:Token"] = "fd-token";
+        var validator = Create(Environments.Production, values);
+        await validator.ValidateAsync();
     }
 
     [Fact]

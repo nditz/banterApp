@@ -1,7 +1,7 @@
 /**
  * Advertising consent is separate from terms-of-use consent.
- * Phase 1 stopgap: no CMP yet, so ads are not requested until a later
- * phase records an explicit grant. Do not treat terms acceptance as ad consent.
+ * Default is unset: AdSense may load (Google Funding Choices can still
+ * gate EEA traffic). An explicit deny keeps ads off.
  */
 const STORAGE_KEY = "balltakes_advertising_consent";
 
@@ -36,6 +36,6 @@ export function setAdvertisingConsent(value: "granted" | "denied"): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, value);
   } catch {
-    // Ignore persistence failures; ads stay off.
+    // Ignore persistence failures.
   }
 }

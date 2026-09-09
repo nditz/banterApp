@@ -181,7 +181,7 @@ public static class MatchEndpoints
                     fromProvider,
                     status,
                     isMock ? "mock" : "provider",
-                    Official: !isMock && !FootballDatasetStatus.LooksLikeMockIds(fromProvider.Select(m => m.Id)),
+                    Official: FootballDatasetStatus.LooksLikeOfficialIds(fromProvider.Select(m => m.Id)),
                     Error: status == FootballDatasetStatus.Stale
                         ? "These fixtures are overdue without results. Score sync may be failing."
                         : null));
@@ -217,7 +217,7 @@ public static class MatchEndpoints
             mapped,
             statusDb,
             looksMock ? "mock" : "database",
-            Official: !isMock && !looksMock,
+            Official: FootballDatasetStatus.LooksLikeOfficialIds(mapped.Select(m => m.Id)),
             Error: statusDb == FootballDatasetStatus.Stale
                 ? "These fixtures are overdue without results. Score sync may be failing."
                 : null));
@@ -378,8 +378,12 @@ public static class MatchEndpoints
 
     private static async Task<List<MatchResponse>> TryMapProviderFixturesAsync(
         Func<CancellationToken, Task<IReadOnlyList<Integrations.SportsData.Dtos.MatchDto>>> fetch,
-        CancellationToken ct) =>
-        await TryMapProviderFixturesAsync(async token => await fetch(token), ct);
+        CancellationToken ct)
+    {
+        return await TryMapProviderFixturesAsync(
+            async token => (IEnumerable<Integrations.SportsData.Dtos.MatchDto>)await fetch(token),
+            ct);
+    }
 
     private static IEnumerable<Integrations.SportsData.Dtos.MatchDto> FilterPremierLeagueDtos(
         IEnumerable<Integrations.SportsData.Dtos.MatchDto> fixtures) =>

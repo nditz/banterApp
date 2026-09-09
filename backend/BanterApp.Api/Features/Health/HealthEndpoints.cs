@@ -1,6 +1,7 @@
 using BanterApp.Api.Data;
 using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.SportsData;
+using BanterApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -17,16 +18,21 @@ public static class HealthEndpoints
         app.MapGet("/api/health", async (
             AppDbContext db,
             IOptions<SportsDataOptions> sportsOptions,
+            IOptions<FootballDataOptions> footballDataOptions,
             CancellationToken ct) =>
         {
             var sports = sportsOptions.Value;
             var hasSportsKey = !string.IsNullOrWhiteSpace(sports.ApiKey);
-            var sportsMode = sports.Provider switch
-            {
-                "apifootball" when hasSportsKey => "apifootball-live",
-                "apifootball" => "apifootball-mock-fallback",
-                _ => "mock"
-            };
+            var hasFootballDataToken = !string.IsNullOrWhiteSpace(footballDataOptions.Value.Token);
+            var sportsMode =
+                FootballDatasetStatus.IsFootballDataProvider(sports.Provider)
+                    ? hasFootballDataToken ? "football-data-live" : "football-data-unconfigured"
+                    : sports.Provider switch
+                    {
+                        "apifootball" when hasSportsKey => "apifootball-live",
+                        "apifootball" => "apifootball-mock-fallback",
+                        _ => "mock"
+                    };
 
             try
             {
@@ -62,9 +68,10 @@ public static class HealthEndpoints
                              m.Status != "HT",
                         ct);
 
+                var providerUnconfigured = sportsMode is "football-data-unconfigured" or "apifootball-mock-fallback";
                 return Results.Ok(new
                 {
-                    status = overdueUnfinished || sportsMode == "apifootball-mock-fallback" ? "degraded" : "ok",
+                    status = overdueUnfinished || providerUnconfigured ? "degraded" : "ok",
                     database = new
                     {
                         connected = true,

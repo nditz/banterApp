@@ -58,6 +58,12 @@ public sealed class ProductionStartupValidator(
         }
 
         var sportsProvider = configuration["SportsData:Provider"]?.Trim().ToLowerInvariant() ?? "mock";
+        if (FootballDatasetStatus.IsFootballDataProvider(sportsProvider) &&
+            string.IsNullOrWhiteSpace(configuration["FootballData:Token"]))
+        {
+            errors.Add("Production requires FootballData:Token when SportsData:Provider is footballdata.");
+        }
+
         if (sportsProvider is "apifootball" && string.IsNullOrWhiteSpace(configuration["SportsData:ApiKey"]))
         {
             errors.Add("Production requires SportsData:ApiKey when SportsData:Provider is apifootball.");

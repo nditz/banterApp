@@ -75,4 +75,12 @@ public sealed class BackgroundJobsOptions
     public int RssFeedResolveIntervalMinutes { get; set; } = 360;
 
     public int RssFeedResolveStartMinute { get; set; } = 10;
+
+    /// <summary>Refresh football GIF search phrases from licensed APIs (staggered, few calls).</summary>
+    public int GifQueryRefreshIntervalMinutes { get; set; } = 180;
+
+    public int GifQueryRefreshStartMinute { get; set; } = 22;
+
+    /// <summary>Optional sticker-to-live-GIF upgrades per GIF refresh run.</summary>
+    public int GifQueryRefreshStickerUpgrades { get; set; } = 2;
 }

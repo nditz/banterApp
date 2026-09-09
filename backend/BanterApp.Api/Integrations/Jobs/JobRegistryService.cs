@@ -374,6 +374,7 @@ public sealed class JobRegistryService(
         nameof(StandingsSyncJob) => StandingsSyncJob.JobId,
         nameof(NewsIngestJob) => NewsIngestJob.JobId,
         nameof(AiReactionJob) => AiReactionJob.JobId,
+        nameof(GifQueryRefreshJob) => GifQueryRefreshJob.JobId,
         nameof(FootballCountriesSyncJob) => FootballCountriesSyncJob.JobId,
         nameof(FootballPlayersSyncJob) => FootballPlayersSyncJob.JobId,
         nameof(FootballPlayerStatsSyncJob) => FootballPlayerStatsSyncJob.JobId,

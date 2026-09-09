@@ -225,7 +225,10 @@ public sealed class FeedBanterEnrichmentJob
             .Take(Math.Clamp(_jobOptions.FeedBanterEnrichmentBatchSize, 1, 25))
             .ToListAsync(cancellationToken);
 
-        var upgraded = await _feedReactionMedia.UpgradeStoredStickersAsync(stickerCandidates, cancellationToken);
+        var upgraded = await _feedReactionMedia.UpgradeStoredStickersAsync(
+            stickerCandidates,
+            cancellationToken,
+            maxUpgrades: 1);
         if (upgraded > 0)
         {
             await _db.SaveChangesAsync(cancellationToken);

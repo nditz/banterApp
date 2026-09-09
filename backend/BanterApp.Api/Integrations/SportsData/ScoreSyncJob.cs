@@ -17,7 +17,6 @@ namespace BanterApp.Api.Integrations.SportsData;
 public sealed class ScoreSyncJob
 {
     public const string JobId = "score-sync";
-    private const string Provider = "api_football";
 
     private readonly ISportsDataProvider _provider;
     private readonly IEnumerable<ISportsDataFallbackProvider> _fallbacks;
@@ -51,10 +50,17 @@ public sealed class ScoreSyncJob
         _logger = logger;
     }
 
+    private string SyncProviderName =>
+        FootballDatasetStatus.IsFootballDataProvider(_options.Provider)
+            ? "football_data"
+            : FootballDatasetStatus.IsMockProvider(_options.Provider)
+                ? "mock"
+                : "api_football";
+
     [AutomaticRetry(Attempts = 2, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
     public async Task SyncAsync(CancellationToken cancellationToken)
     {
-        var run = await _tracker.StartAsync(Provider, JobId, cancellationToken);
+        var run = await _tracker.StartAsync(SyncProviderName, JobId, cancellationToken);
         var added = 0;
         var updated = 0;
 
@@ -70,7 +76,7 @@ public sealed class ScoreSyncJob
             {
                 _logger.LogWarning(ex, "Canonical sports provider returned no fixtures.");
                 await _tracker.LogErrorAsync(
-                    Provider,
+                    SyncProviderName,
                     JobId,
                     "fixture",
                     ex.Message,
@@ -87,13 +93,15 @@ public sealed class ScoreSyncJob
             {
                 _logger.LogWarning(ex, "Live fixture poll failed; continuing with the full fixture list.");
                 await _tracker.LogErrorAsync(
-                    Provider,
+                    SyncProviderName,
                     JobId,
                     "live-fixture",
                     ex.Message,
                     run.Id,
                     ct: cancellationToken);
             }
+
+            var usingMock = FootballDatasetStatus.IsMockProvider(_options.Provider);
 
             if (all.Count == 0)
             {
@@ -103,13 +111,10 @@ public sealed class ScoreSyncJob
                     if (fallbackFixtures.Count > 0)
                     {
                         all = fallbackFixtures;
-                        await _tracker.LogErrorAsync(
-                            Provider,
-                            JobId,
-                            "fixture",
-                            $"Canonical fixtures empty; used fallback provider {fallback.ProviderName}.",
-                            run.Id,
-                            ct: cancellationToken);
+                        _logger.LogWarning(
+                            "Canonical fixtures empty; using fallback provider {Fallback} ({Count} fixtures).",
+                            fallback.ProviderName,
+                            fallbackFixtures.Count);
                         break;
                     }
                 }
@@ -117,13 +122,12 @@ public sealed class ScoreSyncJob
 
             if (all.Count == 0)
             {
-                var usingMock = FootballDatasetStatus.IsMockProvider(_options.Provider);
                 var hasPremierLeague = await _db.Matches.WherePremierLeague().AnyAsync(cancellationToken);
                 if (usingMock && !hasPremierLeague)
                 {
                     all = await new MockSportsDataProvider().GetAllFixturesAsync(cancellationToken);
                     await _tracker.LogErrorAsync(
-                        Provider,
+                        SyncProviderName,
                         JobId,
                         "fixture",
                         "Canonical fixtures empty; seeded mock Premier League fixtures.",
@@ -144,6 +148,12 @@ public sealed class ScoreSyncJob
                 .GroupBy(d => d.Id)
                 .Select(g => g.Last())
                 .ToList();
+
+            if (merged.Count == 0 && !usingMock)
+            {
+                throw new SportsDataUnavailableException(
+                    "Score sync fetched 0 Premier League fixtures from the live sports provider.");
+            }
 
             foreach (var dto in merged)
             {
@@ -176,15 +186,21 @@ public sealed class ScoreSyncJob
                 await _catalog.UpsertClubAsync(dto.AwayTeam.Code, dto.AwayTeam.Name, dto.AwayTeam.LogoUrl, dto.AwayTeam.Id, cancellationToken);
 
                 if (dto.Id.StartsWith("apifb-", StringComparison.OrdinalIgnoreCase) ||
+                    dto.Id.StartsWith("fd-", StringComparison.OrdinalIgnoreCase) ||
                     dto.Id.StartsWith("pl26-", StringComparison.OrdinalIgnoreCase))
                 {
                     var externalId = dto.Id.Contains('-')
                         ? dto.Id[(dto.Id.IndexOf('-') + 1)..]
                         : dto.Id;
+                    var idProvider = dto.Id.StartsWith("pl26-", StringComparison.OrdinalIgnoreCase)
+                        ? "mock"
+                        : dto.Id.StartsWith("fd-", StringComparison.OrdinalIgnoreCase)
+                            ? "football_data"
+                            : SyncProviderName;
                     await _tracker.UpsertExternalIdAsync(
                         "fixture",
                         dto.Id,
-                        dto.Id.StartsWith("pl26-", StringComparison.OrdinalIgnoreCase) ? "mock" : Provider,
+                        idProvider,
                         externalId,
                         ct: cancellationToken);
                 }
@@ -226,7 +242,7 @@ public sealed class ScoreSyncJob
         foreach (var row in computed)
         {
             var existing = await _db.StandingRows.FirstOrDefaultAsync(
-                x => x.GroupKey == "PL" && x.TeamCode == row.TeamCode && x.Provider == Provider,
+                x => x.GroupKey == "PL" && x.TeamCode == row.TeamCode && x.Provider == SyncProviderName,
                 cancellationToken);
 
             if (existing is null)
@@ -248,7 +264,7 @@ public sealed class ScoreSyncJob
                     GoalsAgainst = row.GoalsAgainst,
                     GoalDiff = row.GoalDiff,
                     Points = row.Points,
-                    Provider = Provider,
+                    Provider = SyncProviderName,
                     LastSyncedAt = now
                 });
             }

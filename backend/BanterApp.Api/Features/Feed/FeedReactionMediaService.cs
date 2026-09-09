@@ -1,68 +1,63 @@
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Integrations.Media;
+using BanterApp.Api.Services;
+using Microsoft.Extensions.Options;
 
 namespace BanterApp.Api.Features.Feed;
 
 /// <summary>
-/// Presents feed reaction media: upgrades bundled <c>/reactions/</c> stickers to live Giphy GIFs
-/// when configured, and builds search queries from card text for richer matches.
+/// Presents feed reaction media from the stored library URL. Live Giphy lookups happen at
+/// write time and on the staggered GIF refresh job, not on every timeline request.
 /// </summary>
 public sealed class FeedReactionMediaService
 {
     private readonly ReactionMediaResolver _resolver;
     private readonly IReactionGifProvider _gifProvider;
+    private readonly IProviderUsageGuard? _usage;
+    private readonly ReactionGifOptions _gifOptions;
 
     public FeedReactionMediaService(
         ReactionMediaResolver resolver,
-        IReactionGifProvider gifProvider)
+        IReactionGifProvider gifProvider,
+        IProviderUsageGuard? usage = null,
+        IOptions<ReactionGifOptions>? gifOptions = null)
     {
         _resolver = resolver;
         _gifProvider = gifProvider;
+        _usage = usage;
+        _gifOptions = gifOptions?.Value ?? new ReactionGifOptions();
     }
 
     public bool LiveGifsEnabled => _gifProvider.IsEnabled;
 
-    /// <summary>Maps a persisted feed row to API media, upgrading local stickers when Giphy is live.</summary>
-    public async Task<FeedMediaResponse?> PresentAsync(
+    /// <summary>Maps a persisted feed row to API media without a live GIF round-trip.</summary>
+    public Task<FeedMediaResponse?> PresentAsync(
         NewsFeedItem item,
         string title,
         CancellationToken cancellationToken = default)
     {
-        var mapped = FeedMediaMapper.FromNewsItem(item);
-        if (mapped is null)
-        {
-            return null;
-        }
-
-        if (!FeedGifCatalog.IsBundledSticker(mapped.Url) || !LiveGifsEnabled)
-        {
-            return mapped;
-        }
-
-        var mood = InferMood(item.Category);
-        var queries = BuildSearchQueries(title, item.Summary, item.Author, item.Category);
-        var resolved = await _resolver.ResolveAsync(
-            queries,
-            mood,
-            item.Id.GetHashCode(),
-            cancellationToken);
-
-        if (FeedGifCatalog.IsBundledSticker(resolved.Url))
-        {
-            return mapped;
-        }
-
-        return new FeedMediaResponse(resolved.Type, resolved.Url, title);
+        _ = cancellationToken;
+        return Task.FromResult(FeedMediaMapper.FromNewsItem(item) is { } mapped
+            ? mapped with { Alt = title }
+            : null);
     }
 
     /// <summary>
-    /// Replaces bundled sticker URLs on stored feed rows with live Giphy GIF URLs (when enabled).
+    /// Replaces bundled sticker URLs on stored feed rows with live Giphy GIF URLs (when enabled
+    /// and under daily quota). Used by staggered jobs, not the timeline read path.
     /// </summary>
     public async Task<int> UpgradeStoredStickersAsync(
         IEnumerable<NewsFeedItem> items,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        int? maxUpgrades = null)
     {
         if (!LiveGifsEnabled)
+        {
+            return 0;
+        }
+
+        var cap = Math.Clamp(maxUpgrades ?? 2, 0, 8);
+        if (cap == 0)
         {
             return 0;
         }
@@ -70,9 +65,20 @@ public sealed class FeedReactionMediaService
         var upgraded = 0;
         foreach (var item in items)
         {
+            if (upgraded >= cap)
+            {
+                break;
+            }
+
             if (!FeedGifCatalog.IsBundledSticker(item.ImageUrl))
             {
                 continue;
+            }
+
+            if (_usage is not null &&
+                !await _usage.CanInvokeAsync(_gifOptions.UsageProviderName, 1, cancellationToken))
+            {
+                break;
             }
 
             var title = FeedBanterFormat.Strip(item.Title);

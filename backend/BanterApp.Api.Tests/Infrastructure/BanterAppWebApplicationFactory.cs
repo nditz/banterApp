@@ -78,6 +78,7 @@ public sealed class BanterAppWebApplicationFactory : WebApplicationFactory<Progr
         builder.UseSetting("Database:TransactionUrl", "");
         builder.UseSetting("Database:InMemoryName", _databaseName);
         builder.UseSetting("BackgroundJobs:Enabled", "false");
+        builder.UseSetting("SportsData:Provider", "mock");
         builder.UseSetting("Admin:AllowedEmails:0", TestUsers.AdminEmail);
         builder.UseSetting("Admin:ExposeErrorDetail", "true");
         builder.UseSetting("FootballReferenceData:CompetitionCode", "PL");

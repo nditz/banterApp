@@ -11,14 +11,32 @@ public static class FootballDatasetStatus
     public const string Error = "error";
     public const string Stale = "stale";
 
-    public static bool IsMockProvider(string? provider) =>
-        !string.Equals(provider?.Trim(), "apifootball", StringComparison.OrdinalIgnoreCase);
+    public static bool IsFootballDataProvider(string? provider)
+    {
+        var value = provider?.Trim().ToLowerInvariant();
+        return value is "footballdata" or "football-data" or "football_data";
+    }
+
+    public static bool IsLiveProvider(string? provider) =>
+        IsFootballDataProvider(provider) ||
+        string.Equals(provider?.Trim(), "apifootball", StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsMockProvider(string? provider) => !IsLiveProvider(provider);
 
     public static bool LooksLikeMockIds(IEnumerable<string> matchIds)
     {
         var ids = matchIds.ToList();
         return ids.Count > 0 &&
                ids.All(id => id.StartsWith("pl26-", StringComparison.OrdinalIgnoreCase));
+    }
+
+    public static bool LooksLikeOfficialIds(IEnumerable<string> matchIds)
+    {
+        var ids = matchIds.ToList();
+        return ids.Count > 0 &&
+               ids.All(id =>
+                   id.StartsWith("fd-", StringComparison.OrdinalIgnoreCase) ||
+                   id.StartsWith("apifb-", StringComparison.OrdinalIgnoreCase));
     }
 
     public static bool HasOverdueUnfinished(

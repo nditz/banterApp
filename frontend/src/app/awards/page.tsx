@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { TournamentBonusBoard } from "@/components/bonuses/TournamentBonusBoard";
-import { PageWithSideAds } from "@/components/layout/PageWithSideAds";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { TOURNAMENT_BONUS_RULES } from "@/lib/scoring-rules";
@@ -15,8 +14,7 @@ export const metadata: Metadata = {
 
 export default function AwardsPage() {
   return (
-    <PageWithSideAds>
-      <div className="mx-auto max-w-4xl space-y-5">
+    <div className="mx-auto max-w-4xl space-y-5">
         <header>
           <p className="page-kicker">Lock before kickoff</p>
           <h1 className="mt-3 text-2xl font-bold sm:text-3xl">Season awards</h1>
@@ -58,6 +56,5 @@ export default function AwardsPage() {
           </Link>
         </section>
       </div>
-    </PageWithSideAds>
   );
 }

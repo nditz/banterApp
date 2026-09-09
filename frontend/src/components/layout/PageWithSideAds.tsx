@@ -1,7 +1,7 @@
 "use client";
 
 import { AdSlot } from "@/components/ads/AdSlot";
-import { canRequestAds, resolveAdSlotId } from "@/lib/ads";
+import { canRequestAds } from "@/lib/ads";
 import { cn } from "@/lib/utils";
 
 interface PageWithSideAdsProps {
@@ -10,12 +10,11 @@ interface PageWithSideAdsProps {
 }
 
 export function PageWithSideAds({ children, className }: PageWithSideAdsProps) {
-  const showLeft = canRequestAds() && Boolean(resolveAdSlotId("rail-left"));
-  const showRight = canRequestAds() && Boolean(resolveAdSlotId("rail-right"));
+  const showRails = canRequestAds();
 
-  if (!showLeft && !showRight) {
+  if (!showRails) {
     return (
-      <div className={cn("relative mx-auto w-full max-w-[1400px]", className)}>
+      <div className={cn("relative mx-auto w-full max-w-[1400px] px-4 sm:px-6", className)}>
         {children}
       </div>
     );
@@ -23,35 +22,27 @@ export function PageWithSideAds({ children, className }: PageWithSideAdsProps) {
 
   return (
     <div className={cn("relative w-full", className)}>
-      <div
-        className={cn(
-          "grid w-full xl:gap-4 2xl:gap-6",
-          showLeft && showRight
-            ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_min(100%,1400px)_minmax(0,1fr)]"
-            : showLeft
-              ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_min(100%,1400px)]"
-              : "grid-cols-1 xl:grid-cols-[min(100%,1400px)_minmax(0,1fr)]"
-        )}
-      >
-        {showLeft ? (
-          <aside
-            className="sticky top-14 hidden min-w-0 self-start xl:block"
-            aria-label="Left advertisements"
-          >
-            <AdSlot placement="skyscraper" slotId="rail-left" fill />
-          </aside>
-        ) : null}
+      <div className="grid w-full grid-cols-1 xl:grid-cols-[minmax(160px,1fr)_minmax(0,min(100%,1400px))_minmax(160px,1fr)] xl:gap-3 2xl:gap-4">
+        <aside
+          className="sticky top-14 hidden min-w-[160px] self-start xl:block"
+          aria-label="Left advertisements"
+        >
+          <AdSlot placement="skyscraper" slotId="rail-left" fill />
+        </aside>
 
-        <div className="min-w-0 w-full">{children}</div>
+        <div className="min-w-0 w-full px-4 sm:px-6">
+          <div className="mb-3 xl:hidden">
+            <AdSlot placement="inline" slotId="display-top" />
+          </div>
+          {children}
+        </div>
 
-        {showRight ? (
-          <aside
-            className="sticky top-14 hidden min-w-0 self-start xl:block"
-            aria-label="Right advertisements"
-          >
-            <AdSlot placement="skyscraper" slotId="rail-right" fill />
-          </aside>
-        ) : null}
+        <aside
+          className="sticky top-14 hidden min-w-[160px] self-start xl:block"
+          aria-label="Right advertisements"
+        >
+          <AdSlot placement="skyscraper" slotId="rail-right" fill />
+        </aside>
       </div>
     </div>
   );

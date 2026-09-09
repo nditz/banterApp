@@ -32,6 +32,13 @@ public static class StringLimits
     public const int ReactionGifWindowId = 16;
     public const int ReactionGifId = 512;
     public const int ReactionGifUrl = 512;
+    public const int GifAssetTitle = 80;
+    public const int GifAssetDescription = 400;
+    public const int GifAssetMood = 32;
+    public const int GifAssetTags = 200;
+    public const int GifAssetSource = 32;
+    public const int GifSearchPhrase = 80;
+    public const int GifSearchSource = 32;
 
     public static string? Truncate(string? value, int maxLength)
     {
