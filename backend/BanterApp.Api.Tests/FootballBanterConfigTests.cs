@@ -136,6 +136,7 @@ public class FootballBanterEngineTests
         var engine = new FootballBanterEngine(
             config,
             new StubFootballBanterContentGenerator(),
+            new UnusedPromptCatalog(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<FootballBanterEngine>.Instance);
 
         var output = await engine.GenerateAsync(new FootballBanterSourceInput
@@ -233,5 +234,22 @@ public class FootballBanterEngineTests
 
         public Task<string> GenerateUsernameSuggestionAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult("TestKnight42");
+    }
+
+    private sealed class UnusedPromptCatalog : Integrations.Ai.IPromptCatalog
+    {
+        public Task<string> ResolveAsync(string key, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Stub OpenAI path should not resolve prompts.");
+
+        public Task<IReadOnlyList<Integrations.Ai.PromptCatalogEntry>> ListAsync(
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Stub OpenAI path should not list prompts.");
+
+        public Task<Integrations.Ai.PromptCatalogEntry> SaveAsync(
+            string key,
+            string? body,
+            Guid? updatedByUserId,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Stub OpenAI path should not save prompts.");
     }
 }

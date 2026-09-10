@@ -140,4 +140,76 @@ public class WorldCupLegacyPurgeTests
         Assert.True(await db.Matches.AnyAsync(m => m.Id == "pl26-mw1-1"));
         Assert.False(await db.Matches.AnyAsync(m => m.Id.StartsWith("apifb-")));
     }
+
+    [Fact]
+    public async Task RemovesWorldCupMediaItemsAndDeactivatesGifQueries()
+    {
+        await using var db = TestDbContextFactory.Create();
+        var source = new MediaSource
+        {
+            Id = Guid.NewGuid(),
+            Name = "Sky Sports",
+            SourceType = "rss",
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        var fifaSource = new MediaSource
+        {
+            Id = Guid.NewGuid(),
+            Name = "FIFA World Cup",
+            SourceType = "rss",
+            SiteUrl = "https://www.fifa.com/tournaments/mens/worldcup",
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        db.MediaSources.AddRange(source, fifaSource);
+        db.MediaItems.AddRange(
+            new MediaItem
+            {
+                Id = Guid.NewGuid(),
+                MediaSourceId = source.Id,
+                ExternalId = "pl-1",
+                Title = "Arsenal vs Chelsea preview",
+                SourceUrl = "https://www.skysports.com/football/arsenal-chelsea",
+                Description = "Premier League preview",
+                ProcessingStatus = MediaItemProcessingStatus.Pending,
+                LastSyncedAt = DateTimeOffset.UtcNow
+            },
+            new MediaItem
+            {
+                Id = Guid.NewGuid(),
+                MediaSourceId = source.Id,
+                ExternalId = "wc-1",
+                Title = "World Cup hydration breaks",
+                SourceUrl = "https://www.theguardian.com/football/world-cup/2026",
+                Description = "World Cup notes",
+                ProcessingStatus = MediaItemProcessingStatus.Pending,
+                LastSyncedAt = DateTimeOffset.UtcNow
+            });
+        db.GifSearchQueries.Add(new GifSearchQuery
+        {
+            Id = Guid.NewGuid(),
+            Phrase = "world cup celebration",
+            Source = GifSearchQuerySources.GiphyTrending,
+            IsFootballRelated = true,
+            IsActive = true
+        });
+        db.GeneratedContents.Add(new GeneratedContent
+        {
+            Id = Guid.NewGuid(),
+            Type = GeneratedContentType.Banter,
+            Prompt = "Write World Cup banter",
+            Output = "England to the semi-finals"
+        });
+        await db.SaveChangesAsync();
+
+        var removed = await WorldCupLegacyPurge.ExecuteAsync(db);
+
+        Assert.Equal(0, removed);
+        Assert.Equal("Arsenal vs Chelsea preview", (await db.MediaItems.SingleAsync()).Title);
+        Assert.False(await db.GeneratedContents.AnyAsync());
+        Assert.False((await db.GifSearchQueries.SingleAsync()).IsActive);
+        Assert.True((await db.MediaSources.SingleAsync(s => s.Name == "Sky Sports")).IsActive);
+        Assert.False((await db.MediaSources.SingleAsync(s => s.Name == "FIFA World Cup")).IsActive);
+    }
 }

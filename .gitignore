@@ -46,6 +46,9 @@ npm-debug.log*
 # Supabase
 supabase/.temp/
 
+# One-off local/ops SQL and helper scripts (not part of the app)
+scripts/
+
 # Local-only notes (integration failure reports, scratch docs)
 docs/local_docs/
 

@@ -112,6 +112,38 @@ public class AdminEndpointIntegrationTests : IClassFixture<BanterAppWebApplicati
     }
 
     [Fact]
+    public async Task GetPrompts_WithAdmin_ReturnsShippedKeys()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.GetAsync("/api/admin/prompts");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<List<PromptListItem>>();
+        Assert.NotNull(body);
+        Assert.Contains(body!, p => p.Key == "FeedBanterSystemPrompt");
+        Assert.Contains(body!, p => p.Key == "PunditExtractionSystemPrompt");
+        Assert.Equal(5, body!.Count);
+    }
+
+    [Fact]
+    public async Task PutPrompt_WithAdminAndCsrf_StoresOverride()
+    {
+        using var factory = new BanterAppWebApplicationFactory();
+        using var client = factory.CreateAdminClient();
+        await CsrfTestHelper.ApplyCsrfAsync(client);
+
+        var response = await client.PutAsJsonAsync(
+            "/api/admin/prompts/NewsReactionSystemPrompt",
+            new { body = "Admin override for news reactions." });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var saved = await response.Content.ReadFromJsonAsync<PromptListItem>();
+        Assert.True(saved!.IsOverride);
+        Assert.Contains("Admin override", saved.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task GetSession_WithAdmin_ReturnsIsPlatformAdminTrue()
     {
         using var client = _factory.CreateAdminClient();
@@ -148,4 +180,6 @@ public class AdminEndpointIntegrationTests : IClassFixture<BanterAppWebApplicati
     private sealed record ChecklistItem(string Label, bool Passed);
 
     private sealed record SessionAdminResponse(bool IsPlatformAdmin);
+
+    private sealed record PromptListItem(string Key, string Body, bool IsOverride);
 }

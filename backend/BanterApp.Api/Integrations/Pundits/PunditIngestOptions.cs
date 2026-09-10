@@ -1,3 +1,5 @@
+using BanterApp.Api.Data;
+
 namespace BanterApp.Api.Integrations.Pundits;
 
 public sealed class PunditIngestOptions
@@ -6,7 +8,7 @@ public sealed class PunditIngestOptions
 
     public bool Enabled { get; set; } = true;
 
-    public string[] YouTubeSearchQueries { get; set; } = [];
+    public string[] YouTubeSearchQueries { get; set; } = [.. CompetitionFocus.YouTubeSearchQueries];
 
     public string[] RssFeedUrls { get; set; } = [];
 

@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using BanterApp.Api.Common;
+using BanterApp.Api.Data;
 using BanterApp.Api.Features.Matches;
 using BanterApp.Api.Integrations.Ai;
 using BanterApp.Api.Integrations.Common;
@@ -15,17 +16,20 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
 {
     private readonly HttpClient _httpClient;
     private readonly AiOptions _options;
+    private readonly IPromptCatalog _prompts;
     private readonly MatchResolutionService _matchResolution;
     private readonly ILogger<OpenAiPunditOpinionExtractor> _logger;
 
     public OpenAiPunditOpinionExtractor(
         HttpClient httpClient,
         IOptions<AiOptions> options,
+        IPromptCatalog prompts,
         MatchResolutionService matchResolution,
         ILogger<OpenAiPunditOpinionExtractor> logger)
     {
         _httpClient = httpClient;
         _options = options.Value;
+        _prompts = prompts;
         _matchResolution = matchResolution;
         _logger = logger;
     }
@@ -49,7 +53,9 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
         var fixtureCatalog = await _matchResolution.BuildFixtureCatalogJsonAsync(cancellationToken: cancellationToken);
         var userPrompt =
             PromptGuard.UntrustedSourceInstruction + "\n\n" +
-            "Extract pundit opinions and predictions from this source.\n\n" +
+            CompetitionFocus.PromptDirective + "\n\n" +
+            "Extract pundit opinions and predictions from this source.\n" +
+            "If the source is only about the World Cup or another competition, return pundits as an empty array.\n\n" +
             $"source_type: {sourceType}\n" +
             $"source_name: {sourceName}\n" +
             $"source_url: {sourceUrl}\n" +
@@ -69,7 +75,7 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
         try
         {
             var json = await CompleteChatAsync(
-                _options.PunditExtractionSystemPrompt,
+                await _prompts.ResolveAsync(PromptKeys.PunditExtraction, cancellationToken),
                 userPrompt,
                 sourceUrl,
                 cancellationToken);

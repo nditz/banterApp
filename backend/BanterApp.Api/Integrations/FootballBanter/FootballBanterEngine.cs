@@ -14,15 +14,18 @@ public sealed class FootballBanterEngine : IFootballBanterEngine
 {
     private readonly IFootballBanterConfigProvider _config;
     private readonly IContentGenerator _contentGenerator;
+    private readonly IPromptCatalog _prompts;
     private readonly ILogger<FootballBanterEngine> _logger;
 
     public FootballBanterEngine(
         IFootballBanterConfigProvider config,
         IContentGenerator contentGenerator,
+        IPromptCatalog prompts,
         ILogger<FootballBanterEngine> logger)
     {
         _config = config;
         _contentGenerator = contentGenerator;
+        _prompts = prompts;
         _logger = logger;
     }
 
@@ -41,7 +44,7 @@ public sealed class FootballBanterEngine : IFootballBanterEngine
         {
             var json = await _contentGenerator.GenerateFootballBanterJsonAsync(
                 input,
-                _config.SystemPrompt,
+                await _prompts.ResolveAsync(PromptKeys.FeedBanter, cancellationToken),
                 _config.Config.OpenAi,
                 _config.Config.Banter.DefaultIntensity,
                 cancellationToken);

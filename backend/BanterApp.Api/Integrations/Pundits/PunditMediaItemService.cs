@@ -76,6 +76,11 @@ public sealed class PunditMediaItemService
 
         var hash = ContentHashHelper.Compute(externalId, item.SourceUrl, item.Title);
 
+        if (CompetitionFocus.LooksLikeOffFocus(item.Title, item.SourceUrl, item.Description, item.FullText))
+        {
+            return (0, 0, 1, false);
+        }
+
         var duplicateHash = _db.MediaItems.Local.Any(x =>
                 x.ContentHash == hash && x.MediaSourceId != source.Id)
             || await _db.MediaItems

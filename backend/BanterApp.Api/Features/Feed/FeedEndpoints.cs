@@ -135,6 +135,7 @@ public static class FeedEndpoints
 
         var articles = await news.GetLatestArticlesAsync(maxItems, ct);
         return articles
+            .Where(a => !CompetitionFocus.LooksLikeOffFocus(a.Title, a.SourceUrl, a.Summary))
             .OrderByDescending(a => a.PublishedAt)
             .Select(a => MapFromDto(a))
             .ToList();

@@ -27,7 +27,7 @@ public sealed class BanterContextEnricher(
             .Select(e => new
             {
                 player = e.Player.DisplayName,
-                country = e.Country != null ? e.Country.Name : e.Player.NationalTeamName,
+                club = e.Player.ClubName,
                 goals = e.Value,
                 rank = e.Rank
             })
@@ -42,7 +42,7 @@ public sealed class BanterContextEnricher(
             .Select(e => new
             {
                 player = e.Player.DisplayName,
-                country = e.Country != null ? e.Country.Name : e.Player.NationalTeamName,
+                club = e.Player.ClubName,
                 assists = e.Value,
                 rank = e.Rank
             })
@@ -56,7 +56,7 @@ public sealed class BanterContextEnricher(
             .Select(s => new
             {
                 player = s.Player.DisplayName,
-                country = s.Country != null ? s.Country.Name : s.Player.NationalTeamName,
+                club = s.Player.ClubName,
                 s.Goals,
                 s.Assists,
                 s.MatchesPlayed
@@ -72,6 +72,13 @@ public sealed class BanterContextEnricher(
 
         var context = new
         {
+            competition = new
+            {
+                name = CompetitionFocus.Name,
+                season = CompetitionFocus.Season,
+                display = CompetitionFocus.DisplayName,
+                focus = CompetitionFocus.PromptDirective
+            },
             top_user_predictions = new[]
             {
                 new { type = UserPredictionTypes.LeagueWinner, entries = winnerAgg.Entries.Take(3) },
@@ -81,9 +88,9 @@ public sealed class BanterContextEnricher(
             top_scorers = topScorers,
             top_assists = topAssists,
             player_stats = playerStats,
-            country_stats = winnerAgg.Entries.Select(e => new
+            club_stats = winnerAgg.Entries.Select(e => new
             {
-                country = e.Name,
+                club = e.Name,
                 prediction_count = e.PredictionCount,
                 percentage = e.Percentage
             })

@@ -200,3 +200,14 @@ export interface FootballLeaderboardsAdminResponse {
     sourceUpdatedAt: string | null;
   }>;
 }
+
+export interface AdminPrompt {
+  key: string;
+  label: string;
+  description: string;
+  body: string;
+  defaultBody: string;
+  isOverride: boolean;
+  applyCompetitionFocus: boolean;
+  updatedAt: string | null;
+}

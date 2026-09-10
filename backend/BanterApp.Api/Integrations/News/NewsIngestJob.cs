@@ -70,6 +70,11 @@ public sealed class NewsIngestJob
 
             foreach (var article in articles)
             {
+                if (CompetitionFocus.LooksLikeOffFocus(article.Title, article.SourceUrl, article.Summary))
+                {
+                    continue;
+                }
+
                 try
                 {
                     var (a, u) = await UpsertArticleAsync(article, cancellationToken);

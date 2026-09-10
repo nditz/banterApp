@@ -16,6 +16,7 @@ import type {
   FootballCountryAdminItem,
   FootballPlayerAdminItem,
   FootballLeaderboardsAdminResponse,
+  AdminPrompt,
 } from "@/lib/admin/types";
 
 const adminKey = ["admin"] as const;
@@ -306,6 +307,27 @@ export function useAdminFootballToggleActive() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...adminKey, "football-data"] });
+    },
+  });
+}
+
+export function useAdminPrompts() {
+  return useQuery({
+    queryKey: [...adminKey, "prompts"],
+    queryFn: () => apiFetch<AdminPrompt[]>("/api/admin/prompts"),
+  });
+}
+
+export function useAdminSavePrompt() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, body }: { key: string; body: string | null }) =>
+      apiFetch<AdminPrompt>(`/api/admin/prompts/${encodeURIComponent(key)}`, {
+        method: "PUT",
+        body: JSON.stringify({ body }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...adminKey, "prompts"] });
     },
   });
 }

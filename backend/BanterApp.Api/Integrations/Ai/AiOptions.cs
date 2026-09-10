@@ -40,12 +40,14 @@ public sealed class AiOptions
 
     /// <summary>System prompt for rewriting RSS/pundit/match feed cards into banter voice.</summary>
     public string FeedBanterSystemPrompt { get; set; } =
-        "You rewrite football news and pundit takes for a Gen Z banter feed. Reply ONLY with JSON: " +
+        "You rewrite Premier League news and pundit takes for a Gen Z banter feed. Reply ONLY with JSON: " +
         "{\"title\":\"short punchy headline (max 100 chars, may use 1 emoji)\"," +
         "\"body\":\"2-4 sentences of fun banter that keeps the facts but makes it entertaining\"," +
         "\"mood\":\"celebrate|hype|debate|shock|chaos|facepalm|miss|roast|trophy|news|pundit|cooked|ratio|delulu\"," +
         "\"jokeLine\":\"one optional football meme one-liner or POV caption\"}. " +
-        "Keep real pundit names and predictions accurate. PG-rated. Never encourage gambling.";
+        "Keep real pundit names and predictions accurate. Vary wording — do not reuse the same joke. " +
+        "Do not mention World Cup, Brazil, or national-team tournament frames unless the source is explicitly about that. " +
+        "PG-rated. Never encourage gambling.";
 
     /// <summary>Max AI generations per anonymous session (registered users unlimited).</summary>
     public int AnonymousGenerationLimit { get; set; } = 3;
@@ -67,17 +69,18 @@ public sealed class AiOptions
     public string FeedVisualSystemPrompt { get; set; } =
         "You pick the animated reaction GIF for a football banter app feed card. Reply ONLY with JSON: " +
         "{\"format\":\"gif\",\"mood\":\"celebrate|hype|debate|shock|chaos|facepalm|miss|roast|trophy|news|pundit|cooked|ratio|delulu\"," +
-        "\"gifQuery\":\"4-8 word Giphy search phrase for an animated sports reaction GIF — NOT an emoji or mood word alone. " +
-        "Examples: 'ronaldo siuu celebration stadium', 'football fan shocked disbelief', 'roy keane angry pundit desk', 'messi goal celebration gif'. " +
-        "Include emotion + football/sport context. PG-rated.\"}. " +
+        "\"gifQuery\":\"4-8 word Giphy search phrase for an animated Premier League reaction GIF — NOT an emoji or mood word alone. " +
+        "Examples: 'salah celebration anfield', 'football fan shocked disbelief', 'roy keane angry pundit desk', 'haaland goal celebration gif'. " +
+        "Include emotion + Premier League/club context. Do not search World Cup or national-team tropes unless the source is about that. PG-rated.\"}. " +
         "Always set format to gif, mood, and a concrete gifQuery.";
 
     /// <summary>System prompt for structured pundit opinion extraction from articles/transcripts.</summary>
     public string PunditExtractionSystemPrompt { get; set; } =
-        "You extract structured football pundit opinions and predictions from source text. Reply ONLY with valid JSON. " +
+        "You extract structured Premier League pundit opinions and predictions from source text. Reply ONLY with valid JSON. " +
         "Do not invent quotes. Only set is_direct_quote true when the quote appears verbatim in the source text. " +
         "If the pundit name is unclear, use name Unknown and needs_human_review true. " +
-        "Preserve source_url, source_name, and source_title from the input. Never fabricate attribution.";
+        "Preserve source_url, source_name, and source_title from the input. Never fabricate attribution. " +
+        "If the source is only about the World Cup or another competition, return pundits as an empty array.";
 
     public int PunditExtractionMaxTokens { get; set; } = 4096;
 

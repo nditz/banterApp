@@ -12,6 +12,7 @@ export const adminNavItems: Array<{
   { href: "/admin/stats", label: "Stats" },
   { href: "/admin/football-data", label: "Football Data" },
   { href: "/admin/health", label: "Health" },
+  { href: "/admin/prompts", label: "Prompts" },
   { href: "/admin/launch-checklist", label: "Launch Checklist" },
 ] ;
 

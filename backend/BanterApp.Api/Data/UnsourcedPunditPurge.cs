@@ -41,9 +41,7 @@ public static class UnsourcedPunditPurge
             .Where(n =>
                 n.Category == PunditOpinionFeedMapper.FeedCategory &&
                 (feedIds.Contains(n.Id) ||
-                 LooksLikeWorldCupText(n.Title) ||
-                 LooksLikeWorldCupText(n.Url) ||
-                 LooksLikeWorldCupText(n.Summary)))
+                 CompetitionFocus.LooksLikeOffFocus(n.Title, n.Url, n.Summary)))
             .ToListAsync(cancellationToken);
 
         db.NewsFeedItems.RemoveRange(junkFeed);
@@ -101,9 +99,7 @@ public static class UnsourcedPunditPurge
 
         var source = opinion.SourceItem;
         if (source is not null &&
-            (LooksLikeWorldCupText(source.Title) ||
-             LooksLikeWorldCupText(source.SourceUrl) ||
-             LooksLikeWorldCupText(source.Description) ||
+            (CompetitionFocus.LooksLikeOffFocus(source.Title, source.SourceUrl, source.Description) ||
              (source.ProcessingError?.Contains("Transcript incomplete", StringComparison.OrdinalIgnoreCase) ?? false) ||
              SourceTextQuality.IsTitleDescriptionFallback(source.Title, source.Description, source.RawText)))
         {
@@ -112,11 +108,4 @@ public static class UnsourcedPunditPurge
 
         return false;
     }
-
-    private static bool LooksLikeWorldCupText(string? value) =>
-        !string.IsNullOrWhiteSpace(value) &&
-        (value.Contains("world cup", StringComparison.OrdinalIgnoreCase) ||
-         value.Contains("world-cup", StringComparison.OrdinalIgnoreCase) ||
-         value.Contains("worldcup", StringComparison.OrdinalIgnoreCase) ||
-         value.Contains("fifa", StringComparison.OrdinalIgnoreCase));
 }

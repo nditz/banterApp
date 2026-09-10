@@ -51,4 +51,5 @@ export const adminRoutes = [
   "/admin/review",
   "/admin/stats",
   "/admin/health",
+  "/admin/prompts",
 ] as const;

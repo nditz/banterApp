@@ -276,6 +276,11 @@ public sealed class StubContentGenerator : IContentGenerator
         "That face you make when the transfer rumour was actually true.",
         "Nobody: … Football Twitter: allow me to introduce myself.",
         "VAR review on my ability to cope with this headline.",
+        "Stoppage time and my group chat both still going.",
+        "Big six energy until the table says otherwise.",
+        "Clean sheet? In this economy?",
+        "That's a sitter. That's also my weekend.",
+        "Monday Night Football voice: 'they've got to do better'.",
     ];
 
     public Task<string> GenerateNewsReactionAsync(
@@ -355,7 +360,7 @@ public sealed class StubContentGenerator : IContentGenerator
 
         var jokeLine = PickTemplate(FootballJokeLines, headline);
         var moods = new[] { "celebrate", "debate", "shock", "facepalm", "hype", "pundit", "cooked", "ratio", "delulu" };
-        var mood = moods[Math.Abs($"{headline}|{category}".GetHashCode()) % moods.Length];
+        var mood = moods[Math.Abs(HashCode.Combine($"{headline}|{category}".GetHashCode(StringComparison.Ordinal), DateTime.UtcNow.DayOfYear)) % moods.Length];
 
         return Task.FromResult(new FeedBanterCard(title, body, mood, jokeLine));
     }
@@ -393,7 +398,8 @@ public sealed class StubContentGenerator : IContentGenerator
     private static string PickTemplate(string[] templates, params string[] seedParts)
     {
         var seed = string.Join('|', seedParts);
-        var index = Math.Abs(seed.GetHashCode()) % templates.Length;
+        var index = Math.Abs(HashCode.Combine(seed.GetHashCode(StringComparison.Ordinal), DateTime.UtcNow.DayOfYear)) %
+                    templates.Length;
         return templates[index];
     }
 

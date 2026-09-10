@@ -57,6 +57,8 @@ public static class ServiceCollectionExtensions
             var logger = sp.GetRequiredService<ILogger<FootballBanterConfigProvider>>();
             return FootballBanterConfigProvider.Create(env.ContentRootPath, logger);
         });
+        services.AddMemoryCache();
+        services.AddScoped<IPromptCatalog, PromptCatalog>();
         services.AddScoped<IFootballBanterEngine, FootballBanterEngine>();
         services.AddSingleton<IPostConfigureOptions<PunditIngestOptions>, FootballBanterPunditIngestPostConfigurer>();
         services.AddSingleton<IPostConfigureOptions<YouTubeOptions>, FootballBanterYouTubePostConfigurer>();
