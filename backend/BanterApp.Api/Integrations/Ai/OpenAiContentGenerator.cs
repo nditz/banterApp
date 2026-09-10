@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using BanterApp.Api.Data;
 using BanterApp.Api.Features.Ai;
 using BanterApp.Api.Features.Pundits;
 using BanterApp.Api.Integrations.FootballBanter;
@@ -19,16 +20,19 @@ public sealed class OpenAiContentGenerator : IContentGenerator
 {
     private readonly HttpClient _httpClient;
     private readonly AiOptions _options;
+    private readonly IPromptCatalog _prompts;
     private readonly ILogger<OpenAiContentGenerator> _logger;
     private readonly ConcurrentDictionary<string, int> _generationCounts = new();
 
     public OpenAiContentGenerator(
         HttpClient httpClient,
         IOptions<AiOptions> options,
+        IPromptCatalog prompts,
         ILogger<OpenAiContentGenerator> logger)
     {
         _httpClient = httpClient;
         _options = options.Value;
+        _prompts = prompts;
         _logger = logger;
     }
 
@@ -149,7 +153,10 @@ public sealed class OpenAiContentGenerator : IContentGenerator
             ? $"Headline: {headline}\nSummary: {summary}"
             : $"Category: {category}\nHeadline: {headline}\nSummary: {summary}";
 
-        return await CompleteChatAsync(_options.NewsReactionSystemPrompt, userPrompt, cancellationToken);
+        return await CompleteChatAsync(
+            await _prompts.ResolveAsync(PromptKeys.NewsReaction, cancellationToken),
+            userPrompt,
+            cancellationToken);
     }
 
     public async Task<string?> GenerateReactionImageUrlAsync(
@@ -164,7 +171,7 @@ public sealed class OpenAiContentGenerator : IContentGenerator
         }
 
         var scenePrompt =
-            $"{_options.MemeImagePrompt}\nSubject: {headline}\nBanter: {reactionText}";
+            $"{await _prompts.ResolveAsync(PromptKeys.MemeImage, cancellationToken)}\nSubject: {headline}\nBanter: {reactionText}";
         if (!string.IsNullOrWhiteSpace(category))
         {
             scenePrompt += $"\nContext: {category}";
@@ -185,14 +192,15 @@ public sealed class OpenAiContentGenerator : IContentGenerator
         }
 
         var userPrompt =
+            $"Focus: {CompetitionFocus.DisplayName}\n" +
             $"Headline: {headline}\nReaction: {reactionText}\n" +
             (string.IsNullOrWhiteSpace(category) ? "" : $"Category: {category}\n") +
-            "Pick the best visual for a football banter feed card.";
+            "Pick a Premier League reaction GIF. Vary the search phrase.";
 
         try
         {
             var json = await CompleteChatAsync(
-                _options.FeedVisualSystemPrompt,
+                await _prompts.ResolveAsync(PromptKeys.FeedVisual, cancellationToken),
                 userPrompt,
                 cancellationToken,
                 responseFormatJson: true);
@@ -219,6 +227,9 @@ public sealed class OpenAiContentGenerator : IContentGenerator
         }
 
         var userPrompt =
+            $"Focus: {CompetitionFocus.DisplayName}\n" +
+            $"Rewrite nonce: {DateTime.UtcNow:yyyy-MM-dd}\n" +
+            $"Vary this rewrite; do not reuse World Cup or national-team tournament framing.\n" +
             $"Category: {category ?? "news"}\n" +
             (string.IsNullOrWhiteSpace(author) ? "" : $"Pundit/author: {author}\n") +
             $"Headline: {headline}\nSummary: {summary}";
@@ -226,7 +237,7 @@ public sealed class OpenAiContentGenerator : IContentGenerator
         try
         {
             var json = await CompleteChatAsync(
-                _options.FeedBanterSystemPrompt,
+                await _prompts.ResolveAsync(PromptKeys.FeedBanter, cancellationToken),
                 userPrompt,
                 cancellationToken,
                 responseFormatJson: true);
@@ -501,7 +512,7 @@ public sealed class OpenAiContentGenerator : IContentGenerator
 
         var userPrompt = BuildFootballBanterUserPrompt(input, banterIntensity);
         return await CompleteChatAsync(
-            systemPrompt,
+            CompetitionFocus.ApplyToSystemPrompt(systemPrompt),
             userPrompt,
             cancellationToken,
             responseFormatJson: true,
@@ -526,14 +537,18 @@ public sealed class OpenAiContentGenerator : IContentGenerator
             ["statement_type"] = input.StatementType is null
                 ? null
                 : FootballBanterOutputParser.ToJsonString(input.StatementType.Value),
-            ["banter_intensity"] = banterIntensity
+            ["banter_intensity"] = banterIntensity,
+            ["competition"] = CompetitionFocus.DisplayName,
+            ["freshness"] = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+            ["instruction"] = CompetitionFocus.PromptDirective +
+                " Vary phrasing each time. Do not invent quotes."
         };
 
         if (!string.IsNullOrWhiteSpace(input.ReferenceContextJson))
         {
             payload["reference_context"] = input.ReferenceContextJson;
-            payload["instruction"] =
-                "Only cite statistics from reference_context; do not invent numbers or player/country stats.";
+            payload["stats_instruction"] =
+                "Only cite statistics from reference_context; do not invent numbers or player/club stats.";
         }
 
         return JsonSerializer.Serialize(payload, FootballBanterJson.OutputOptions);

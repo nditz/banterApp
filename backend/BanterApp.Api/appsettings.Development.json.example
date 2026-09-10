@@ -39,11 +39,9 @@
     "BaseUrl": "https://www.googleapis.com/youtube/v3",
     "ApiKey": "",
     "DefaultSearchTerms": [
-      "Premier League",
-      "Premier League highlights",
-      "Premier League predictions",
-      "Premier League preview",
-      "Premier League score prediction"
+      "Premier League 2026/27 predictions pundits",
+      "Premier League weekend preview predictions",
+      "Sky Sports Premier League Super Sunday predictions"
     ]
   },
   "ReactionGif": {
@@ -84,12 +82,14 @@
   "PunditIngest": {
     "Enabled": true,
     "YouTubeSearchQueries": [
-      "Premier League predictions pundits",
-      "football pundits predictions",
-      "BBC Sport Premier League predictions",
-      "Sky Sports Premier League predictions",
-      "ESPN FC predictions",
-      "Guardian Football Premier League analysis"
+      "Premier League 2026/27 predictions pundits",
+      "Premier League weekend preview predictions",
+      "Sky Sports Premier League Super Sunday predictions",
+      "Monday Night Football Premier League predictions",
+      "The Rest Is Football Premier League",
+      "Stick to Football Premier League predictions",
+      "Gary Neville Premier League prediction",
+      "BBC Match of the Day Premier League analysis"
     ],
     "MaxItemsPerSource": 25,
     "ExtractionBatchSize": 5,

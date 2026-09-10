@@ -25,6 +25,9 @@ public class GifLibraryServiceTests
             Assert.Equal(GifAssetSources.Bundled, a.Source);
         });
         Assert.Contains(await db.GifSearchQueries.Select(q => q.Phrase).ToListAsync(), p => p == "premier league");
+        Assert.Contains(assets, a => a.Url == "/reactions/delulu-vision.svg");
+        Assert.True(assets.Count >= 20);
+        Assert.Contains(await db.GifSearchQueries.Select(q => q.Phrase).ToListAsync(), p => p == "haaland celebration");
     }
 
     [Fact]

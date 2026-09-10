@@ -90,6 +90,13 @@ public sealed class PunditExtractionJob
                 }
 
                 var sourceText = item.RawText;
+                if (CompetitionFocus.LooksLikeOffFocus(item.Title, item.SourceUrl, item.Description, sourceText))
+                {
+                    item.ProcessingStatus = MediaItemProcessingStatus.Skipped;
+                    item.ProcessingError = $"Off-focus for {CompetitionFocus.DisplayName}.";
+                    continue;
+                }
+
                 if (!SourceTextQuality.IsUsable(sourceText, _options.MinSourceTextLength) ||
                     SourceTextQuality.IsTitleDescriptionFallback(item.Title, item.Description, sourceText))
                 {

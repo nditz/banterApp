@@ -8,11 +8,13 @@
       "api_base_url": "https://www.googleapis.com/youtube/v3",
       "search_terms": [
         "Premier League 2026/27 predictions pundits",
-        "football pundits predictions",
-        "BBC Sport Premier League predictions",
-        "Sky Sports Premier League predictions",
-        "ESPN FC predictions",
-        "Guardian Football Premier League analysis"
+        "Premier League weekend preview predictions",
+        "Sky Sports Premier League Super Sunday predictions",
+        "Monday Night Football Premier League predictions",
+        "The Rest Is Football Premier League",
+        "Stick to Football Premier League predictions",
+        "Gary Neville Premier League prediction",
+        "BBC Match of the Day Premier League analysis"
       ],
       "max_results_per_search": 25,
       "sync_interval_minutes": 180,

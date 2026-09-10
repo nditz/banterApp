@@ -1,3 +1,5 @@
+using BanterApp.Api.Data;
+
 namespace BanterApp.Api.Integrations.FootballBanter;
 
 public sealed class FootballBanterConfigLoadResult
@@ -77,6 +79,6 @@ public static class FootballBanterConfigLoader
         var prompt = File.ReadAllText(promptPath).Trim();
         return string.IsNullOrWhiteSpace(prompt)
             ? FootballBanterDefaults.EmbeddedSystemPromptFallback
-            : prompt;
+            : CompetitionFocus.ApplyToSystemPrompt(prompt);
     }
 }

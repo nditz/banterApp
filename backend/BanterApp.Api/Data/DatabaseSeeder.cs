@@ -1,6 +1,7 @@
 using BanterApp.Api.Common;
 using BanterApp.Api.Data.Entities;
 using BanterApp.Api.Features.Matches;
+using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.News;
 using BanterApp.Api.Integrations.Rss;
 using BanterApp.Api.Integrations.SportsData;
@@ -52,6 +53,9 @@ public static class DatabaseSeeder
 
         await WorldCupLegacyPurge.ExecuteAsync(db, logger, cancellationToken);
 
+        var gifLibrary = scope.ServiceProvider.GetRequiredService<GifLibraryService>();
+        await gifLibrary.EnsureSeededAsync(cancellationToken);
+
         var rssCatalog = scope.ServiceProvider.GetRequiredService<IRssFeedCatalog>();
         await rssCatalog.SeedAsync(cancellationToken);
 
@@ -66,6 +70,11 @@ public static class DatabaseSeeder
             var articles = await news.GetLatestArticlesAsync(20, cancellationToken);
             foreach (var article in articles)
             {
+                if (CompetitionFocus.LooksLikeOffFocus(article.Title, article.Url, article.Summary))
+                {
+                    continue;
+                }
+
                 db.NewsFeedItems.Add(new NewsFeedItem
                 {
                     Id = article.Id,

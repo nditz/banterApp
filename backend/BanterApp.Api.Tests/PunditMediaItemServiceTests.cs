@@ -97,6 +97,36 @@ public sealed class PunditMediaItemServiceTests
         Assert.Empty(db.MediaItems.Local);
     }
 
+    [Fact]
+    public async Task UpsertItemAsync_skips_world_cup_titles_and_urls()
+    {
+        await using var db = TestDbContextFactory.Create();
+        var service = new PunditMediaItemService(db);
+        var source = await service.EnsureSourceAsync("Feed", "rss", "https://example.com/feed.xml");
+
+        var byTitle = await service.UpsertItemAsync(
+            source,
+            Article("guid-wc", "World Cup hydration breaks"),
+            CancellationToken.None);
+        var byUrl = await service.UpsertItemAsync(
+            source,
+            new(
+                "guid-fifa",
+                "Match preview",
+                "summary",
+                "https://www.fifa.com/tournaments/mens/worldcup/preview",
+                null,
+                DateTimeOffset.UtcNow,
+                "https://example.com/feed.xml",
+                Publication: "FIFA",
+                FullText: "body"),
+            CancellationToken.None);
+
+        Assert.Equal((0, 0, 1, false), byTitle);
+        Assert.Equal((0, 0, 1, false), byUrl);
+        Assert.Empty(db.MediaItems.Local);
+    }
+
     private static MediaItemDto Article(string externalId, string title) =>
         new(
             externalId,

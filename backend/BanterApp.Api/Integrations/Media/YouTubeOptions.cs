@@ -1,3 +1,5 @@
+using BanterApp.Api.Data;
+
 namespace BanterApp.Api.Integrations.Media;
 
 public sealed class YouTubeOptions
@@ -8,10 +10,5 @@ public sealed class YouTubeOptions
 
     public string? ApiKey { get; set; }
 
-    public string[] DefaultSearchTerms { get; set; } =
-    [
-        "Premier League predictions",
-        "Premier League preview",
-        "Premier League score prediction"
-    ];
+    public string[] DefaultSearchTerms { get; set; } = [.. CompetitionFocus.YouTubeSearchQueries];
 }

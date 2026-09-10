@@ -1,6 +1,7 @@
 using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Integrations.Ai;
 using BanterApp.Api.Integrations.Jobs;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.News;
@@ -74,6 +75,9 @@ public static class AdminEndpoints
         group.MapPost("/backfill/youtube", BackfillYoutube).RequireRateLimiting(RateLimitPolicies.YoutubeSyncTrigger);
         group.MapPost("/backfill/failed-extractions", BackfillFailedExtractions).RequireRateLimiting(RateLimitPolicies.Write);
         group.MapPost("/backfill/prediction-aggregates", BackfillPredictionAggregates).RequireRateLimiting(RateLimitPolicies.Write);
+
+        group.MapGet("/prompts", ListPrompts);
+        group.MapPut("/prompts/{key}", SavePrompt).RequireRateLimiting(RateLimitPolicies.Write);
 
         group.MapGet("/football-data/overview", GetFootballDataOverview);
         group.MapGet("/football-data/countries", GetFootballCountries);
@@ -735,6 +739,42 @@ public static class AdminEndpoints
         return Results.Ok(logs);
     }
 
+    private static async Task<IResult> ListPrompts(IPromptCatalog prompts, CancellationToken ct) =>
+        Results.Ok(await prompts.ListAsync(ct));
+
+    private static async Task<IResult> SavePrompt(
+        string key,
+        PromptOverrideRequest request,
+        IPromptCatalog prompts,
+        IUserContext user,
+        IAdminAuditService audit,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        if (!PromptKeys.TryGet(key, out _))
+        {
+            return Results.NotFound(new { error = "Unknown prompt key." });
+        }
+
+        try
+        {
+            var saved = await prompts.SaveAsync(key, request.Body, user.UserId, ct);
+            await audit.LogAsync(
+                user,
+                http,
+                string.IsNullOrWhiteSpace(request.Body) ? "prompt.reset" : "prompt.update",
+                "prompt",
+                saved.Key,
+                new { saved.IsOverride, length = saved.Body.Length },
+                ct);
+            return Results.Ok(saved);
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+
     private static async Task<IResult> BackfillRss(
         IRecurringJobManager recurring, IUserContext user, IAdminAuditService audit, HttpContext http, CancellationToken ct)
     {
@@ -857,3 +897,5 @@ public static class AdminEndpoints
 public sealed record AdminReviewRejectRequest(string? Notes);
 
 public sealed record SetActiveRequest(bool IsActive);
+
+public sealed record PromptOverrideRequest(string? Body);

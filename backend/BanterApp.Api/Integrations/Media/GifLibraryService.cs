@@ -69,6 +69,78 @@ public sealed class GifLibraryService
             "Pundit-desk energy. Safe pick, studio consensus, playing it down the middle.",
             "pundit",
             "pundit,news,debate"),
+        new(
+            "/reactions/delulu-vision.svg",
+            "Delulu vision",
+            "Unshakable belief in a wild Premier League take. Delulu, but committed.",
+            "delulu",
+            "delulu,hype,chaos"),
+        new(
+            "/reactions/last-gasp.svg",
+            "Last gasp",
+            "Stoppage-time winner energy. The group chat is still catching up.",
+            "hype",
+            "hype,celebrate,miss,chaos"),
+        new(
+            "/reactions/var-check.svg",
+            "VAR check",
+            "The wait. The still. The groan. Premier League VAR theatre.",
+            "debate",
+            "debate,shock,pundit"),
+        new(
+            "/reactions/red-carded.svg",
+            "Sent off",
+            "Straight red. The take, the tackle, or the night is over.",
+            "shock",
+            "shock,chaos,roast"),
+        new(
+            "/reactions/ratioed.svg",
+            "Ratioed",
+            "The replies cooked the original take. Timeline 1, pundit 0.",
+            "ratio",
+            "ratio,roast,cooked"),
+        new(
+            "/reactions/cooked-take.svg",
+            "Cooked take",
+            "That prediction did not survive kickoff. Fully cooked.",
+            "cooked",
+            "cooked,facepalm,roast"),
+        new(
+            "/reactions/derby-day.svg",
+            "Derby day",
+            "Local-rival energy. Nobody is playing it safe this weekend.",
+            "hype",
+            "hype,debate,chaos"),
+        new(
+            "/reactions/table-talk.svg",
+            "Table talk",
+            "Standings, run-ins, and who is actually in the title race.",
+            "news",
+            "news,pundit,debate"),
+        new(
+            "/reactions/missed-sitter.svg",
+            "Sitter",
+            "Open net, open goal, open embarrassment. Facepalm football.",
+            "facepalm",
+            "facepalm,miss,roast"),
+        new(
+            "/reactions/big-six.svg",
+            "Big six",
+            "The usual suspects arguing over who is actually elite this season.",
+            "debate",
+            "debate,pundit,hype"),
+        new(
+            "/reactions/clean-sheet.svg",
+            "Clean sheet",
+            "Defensive masterclass energy. Keepers eating tonight.",
+            "celebrate",
+            "celebrate,trophy,news"),
+        new(
+            "/reactions/late-drama.svg",
+            "Late drama",
+            "Added time chaos. The script writers are working overtime.",
+            "chaos",
+            "chaos,shock,hype"),
     ];
 
     private readonly AppDbContext _db;

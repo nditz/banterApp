@@ -28,6 +28,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ReactionGifUse> ReactionGifUses => Set<ReactionGifUse>();
     public DbSet<GifAsset> GifAssets => Set<GifAsset>();
     public DbSet<GifSearchQuery> GifSearchQueries => Set<GifSearchQuery>();
+    public DbSet<PromptOverride> PromptOverrides => Set<PromptOverride>();
     public DbSet<BanterContentHistory> BanterContentHistories => Set<BanterContentHistory>();
     public DbSet<TournamentBonusPick> TournamentBonusPicks => Set<TournamentBonusPick>();
     public DbSet<TournamentAwardResult> TournamentAwardResults => Set<TournamentAwardResult>();
@@ -328,6 +329,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Source).HasMaxLength(GifSearchQueryLimits.Source);
             e.HasIndex(x => x.Phrase).IsUnique();
             e.HasIndex(x => new { x.IsActive, x.IsFootballRelated, x.LastSeenAtUtc });
+        });
+
+        modelBuilder.Entity<PromptOverride>(e =>
+        {
+            e.ToTable("prompt_overrides");
+            e.HasKey(x => x.Key);
+            e.Property(x => x.Key).HasMaxLength(PromptOverrideLimits.Key);
+            e.Property(x => x.Body).HasMaxLength(PromptOverrideLimits.Body);
         });
 
         modelBuilder.Entity<BanterContentHistory>(e =>

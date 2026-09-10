@@ -1,4 +1,5 @@
 using BanterApp.Api.Common;
+using BanterApp.Api.Data;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Integrations.Media.Dtos;
 using BanterApp.Api.Integrations.Rss;
@@ -60,6 +61,11 @@ public sealed class RssNewsProvider
 
                 foreach (var item in fetched.Items)
                 {
+                    if (CompetitionFocus.LooksLikeOffFocus(item.Title, item.SourceUrl, item.Description, item.FullText))
+                    {
+                        continue;
+                    }
+
                     articles.Add(MapItem(item, feed.Url, feed.Name));
                 }
             }
