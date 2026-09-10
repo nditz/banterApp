@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdConsentSettings } from "@/components/ads/AdConsentSettings";
 import { BRAND } from "@/lib/brand";
 
 export const metadata = {
@@ -21,7 +22,24 @@ export default function PrivacyPage() {
         <li>Anonymous users receive a cookie and optional recovery token stored locally.</li>
         <li>Admin audit and auth audit logs retain IP address and user agent for security.</li>
         <li>AI and ingestion jobs process public sports content with source attribution.</li>
+        <li>
+          Advertising is opt-in. Google AdSense is only loaded after you allow it, and
+          accepting the Terms of Use does not grant advertising consent.
+        </li>
       </ul>
+
+      <section className="mt-8" aria-labelledby="ad-preferences-heading">
+        <h2 id="ad-preferences-heading" className="text-lg font-semibold">
+          Ad preferences
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Change your mind at any time. Turning ads off removes the ad slots and stops the
+          AdSense script from loading.
+        </p>
+        <div className="mt-3">
+          <AdConsentSettings />
+        </div>
+      </section>
       <p className="mt-6 text-sm text-muted-foreground">
         For takedown requests or privacy questions, contact{" "}
         <a href="mailto:privacy@balltakes.com" className="text-primary hover:underline">

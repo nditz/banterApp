@@ -1,7 +1,7 @@
 "use client";
 
 import { AdSlot } from "@/components/ads/AdSlot";
-import { canRequestAds } from "@/lib/ads";
+import { useAdvertisingConsent } from "@/hooks/useAdvertisingConsent";
 import { cn } from "@/lib/utils";
 
 interface PageWithSideAdsProps {
@@ -10,7 +10,7 @@ interface PageWithSideAdsProps {
 }
 
 export function PageWithSideAds({ children, className }: PageWithSideAdsProps) {
-  const showRails = canRequestAds();
+  const showRails = useAdvertisingConsent();
 
   if (!showRails) {
     return (

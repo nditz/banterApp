@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, KeyRound, LogIn, LogOut, Menu, Shield, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { AdConsentBanner } from "@/components/ads/AdConsentBanner";
 import { AdSenseLoader } from "@/components/ads/AdSenseLoader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { PageWithSideAds } from "@/components/layout/PageWithSideAds";
@@ -537,6 +538,7 @@ export function AppShell({ children }: AppShellProps) {
         {isAuthRoute ? children : <PageWithSideAds>{children}</PageWithSideAds>}
       </main>
 
+      {!isAuthRoute && <AdConsentBanner />}
       {!isAuthRoute && <MobileBottomNav />}
 
       {!isAuthRoute && (

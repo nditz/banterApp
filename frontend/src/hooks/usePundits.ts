@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { useSession } from "@/hooks/useSession";
+import { PRODUCT_METRICS, recordMetric } from "@/lib/metrics";
 import type { PunditDirectoryEntry } from "@/lib/types";
 
 export function usePunditDirectory() {
@@ -25,6 +26,7 @@ export function useFollowPundit() {
     mutationFn: (punditId: string) =>
       apiFetch<PunditDirectoryEntry>(`/api/pundits/${punditId}/follow`, { method: "POST" }),
     onSuccess: () => {
+      recordMetric(PRODUCT_METRICS.punditFollowed);
       void queryClient.invalidateQueries({ queryKey: ["pundits"] });
       void queryClient.invalidateQueries({ queryKey: ["studio"] });
       void queryClient.invalidateQueries({ queryKey: ["feed"] });

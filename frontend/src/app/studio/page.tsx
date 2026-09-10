@@ -1,12 +1,17 @@
+import { Suspense } from "react";
 import { StudioPage } from "@/components/studio/StudioPage";
 
 export const metadata = {
   title: "Content Studio",
   description:
-    "Review your predictions, compare with your league and the pros, and generate your TV-style broadcast script.",
+    "Pick a receipt or sourced story, choose a format and tone, and export a Ball Takes content pack.",
   alternates: { canonical: "/studio" },
 };
 
 export default function Studio() {
-  return <StudioPage />;
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-[820px] py-10 text-sm text-muted-foreground">Loading Studio…</div>}>
+      <StudioPage />
+    </Suspense>
+  );
 }

@@ -24,4 +24,11 @@ public class ErrorCategoryMapperTests
     {
         Assert.Equal(ErrorCodes.ExternalApiError, ErrorCategoryMapper.Map("provider", "provider_failure"));
     }
+
+    [Fact]
+    public void OpenaiProvider_MapsToOpenAiApiError()
+    {
+        Assert.Equal(ErrorCodes.OpenAiApiError, ErrorCategoryMapper.Map("provider", "openai"));
+        Assert.Equal("openai", ErrorCategoryMapper.MapProvider("provider", "openai"));
+    }
 }

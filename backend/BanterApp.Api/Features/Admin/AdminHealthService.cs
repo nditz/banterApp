@@ -108,8 +108,48 @@ public sealed class AdminHealthService(
             overdueUnfinished.Select(m => ((string?)m.Status, m.KickoffTime)),
             DateTimeOffset.UtcNow);
 
+        var resolvedMatchweek = await MatchEndpoints.ResolveCurrentMatchweekNumberAsync(db, ct);
+        var currentMatchweek = resolvedMatchweek > 0 ? resolvedMatchweek : (int?)null;
+
+        // Receipts and Studio packs are user-visible outputs, so a stall in either is an
+        // outage even when every ingestion job is green.
+        var receiptsTotal = await db.PredictionReceipts.CountAsync(ct);
+        var receiptsLast24h = await db.PredictionReceipts.CountAsync(r => r.SettledAt >= since24h, ct);
+        var settledPredictions = await db.Predictions.CountAsync(
+            p => p.Match != null && p.Match.HomeScore != null && p.Match.AwayScore != null, ct);
+        var receiptsMissing = Math.Max(0, settledPredictions - receiptsTotal);
+
+        var packsTotal = await db.GeneratedContents.CountAsync(
+            c => c.Type == GeneratedContentType.ContentPack, ct);
+        var packsLast24h = await db.GeneratedContents.CountAsync(
+            c => c.Type == GeneratedContentType.ContentPack && c.CreatedAt >= since24h, ct);
+
+        var adInitFailures24h = await db.AppMetrics.CountAsync(
+            m => m.MetricKey == "ad_init_failed" && m.RecordedAt >= since24h, ct);
+
+        var repeatedJobFailures = await db.SyncRuns
+            .Where(r => r.Status == "failed" && r.StartedAt >= since24h)
+            .GroupBy(r => r.JobName)
+            .Select(g => new { JobName = g.Key, Count = g.Count() })
+            .Where(x => x.Count >= RepeatedJobFailureThreshold)
+            .ToListAsync(ct);
+
+        var alerts = BuildAlerts(new AlertInputs(
+            DatabaseConnected: dbConnected,
+            CurrentMatchweek: currentMatchweek,
+            FixtureCount: fixtureCount,
+            OverdueUnfinishedFixtures: hasOverdue,
+            ReceiptsMissing: receiptsMissing,
+            CriticalErrors: criticalErrorsCount,
+            AdInitFailures24h: adInitFailures24h,
+            RepeatedlyFailingJobs: repeatedJobFailures.Select(x => x.JobName).ToList()));
+
         return new
         {
+            status = alerts.Any(a => a.Severity == "critical")
+                ? "unhealthy"
+                : alerts.Count > 0 ? "degraded" : "ok",
+            alerts,
             database = new { connected = dbConnected, provider = isPostgres ? "postgresql" : "inmemory" },
             queue = new { connected = true, provider = "hangfire-inmemory" },
             backgroundWorker = new { active = backgroundJobsOptions.Value.Enabled },
@@ -179,7 +219,25 @@ public sealed class AdminHealthService(
                     matchLinked = punditPredictionsMatchLinked
                 }
             },
+            receipts = new
+            {
+                total = receiptsTotal,
+                settledLast24h = receiptsLast24h,
+                settledPredictions,
+                awaitingSettlement = receiptsMissing
+            },
+            studio = new
+            {
+                contentPacks = packsTotal,
+                contentPacksLast24h = packsLast24h
+            },
+            ads = new
+            {
+                consentModel = "opt-in",
+                initFailuresLast24h = adInitFailures24h
+            },
             storage = new { status = "ok" },
+            currentMatchweek,
             lastSuccessfulCronRun = lastSuccessfulRun,
             environmentName = env.EnvironmentName,
             appVersion = typeof(AdminHealthService).Assembly.GetName().Version?.ToString(),
@@ -200,6 +258,78 @@ public sealed class AdminHealthService(
                 providerErrorsLast24h
             }
         };
+    }
+
+    /// <summary>Failures of one job within 24h before it counts as repeatedly failing.</summary>
+    private const int RepeatedJobFailureThreshold = 3;
+
+    /// <summary>Settled predictions allowed to lack a receipt before it looks like a stall.</summary>
+    private const int ReceiptBacklogThreshold = 5;
+
+    public sealed record AdminAlert(string Key, string Severity, string Message);
+
+    private sealed record AlertInputs(
+        bool DatabaseConnected,
+        int? CurrentMatchweek,
+        int FixtureCount,
+        bool OverdueUnfinishedFixtures,
+        int ReceiptsMissing,
+        int CriticalErrors,
+        int AdInitFailures24h,
+        IReadOnlyList<string> RepeatedlyFailingJobs);
+
+    /// <summary>
+    /// Turns raw counts into the conditions an operator should act on, so production
+    /// failures are visible in admin before a user reports them.
+    /// </summary>
+    private static List<AdminAlert> BuildAlerts(AlertInputs input)
+    {
+        var alerts = new List<AdminAlert>();
+
+        if (!input.DatabaseConnected)
+        {
+            alerts.Add(new AdminAlert("database_unreachable", "critical", "The database is unreachable."));
+        }
+
+        if (input.FixtureCount == 0)
+        {
+            alerts.Add(new AdminAlert("no_fixtures", "critical", "No fixtures are loaded — the product has nothing to predict."));
+        }
+
+        if (input.CurrentMatchweek is null)
+        {
+            alerts.Add(new AdminAlert("no_current_matchweek", "critical", "No matchweek is marked current, so predictions cannot open."));
+        }
+
+        if (input.OverdueUnfinishedFixtures)
+        {
+            alerts.Add(new AdminAlert("overdue_fixtures", "warning", "Fixtures are past kickoff with no result — score sync may be stalled."));
+        }
+
+        if (input.ReceiptsMissing > ReceiptBacklogThreshold)
+        {
+            alerts.Add(new AdminAlert(
+                "receipt_settlement_backlog",
+                "warning",
+                $"{input.ReceiptsMissing} settled predictions have no receipt."));
+        }
+
+        foreach (var jobName in input.RepeatedlyFailingJobs)
+        {
+            alerts.Add(new AdminAlert($"job_failing:{jobName}", "warning", $"Job '{jobName}' failed repeatedly in the last 24h."));
+        }
+
+        if (input.AdInitFailures24h > 0)
+        {
+            alerts.Add(new AdminAlert("adsense_init_failures", "info", $"AdSense failed to initialise {input.AdInitFailures24h} times in the last 24h."));
+        }
+
+        if (input.CriticalErrors > 0)
+        {
+            alerts.Add(new AdminAlert("critical_errors_open", "critical", $"{input.CriticalErrors} critical errors are unresolved."));
+        }
+
+        return alerts;
     }
 
     public async Task<object> GetLaunchChecklistAsync(CancellationToken ct)

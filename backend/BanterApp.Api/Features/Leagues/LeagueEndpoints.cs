@@ -9,6 +9,9 @@ namespace BanterApp.Api.Features.Leagues;
 
 public static class LeagueEndpoints
 {
+    /// <summary>Rolling window used for weekly rank movement.</summary>
+    private const int WeeklyWindowDays = 7;
+
     public static IEndpointRouteBuilder MapLeagueEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/leagues").WithTags("Leagues");
@@ -441,6 +444,7 @@ public static class LeagueEndpoints
 
         var userMap = userPoints.ToDictionary(x => x.Id);
         var anonMap = anonPoints.ToDictionary(x => x.Id);
+        var priorMap = await LoadPointsBeforeCutoffAsync(db, userIds, anonIds, ct);
 
         Dictionary<Guid, int> bonusMap = includeBonus
             ? await bonusScoring.GetBonusPointsByIdentityAsync(db, members, ct)
@@ -463,7 +467,7 @@ public static class LeagueEndpoints
             weekMap[id.Value] = weekMap.GetValueOrDefault(id.Value) + row.PointsAwarded;
         }
 
-        return members
+        var rows = members
             .Select(m =>
             {
                 var stats = m.UserId.HasValue
@@ -478,17 +482,82 @@ public static class LeagueEndpoints
                 var bonus = identityId.HasValue && includeBonus
                     ? bonusMap.GetValueOrDefault(identityId.Value)
                     : 0;
+                var priorPoints = identityId.HasValue ? priorMap.GetValueOrDefault(identityId.Value) : 0;
 
-                return new LeagueStandingEntry(
-                    identityId,
-                    m.DisplayName,
-                    matchPoints + bonus,
-                    stats?.Count ?? 0,
-                    bonus);
+                return new
+                {
+                    Entry = new LeagueStandingEntry(
+                        identityId,
+                        m.DisplayName,
+                        matchPoints + bonus,
+                        stats?.Count ?? 0,
+                        bonus),
+                    PriorPoints = priorPoints
+                };
             })
-            .OrderByDescending(s => s.TotalPoints)
-            .ThenBy(s => s.DisplayName)
             .ToList();
+
+        var previousRanks = rows
+            .OrderByDescending(r => r.PriorPoints)
+            .ThenBy(r => r.Entry.DisplayName)
+            .Select((r, i) => (Key: RankKey(r.Entry), Rank: i + 1))
+            .ToDictionary(x => x.Key, x => x.Rank);
+
+        return rows
+            .OrderByDescending(r => r.Entry.TotalPoints)
+            .ThenBy(r => r.Entry.DisplayName)
+            .Select((r, i) =>
+            {
+                var rank = i + 1;
+                var previousRank = previousRanks.GetValueOrDefault(RankKey(r.Entry), rank);
+                return r.Entry with
+                {
+                    Rank = rank,
+                    PreviousRank = previousRank,
+                    RankDelta = previousRank - rank,
+                    WeeklyPoints = r.Entry.TotalPoints - r.PriorPoints
+                };
+            })
+            .ToList();
+    }
+
+    /// <summary>Stable key for a standings row, since guest members can share a null identity.</summary>
+    private static string RankKey(LeagueStandingEntry entry) =>
+        $"{entry.UserId?.ToString() ?? "guest"}|{entry.DisplayName}";
+
+    /// <summary>
+    /// Points banked before the weekly window opened. Rank movement is derived from this
+    /// rather than a snapshot table — prediction points are already tied to kickoff times.
+    /// </summary>
+    private static async Task<Dictionary<Guid, int>> LoadPointsBeforeCutoffAsync(
+        AppDbContext db,
+        List<Guid> userIds,
+        List<Guid> anonIds,
+        CancellationToken ct)
+    {
+        var cutoff = DateTimeOffset.UtcNow.AddDays(-WeeklyWindowDays);
+
+        var userPrior = await db.Predictions
+            .Where(p => p.UserId.HasValue && userIds.Contains(p.UserId.Value))
+            .Where(p => p.Match != null && p.Match.KickoffTime < cutoff)
+            .GroupBy(p => p.UserId!.Value)
+            .Select(g => new { Id = g.Key, Points = g.Sum(p => p.PointsAwarded) })
+            .ToListAsync(ct);
+
+        var anonPrior = await db.Predictions
+            .Where(p => p.AnonymousUserId.HasValue && anonIds.Contains(p.AnonymousUserId.Value))
+            .Where(p => p.Match != null && p.Match.KickoffTime < cutoff)
+            .GroupBy(p => p.AnonymousUserId!.Value)
+            .Select(g => new { Id = g.Key, Points = g.Sum(p => p.PointsAwarded) })
+            .ToListAsync(ct);
+
+        var map = new Dictionary<Guid, int>();
+        foreach (var row in userPrior.Concat(anonPrior))
+        {
+            map[row.Id] = row.Points;
+        }
+
+        return map;
     }
 
     private static async Task<int> GetIdentityMatchPointsAsync(

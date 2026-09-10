@@ -1,4 +1,4 @@
-import { hasAdvertisingConsent, readAdvertisingConsent } from "./advertising-consent";
+import { hasAdvertisingConsent } from "./advertising-consent";
 
 /**
  * Google AdSense configuration.
@@ -7,9 +7,9 @@ import { hasAdvertisingConsent, readAdvertisingConsent } from "./advertising-con
  * serves responsive units, so a single loader script + responsive <ins> tags
  * cover every breakpoint.
  *
- * Ads load when the publisher id is set unless the visitor has denied
- * advertising. Google Funding Choices / AdSense handles EEA consent in the
- * AdSense dashboard. An explicit local deny still wins.
+ * Loading is opt-in: nothing advertising-related is requested until the visitor
+ * explicitly grants consent in the first-party prompt. Accepting the terms of use
+ * is not advertising consent.
  */
 
 export const ADSENSE_CLIENT =
@@ -23,9 +23,9 @@ export const ADSENSE_DISPLAY_SLOT =
 
 export const ADSENSE_ENABLED = ADSENSE_CLIENT.length > 0;
 
-/** True when AdSense is configured and the visitor has not denied ads. */
+/** True only when AdSense is configured and the visitor has explicitly granted consent. */
 export function canRequestAds(): boolean {
-  return ADSENSE_ENABLED && readAdvertisingConsent() !== "denied";
+  return ADSENSE_ENABLED && hasAdvertisingConsent();
 }
 
 /** Loader script URL used sitewide. */
@@ -69,12 +69,35 @@ function slotFromEnv(name: string): string | undefined {
   return value ? value : undefined;
 }
 
+/**
+ * Placement keys used across the product. Every ad in the app must name one of these so
+ * placements stay countable and independently configurable, rather than sharing one unit.
+ */
+export const AD_PLACEMENT_KEYS = [
+  "home-feed-1",
+  "home-feed-2",
+  "matchweek-between-fixtures",
+  "banter-feed",
+  "league-standings",
+  "table-bottom",
+  "rail-left",
+  "rail-right",
+  "display-top",
+] as const;
+
+export type AdPlacementKey = (typeof AD_PLACEMENT_KEYS)[number];
+
 export const AD_SLOT_IDS: Record<string, string> = {
   "rail-left": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_LEFT") ?? ADSENSE_DISPLAY_SLOT,
   "rail-right": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_RAIL_RIGHT") ?? ADSENSE_DISPLAY_SLOT,
-  "sidebar-main": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR") ?? ADSENSE_DISPLAY_SLOT,
-  feed: ADSENSE_DISPLAY_SLOT,
-  display: ADSENSE_DISPLAY_SLOT,
+  "display-top": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_DISPLAY_TOP") ?? ADSENSE_DISPLAY_SLOT,
+  "home-feed-1": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_HOME_FEED_1") ?? ADSENSE_DISPLAY_SLOT,
+  "home-feed-2": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_HOME_FEED_2") ?? ADSENSE_DISPLAY_SLOT,
+  "banter-feed": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_BANTER_FEED") ?? ADSENSE_DISPLAY_SLOT,
+  "matchweek-between-fixtures":
+    slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_MATCHWEEK") ?? ADSENSE_DISPLAY_SLOT,
+  "league-standings": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR") ?? ADSENSE_DISPLAY_SLOT,
+  "table-bottom": slotFromEnv("NEXT_PUBLIC_ADSENSE_SLOT_TABLE_BOTTOM") ?? ADSENSE_DISPLAY_SLOT,
 };
 
 export function resolveAdSlotId(slotKey?: string): string {
@@ -82,19 +105,7 @@ export function resolveAdSlotId(slotKey?: string): string {
     return ADSENSE_DISPLAY_SLOT;
   }
 
-  if (AD_SLOT_IDS[slotKey]) {
-    return AD_SLOT_IDS[slotKey];
-  }
-
-  if (slotKey.startsWith("feed-")) {
-    return AD_SLOT_IDS.feed;
-  }
-
-  if (slotKey.startsWith("rail-")) {
-    return AD_SLOT_IDS["rail-left"];
-  }
-
-  return ADSENSE_DISPLAY_SLOT;
+  return AD_SLOT_IDS[slotKey] ?? ADSENSE_DISPLAY_SLOT;
 }
 
 export function hasConfiguredAdSlot(slotKey?: string): boolean {

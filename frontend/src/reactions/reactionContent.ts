@@ -166,6 +166,18 @@ export const reactionContent: ReactionContentItem[] = [
   }
 ];
 
+/**
+ * Reactions are flavour, not currency. Aura is server-awarded points, so a reaction's
+ * weighting is rendered as a vibe label instead of a second running total.
+ */
+export function formatTakeVibe(auraDelta: number): string {
+  if (auraDelta < 0) return 'Fraud watch';
+  if (auraDelta >= 300) return 'Chaos tier';
+  if (auraDelta >= 100) return 'Bold take';
+  if (auraDelta >= 50) return 'Solid take';
+  return 'Safe take';
+}
+
 export const auraLevels = [
   { min: 0, label: 'Casual Fan', emoji: '🙂' },
   { min: 100, label: 'Kitchen Analyst', emoji: '🍳' },

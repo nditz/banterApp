@@ -1,4 +1,5 @@
 using System.Net;
+using BanterApp.Api.Common;
 using BanterApp.Api.Integrations.Media;
 using BanterApp.Api.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -92,6 +93,32 @@ public class RssFeedProviderTests
         Assert.Equal("host_not_allowed", result.Failure.Reason);
         Assert.Contains("https://blocked.example/rss", result.Failure.SafeMessage);
         Assert.Contains("host_not_allowed", result.Failure.SafeMessage);
+    }
+
+    [Fact]
+    public async Task FetchFeedAsync_OversizedUnparseable_TracksFeedUrl()
+    {
+        var http = new ScriptedSafeHttpClient(new SafeHttpFetchResult(
+            new SafeHttpResponse("<html>not a feed", "text/html", HttpStatusCode.OK, "https://feeds.example.com/huge"),
+            SafeHttpFailureKind.Oversized,
+            "oversized bytes_read=21000000 limit=20971520 content_length=unknown"));
+        var tracking = new RecordingErrorTracking();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IErrorTrackingService>(tracking);
+        var provider = new RssFeedProvider(
+            http,
+            NullLogger<RssFeedProvider>.Instance,
+            services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>());
+
+        var result = await provider.FetchFeedAsync("https://feeds.example.com/huge", maxItems: 5);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("https://feeds.example.com/huge", result.Failure!.SafeMessage);
+        var tracked = Assert.Single(tracking.Requests);
+        Assert.Equal(ErrorCodes.RssFetchError, tracked.ErrorCode);
+        Assert.Equal("https://feeds.example.com/huge", tracked.Route);
+        Assert.Contains("https://feeds.example.com/huge", tracked.MessageSafe);
     }
 }
 

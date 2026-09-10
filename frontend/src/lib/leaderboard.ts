@@ -74,6 +74,9 @@ export function normalizeLeaderboardEntry(
   const isCurrentUser =
     raw.isCurrentUser === true || raw.IsCurrentUser === true;
 
+  const rankDelta = pickNumber(raw, "rankDelta", "RankDelta");
+  const weeklyPoints = pickNumber(raw, "weeklyPoints", "WeeklyPoints");
+
   return {
     rank,
     userId,
@@ -91,6 +94,8 @@ export function normalizeLeaderboardEntry(
     attributionNote,
     sourceUrl,
     isCurrentUser,
+    rankDelta,
+    weeklyPoints,
   };
 }
 

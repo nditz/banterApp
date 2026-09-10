@@ -68,12 +68,20 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
 
         try
         {
-            var json = await CompleteChatAsync(_options.PunditExtractionSystemPrompt, userPrompt, cancellationToken);
+            var json = await CompleteChatAsync(
+                _options.PunditExtractionSystemPrompt,
+                userPrompt,
+                sourceUrl,
+                cancellationToken);
             return ParseExtraction(json, sourceType, sourceName, sourceUrl, sourceTitle, publishedAt);
+        }
+        catch (ProviderAppException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Pundit extraction failed for {SourceUrl}.", sourceUrl);
+            _logger.LogWarning("Pundit extraction failed for {SourceUrl}: {Message}", sourceUrl, ex.Message);
             throw;
         }
     }
@@ -174,6 +182,7 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
     private async Task<string> CompleteChatAsync(
         string systemPrompt,
         string userPrompt,
+        string sourceUrl,
         CancellationToken cancellationToken)
     {
         var baseUrl = string.IsNullOrWhiteSpace(_options.BaseUrl)
@@ -211,29 +220,49 @@ public sealed class OpenAiPunditOpinionExtractor : IPunditOpinionExtractor
 
         request.Content = JsonContent.Create(payload);
 
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        HttpResponseMessage response;
+        try
         {
-            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogWarning(
-                "OpenAI pundit extraction failed: {Status} {Body}",
-                (int)response.StatusCode,
-                errorBody);
+            response = await _httpClient.SendAsync(request, cancellationToken);
+        }
+        catch (Exception ex) when (
+            ProviderErrorMapper.IsHttpClientTimeout(ex) &&
+            !cancellationToken.IsCancellationRequested)
+        {
             throw ProviderErrorMapper.MapOpenAi(
-                (int)response.StatusCode,
+                408,
                 "opinion.extract",
                 _options.Model,
-                rawMessage: errorBody);
+                rawMessage: "http_client_timeout",
+                sourceUrl: sourceUrl);
         }
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        return document.RootElement
-            .GetProperty("choices")[0]
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString()
-            ?.Trim() ?? string.Empty;
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning(
+                    "OpenAI pundit extraction failed: {Status} {Body}",
+                    (int)response.StatusCode,
+                    errorBody);
+                throw ProviderErrorMapper.MapOpenAi(
+                    (int)response.StatusCode,
+                    "opinion.extract",
+                    _options.Model,
+                    rawMessage: errorBody,
+                    sourceUrl: sourceUrl);
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            return document.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString()
+                ?.Trim() ?? string.Empty;
+        }
     }
 
     private static bool IsReasoningModel(string? model)

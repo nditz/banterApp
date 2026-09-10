@@ -5,46 +5,66 @@ import {
   datasetStatusFromMatchweek,
   isUnofficialMatchweek,
 } from "./football-dataset";
-import { canRequestAds, resolveAdSlotId } from "./ads";
+import { AD_PLACEMENT_KEYS, canRequestAds, resolveAdSlotId } from "./ads";
+
+function stubStorage() {
+  const store: Record<string, string> = {};
+  vi.stubGlobal("window", {
+    localStorage: {
+      getItem: (key: string) => store[key] ?? null,
+      setItem: (key: string, value: string) => {
+        store[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete store[key];
+      },
+    },
+    dispatchEvent: () => true,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  });
+}
 
 describe("advertising consent", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("defaults to unset without a window", () => {
+  it("defaults to unset and blocks ads without a window", () => {
     expect(readAdvertisingConsent()).toBe("unset");
     expect(hasAdvertisingConsent()).toBe(false);
-    expect(canRequestAds()).toBe(true);
+    expect(canRequestAds()).toBe(false);
   });
 
   it("does not treat terms consent as advertising consent", () => {
-    const store: Record<string, string> = {};
-    vi.stubGlobal("window", {
-      localStorage: {
-        getItem: (key: string) => store[key] ?? null,
-        setItem: (key: string, value: string) => {
-          store[key] = value;
-        },
-      },
-    });
+    stubStorage();
     expect(hasAdvertisingConsent()).toBe(false);
-    expect(canRequestAds()).toBe(true);
+    // Nothing has been granted, so ads stay off even though the terms gate may be accepted.
+    expect(canRequestAds()).toBe(false);
+  });
+
+  it("requires an explicit grant before ads may load", () => {
+    stubStorage();
+    expect(canRequestAds()).toBe(false);
     setAdvertisingConsent("granted");
     expect(hasAdvertisingConsent()).toBe(true);
     expect(canRequestAds()).toBe(true);
     setAdvertisingConsent("denied");
+    expect(hasAdvertisingConsent()).toBe(false);
     expect(canRequestAds()).toBe(false);
   });
 });
 
 describe("ad slots", () => {
-  it("uses the ball-take-ads display unit everywhere by default", () => {
+  it("resolves every placement key to a configured unit", () => {
+    for (const key of AD_PLACEMENT_KEYS) {
+      expect(resolveAdSlotId(key)).toBe("6603089832");
+    }
+  });
+
+  it("falls back to the display unit for unknown keys", () => {
     expect(resolveAdSlotId()).toBe("6603089832");
-    expect(resolveAdSlotId("feed-2")).toBe("6603089832");
-    expect(resolveAdSlotId("rail-left")).toBe("6603089832");
-    expect(resolveAdSlotId("rail-right")).toBe("6603089832");
-    expect(resolveAdSlotId("sidebar-main")).toBe("6603089832");
+    expect(resolveAdSlotId("not-a-placement")).toBe("6603089832");
   });
 });
 

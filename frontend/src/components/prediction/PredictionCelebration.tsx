@@ -19,6 +19,7 @@ import {
 } from "@/lib/motionConfig";
 import { getThemeForReaction } from "@/lib/predictionThemes";
 import type { PredictionReaction } from "@/lib/reactionEngine";
+import { formatTakeVibe } from "@/reactions/reactionContent";
 import { cn } from "@/lib/utils";
 
 interface PredictionCelebrationProps {
@@ -219,8 +220,7 @@ export function PredictionCelebration({
               theme.text
             )}
           >
-            {reaction.auraDelta > 0 ? "+" : ""}
-            {reaction.auraDelta} aura
+            {formatTakeVibe(reaction.auraDelta)}
           </span>
         </motion.div>
       </motion.div>

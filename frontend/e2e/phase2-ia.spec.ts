@@ -68,8 +68,9 @@ test.describe("Phase 2 product IA", () => {
 
     await page.goto("/studio", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Content Studio").first()).toBeAttached();
-    const punditTab = page.locator('[aria-label="Studio sections"] [role="tab"]').nth(2);
-    await punditTab.click({ force: true });
+    await expect(page.getByRole("tab", { name: "Stories" })).toBeAttached();
+    await expect(page.getByText(/video content — coming soon/i)).toHaveCount(0);
+    await page.getByRole("tab", { name: "vs Pundits" }).click({ force: true });
     await expect(page.getByText(/sourced pundit predictions/i)).toBeAttached();
     await expect(page.getByText(/fictional pundit/i)).toHaveCount(0);
 

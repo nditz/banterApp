@@ -14,6 +14,7 @@ public sealed class PunditExtractionJob
     public const string JobId = "pundit-extraction";
     private const string Provider = "pundit-extraction";
     private const string OpenAiProvider = "openai";
+    private const int ConsecutiveTimeoutsToStopBatch = 2;
 
     private readonly AppDbContext _db;
     private readonly IPunditOpinionExtractor _extractor;
@@ -78,6 +79,7 @@ public sealed class PunditExtractionJob
                 .Take(batchSize)
                 .ToListAsync(cancellationToken);
 
+            var consecutiveTimeouts = 0;
             foreach (var item in items)
             {
                 if (await _db.PunditOpinions.AnyAsync(o => o.SourceItemId == item.Id, cancellationToken))
@@ -118,12 +120,17 @@ public sealed class PunditExtractionJob
 
                     var count = await _persistence.PersistExtractionAsync(item, extraction, cancellationToken);
                     extracted += count;
+                    consecutiveTimeouts = 0;
                     await _usage.RecordSuccessAsync(OpenAiProvider, estimatedUnits: 1, ct: cancellationToken);
                 }
                 catch (Exception ex) when (IsOpenAiRateLimit(ex))
                 {
-                    _logger.LogWarning(ex, "OpenAI rate-limited pundit extraction; stopping this batch.");
-                    await _usage.RecordFailureAsync(OpenAiProvider, ex.Message, cancellationToken);
+                    _logger.LogWarning("OpenAI rate-limited pundit extraction; stopping this batch.");
+                    await _usage.RecordFailureAsync(
+                        OpenAiProvider,
+                        ex.Message,
+                        cancellationToken,
+                        trackOperationalError: false);
                     _usage.OpenCircuit(OpenAiProvider);
                     await _errorTracking.TrackAsync(new ErrorTrackRequest
                     {
@@ -134,29 +141,76 @@ public sealed class PunditExtractionJob
                         JobKey = "openai.opinion.extract",
                         JobRunId = run.Id,
                         Provider = OpenAiProvider,
+                        Route = item.SourceUrl,
                         IsRetryable = true,
                         Metadata = new Dictionary<string, object?>
                         {
-                            ["media_item_id"] = item.Id
+                            ["media_item_id"] = item.Id,
+                            ["source_url"] = item.SourceUrl
                         }
                     }, cancellationToken);
                     break;
+                }
+                catch (Exception ex) when (IsOpenAiTimeout(ex))
+                {
+                    failed++;
+                    consecutiveTimeouts++;
+                    item.ProcessingStatus = MediaItemProcessingStatus.Failed;
+                    item.ProcessingError = StringLimits.Truncate(
+                        ex is ProviderAppException mapped ? mapped.SafeMessage : "AI service timed out.",
+                        StringLimits.ProcessingError);
+                    _logger.LogWarning(
+                        "OpenAI timed out extracting item {ItemId} ({Url}).",
+                        item.Id,
+                        item.SourceUrl);
+                    await _tracker.LogErrorAsync(
+                        Provider,
+                        JobId,
+                        "media_item",
+                        "AI service timed out.",
+                        run.Id,
+                        item.SourceUrl,
+                        cancellationToken);
+                    await _usage.RecordFailureAsync(
+                        OpenAiProvider,
+                        ex.Message,
+                        cancellationToken,
+                        trackOperationalError: false);
+
+                    if (consecutiveTimeouts >= ConsecutiveTimeoutsToStopBatch)
+                    {
+                        _logger.LogWarning(
+                            "Stopping pundit extraction batch after {Count} consecutive OpenAI timeouts.",
+                            consecutiveTimeouts);
+                        _usage.OpenCircuit(OpenAiProvider);
+                        break;
+                    }
                 }
                 catch (Exception ex)
                 {
                     failed++;
                     item.ProcessingStatus = MediaItemProcessingStatus.Failed;
-                    item.ProcessingError = StringLimits.Truncate(ex.Message, StringLimits.ProcessingError);
-                    _logger.LogWarning(ex, "Pundit extraction failed for item {ItemId}.", item.Id);
+                    item.ProcessingError = StringLimits.Truncate(
+                        ex is ProviderAppException mapped ? mapped.SafeMessage : ex.Message,
+                        StringLimits.ProcessingError);
+                    _logger.LogWarning(
+                        "Pundit extraction failed for item {ItemId} ({Url}): {Message}",
+                        item.Id,
+                        item.SourceUrl,
+                        item.ProcessingError);
                     await _tracker.LogErrorAsync(
                         Provider,
                         JobId,
                         "media_item",
-                        ex.Message,
+                        item.ProcessingError ?? "Pundit extraction failed.",
                         run.Id,
-                        item.ExternalId,
+                        item.SourceUrl,
                         cancellationToken);
-                    await _usage.RecordFailureAsync(OpenAiProvider, ex.Message, cancellationToken);
+                    await _usage.RecordFailureAsync(
+                        OpenAiProvider,
+                        ex.Message,
+                        cancellationToken,
+                        trackOperationalError: false);
                 }
             }
 
@@ -179,6 +233,11 @@ public sealed class PunditExtractionJob
     public static bool IsOpenAiRateLimit(Exception ex) =>
         ex is ProviderAppException provider &&
         (provider.Code == ErrorCodes.RateLimited || provider.StatusCode == StatusCodes.Status429TooManyRequests);
+
+    public static bool IsOpenAiTimeout(Exception ex) =>
+        ex is ProviderAppException provider &&
+        provider.Code == ErrorCodes.OpenAiApiError &&
+        provider.StatusCode == StatusCodes.Status504GatewayTimeout;
 
     private static string MapSourceType(string sourceType) =>
         sourceType switch

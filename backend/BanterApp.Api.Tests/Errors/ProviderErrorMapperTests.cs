@@ -8,6 +8,29 @@ namespace BanterApp.Api.Tests.Errors;
 public class ProviderErrorMapperTests
 {
     [Fact]
+    public void MapOpenAi_Timeout_IncludesSourceUrl()
+    {
+        var ex = ProviderErrorMapper.MapOpenAi(
+            408,
+            "opinion.extract",
+            "gpt-4o-mini",
+            sourceUrl: "https://www.skysports.com/football/scotland-vs-morocco/report/549795");
+        Assert.Equal(ErrorCodes.OpenAiApiError, ex.Code);
+        Assert.Equal("AI service timed out. Please try again.", ex.SafeMessage);
+        Assert.True(ex.IsRetryable);
+        Assert.Equal("https://www.skysports.com/football/scotland-vs-morocco/report/549795", ex.Metadata?["source_url"]);
+    }
+
+    [Fact]
+    public void IsHttpClientTimeout_DetectsDefaultHttpClientMessage()
+    {
+        var ex = new TaskCanceledException(
+            "The request was canceled due to the configured HttpClient.Timeout of 100 seconds elapsing.");
+        Assert.True(ProviderErrorMapper.IsHttpClientTimeout(ex));
+        Assert.Equal("AI service timed out.", ProviderErrorMapper.SafeProviderFailureMessage(ex.Message));
+    }
+
+    [Fact]
     public void MapOpenAi_RateLimit_IsRetryable()
     {
         var ex = ProviderErrorMapper.MapOpenAi(429, "complete", "gpt-4o-mini");

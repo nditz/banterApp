@@ -9,7 +9,8 @@ public static class ProviderErrorMapper
         string? operation = null,
         string? model = null,
         string? providerRequestId = null,
-        string? rawMessage = null)
+        string? rawMessage = null,
+        string? sourceUrl = null)
     {
         var (code, safeMessage, mappedStatus, retryable) = statusCode switch
         {
@@ -38,8 +39,48 @@ public static class ProviderErrorMapper
             {
                 ["model"] = model,
                 ["status_code"] = statusCode,
-                ["raw_message"] = rawMessage
+                ["raw_message"] = rawMessage,
+                ["source_url"] = sourceUrl
             });
+    }
+
+    public static bool IsHttpClientTimeout(Exception ex)
+    {
+        for (var current = ex; current is not null; current = current.InnerException)
+        {
+            if (current is TimeoutException)
+            {
+                return true;
+            }
+
+            if (current.Message.Contains("HttpClient.Timeout", StringComparison.OrdinalIgnoreCase) ||
+                current.Message.Contains(
+                    "The request was canceled due to the configured",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static string SafeProviderFailureMessage(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return "Provider request failed.";
+        }
+
+        if (message.Contains("HttpClient.Timeout", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains(
+                "The request was canceled due to the configured",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return "AI service timed out.";
+        }
+
+        return message;
     }
 
     public static ProviderAppException MapYouTube(

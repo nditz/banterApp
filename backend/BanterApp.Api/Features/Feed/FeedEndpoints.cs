@@ -69,10 +69,10 @@ public static class FeedEndpoints
         var followedIds = await follows.GetFollowedPunditIdsAsync(user, ct);
         var (feedMode, personal) = await PersonalizedFeedService.BuildAsync(db, user, 20, followedIds, ct);
         var newsItems = await LoadNewsItemsAsync(db, news, feedMedia, 100, ct);
-        var merged = DedupeAndVaryMedia(personal
-            .Concat(newsItems)
+        var ranked = newsItems
             .OrderByDescending(i => i.QualityScore ?? 0)
-            .ThenByDescending(i => i.PublishedAt));
+            .ThenByDescending(i => i.PublishedAt);
+        var merged = DedupeAndVaryMedia(MergeTimeline(personal, ranked));
 
         var pageItems = merged.Skip(skip).Take(size).ToList();
         http.Response.Headers.CacheControl = "public, max-age=60";
@@ -98,10 +98,10 @@ public static class FeedEndpoints
         var followedIds = await follows.GetFollowedPunditIdsAsync(user, ct);
         var (feedMode, personal) = await PersonalizedFeedService.BuildAsync(db, user, 10, followedIds, ct);
         var newsItems = await LoadNewsItemsAsync(db, news, feedMedia, 100, ct);
-        var merged = DedupeAndVaryMedia(personal
-            .Concat(newsItems)
+        var ranked = newsItems
             .OrderByDescending(i => i.Likes ?? 0)
-            .ThenByDescending(i => i.PublishedAt));
+            .ThenByDescending(i => i.PublishedAt);
+        var merged = DedupeAndVaryMedia(MergeTimeline(personal, ranked));
 
         var pageItems = merged.Skip(skip).Take(size).ToList();
         http.Response.Headers.CacheControl = "public, max-age=60";
@@ -140,10 +140,103 @@ public static class FeedEndpoints
             .ToList();
     }
 
+    /// <summary>Personalized cards emitted per block of generic public cards.</summary>
+    private const int PersonalizedCardsPerBlock = 1;
+
+    /// <summary>Generic public cards emitted per block.</summary>
+    private const int PublicCardsPerBlock = 2;
+
+    /// <summary>Longest run of one card type before the timeline pulls a different type forward.</summary>
+    private const int MaxConsecutiveSameType = 2;
+
+    /// <summary>
+    /// Weaves the viewer's personalized cards through the ranked public cards instead of
+    /// sorting both into one list. A global sort buried personalized cards, because only
+    /// persisted news rows carry a quality score.
+    /// </summary>
+    private static IEnumerable<FeedItemResponse> MergeTimeline(
+        IReadOnlyList<FeedItemResponse> personalized,
+        IEnumerable<FeedItemResponse> publicItems)
+    {
+        var pending = new Queue<FeedItemResponse>(personalized);
+        var emittedSincePersonal = 0;
+
+        foreach (var item in publicItems)
+        {
+            if (pending.Count > 0 && emittedSincePersonal >= PublicCardsPerBlock)
+            {
+                for (var i = 0; i < PersonalizedCardsPerBlock && pending.Count > 0; i++)
+                {
+                    yield return pending.Dequeue();
+                }
+
+                emittedSincePersonal = 0;
+            }
+
+            yield return item;
+            emittedSincePersonal++;
+        }
+
+        while (pending.Count > 0)
+        {
+            yield return pending.Dequeue();
+        }
+    }
+
+    /// <summary>
+    /// Breaks up long runs of one card type so the timeline reads as a mix rather than a
+    /// block of news. Preserves relative order otherwise.
+    /// </summary>
+    private static List<FeedItemResponse> RotateCardTypes(List<FeedItemResponse> items)
+    {
+        var result = new List<FeedItemResponse>(items.Count);
+        var remaining = new LinkedList<FeedItemResponse>(items);
+        string? runType = null;
+        var runLength = 0;
+
+        while (remaining.First is not null)
+        {
+            var node = remaining.First;
+
+            if (runLength >= MaxConsecutiveSameType)
+            {
+                var alternate = remaining.First;
+                while (alternate is not null &&
+                       string.Equals(alternate.Value.Type, runType, StringComparison.OrdinalIgnoreCase))
+                {
+                    alternate = alternate.Next;
+                }
+
+                if (alternate is not null)
+                {
+                    node = alternate;
+                }
+            }
+
+            var chosen = node!.Value;
+            remaining.Remove(node);
+
+            if (string.Equals(chosen.Type, runType, StringComparison.OrdinalIgnoreCase))
+            {
+                runLength++;
+            }
+            else
+            {
+                runType = chosen.Type;
+                runLength = 1;
+            }
+
+            result.Add(chosen);
+        }
+
+        return result;
+    }
+
     /// <summary>
     /// Removes duplicate feed items (same Id can be added by both the personalized
-            /// builder and the persisted news list) and swaps a repeated GIF, meme, or sticker
-    /// URL so the feed does not show the same visual twice in one page.
+    /// builder and the persisted news list), swaps a repeated GIF, meme, or sticker
+    /// URL so the feed does not show the same visual twice in one page, and rotates
+    /// card types so one type cannot dominate a page.
     /// </summary>
     private static List<FeedItemResponse> DedupeAndVaryMedia(IEnumerable<FeedItemResponse> items)
     {
@@ -185,7 +278,7 @@ public static class FeedEndpoints
             result.Add(current);
         }
 
-        return result;
+        return RotateCardTypes(result);
     }
 
     private static PaginatedFeedResponse BuildPage(

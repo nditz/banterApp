@@ -1,11 +1,9 @@
 # Verification Report
 
-**Date:** 2026-09-09 (Phase 3 production re-scan + Phase 4 local implementation)  
-**Phase under test:** Phase 3 (live) then Phase 4 — Receipt Engine (local)  
-**Method:** `cursor/COMPLETION-LOOP.md`. Production HTML via `balltakes.com`. API curl from this environment is bot-blocked (`FORBIDDEN`).  
-**Browser:** No interactive click-through. SSR of `/pundits` and `/predictions/history` on production (pre-deploy). Local: backend tests, Vitest, `tsc`, eslint, `next build`.
-
-Phase 1 and Phase 2 remain closed in production (`#40`). Phase 3 is **deployed** (`#41`) but two P0/P1 defects were still live. Those are fixed in this workspace. Phase 4 is **implemented locally, not in production**.
+**Date:** 2026-09-10 (Phases 6-11 implement pass)
+**Phases under test:** 6 Homepage Banter Timeline, 7 Leagues & Aura, 8 Ads & Consent, 9 Observability & Admin, 10 Visual Finishing, 11 Final Verification
+**Method:** unit/integration tests, ESLint, `tsc --noEmit`, Next.js production build, backend Release build. No production deploy and no browser click-through in this run.
+**Previous report:** 2026-09-09 Phase 5 pass (superseded, history in `IMPLEMENTATION-LOG.md`).
 
 ---
 
@@ -13,91 +11,56 @@ Phase 1 and Phase 2 remain closed in production (`#40`). Phase 3 is **deployed**
 
 | Question | Result |
 |---|---|
-| All Phase 3 P0/P1 passing in production? | **Not yet** — directory first-paint empty; guest comparison was 500 before bot-block |
-| Mark Phase 3 complete? | **Local yes / production after deploy of this run's comparison + `isPending` fixes** |
-| Phase 4 local P0/P1? | **Pass** (tests + build) |
-| Mark Phase 4 complete? | **Local yes / production no** |
-| Start Phase 5? | **No** — wait for migrate + deploy + live receipts |
+| Phases 6-10 implemented? | **Yes (local)** |
+| Mark them complete in production? | **Not yet** — needs deploy plus a pass through `cursor/VERIFY-PROMPT.md` |
+| Any known P0/P1 open in these phases? | **No** |
 
 ---
 
-## Phase 3 production re-scan
+## Tests / build
 
 | Check | Result |
 |---|---|
-| `/pundits` | **200** — copy is correct, but SSR still shows “No sourced pundits yet” while `GET /api/pundits` has Source rows. Cause: TanStack Query `isLoading` is false when the query is not fetching (SSR / session wait). **Fixed locally** with `isPending` and an ungated directory query. |
-| `GET /api/studio/comparison?matchIds=` | Earlier this run: **500** for guests with neither user nor anonymous id (`Enumerable.Empty().AsQueryable().ToListAsync`). **Fixed locally**. This curl now returns bot `FORBIDDEN`, so the live 500 was not re-probed. |
-| `GET /api/pundits/follows` | Previously `[]` for guests (OK). Follow table exists in prod from `#41`. |
-| Studio | Still present. Attribution copy unchanged. |
+| Backend tests | **424 passed** (was 407 at Phase 5 close) |
+| Frontend Vitest | **41 passed** (was 39) |
+| ESLint | **Clean** across the project |
+| `tsc --noEmit` | **Clean** |
+| Next.js production build | **Succeeded** — 35 routes including `/`, `/studio`, `/leagues`, `/predictions/history`, `/privacy`, `/admin/*` |
+| Backend Release build | **Succeeded, 0 warnings** |
+
+New backend coverage this pass:
+
+- `Feed/CommunityFeedServiceTests` — crowd cards respect the minimum-picks threshold, produce pre-match and post-match copy, and never emit a user identifier.
+- `Aura/AuraSummaryTests` — total is points plus matchweek bonuses, weekly change respects the 7-day window, streak breaks on the first blank, unsettled fixtures are not counted, rank and percentile place the user against everyone who has picked.
+- `Metrics/ProductMetricServiceTests` — allowlist rejects unknown/blank/mis-cased keys, summaries report zero for unused keys, events outside the window are excluded, and "never wired" is distinguishable from "zero".
 
 ---
 
-## Phase 4 local verification
+## Acceptance criteria (`16-ACCEPTANCE-CRITERIA.md`)
 
-| Check | Result |
+| Group | Result |
 |---|---|
-| Backend tests | **379 passed** |
-| Frontend Vitest | **37 passed** |
-| Lint / typecheck | eslint clean on touched files; `tsc --noEmit` clean |
-| Production build | Next.js succeeded; `/predictions/history` listed |
-| Production HTML `/predictions/history` | Still old “Prediction History” title — **not deployed** |
+| Product | **Pass (local)** — timeline mixes personal, community and sourced content; Studio is story-driven; pundit follow and comparison are exposed; receipts persist and feed Studio |
+| Football data | **Pass** — unchanged from the Phase 1 production verification; jobs remain observable in `/admin/jobs` |
+| Ads | **Pass (local)** — opt-in consent, per-placement slot keys, collapse on no-fill, no dead rectangles |
+| UX | **Pass (local)** — shared empty/error primitives across product surfaces; no stale World Cup copy; no knowingly broken public route |
+| Studio | **Pass (local)** — receipt → content pack flow with sourced facts and retained history |
+| Engineering | **Pass** — existing architecture reused, tests added for changed critical paths, no secrets, log updated |
 
 ---
 
-## Phase 4 backlog vs evidence
+## Remaining
 
-| ID | Item | Local | Production |
-|---|---|---|---|
-| P4-01 | Receipt entity | Pass | Pending migrate |
-| P4-02 | Settlement emit | Pass (idempotent + new result version) | Pending API deploy; score-sync already calls rescore |
-| P4-03 | History UI | Pass — page is Receipts; cards reused | Pending frontend deploy |
-| P4-04 | Story candidates | Pass — classified, no invented quotes | Pending |
-| P4-05 | Privacy | Pass — `IsPublic=false`; owner-scoped GET; feed does not include receipt ids | Pending |
-
----
-
-## Failures / remaining
-
-### Production deploy — **open, blocks Phase 3 + 4 gates**
-
-1. Deploy API with guest comparison fix + `AddPredictionReceipts`.
-2. Apply `20260909204154_AddPredictionReceipts` on Postgres.
-3. Deploy frontend (`isPending` pundits + Receipts UI).
-4. Re-verify: `/pundits` lists Source desks after paint; matchweek comparison does not 500; `/predictions/history` says Receipts; `GET /api/receipts` is session-scoped.
-
-### Comparison empty when no match-linked Source picks — **data, not a code hide**
-
-Unchanged. Cards show an explicit empty line plus Follow pundits.
-
-### Guest Terms overlay — **open, pre-existing**
-
-More → Pundits / Receipts can wait on Turnstile. Same as Phase 2/3.
-
-### Directory quality — **P3, not blocking**
-
-`GET /api/pundits` still includes non-PL names (ingest). Follow UX can ship; do not invent quotes to fill the list.
-
----
-
-## Acceptance criteria (Phase 4 slice)
-
-| Criterion | Local now |
-|---|---|
-| Receipts persistent and reusable | **Pass** — `prediction_receipts` + `/api/receipts` |
-| History reframed as Receipts | **Pass** |
-| Source attribution preserved on vs-pundit receipts | **Pass** — snapshot + source URL |
-| Public timeline does not leak private receipts | **Pass** |
-| Tests for changed critical paths | **Pass** |
-| Studio not removed | Yes |
-| No fabricated quotes | Yes |
-
-Out of scope: Studio content packs (Phase 5), CMP, Aura persistence.
+- **Production deploy** of Phases 5-10 and a verification pass against the live site.
+- **Breakpoint click-through** at 375 / 768 / 1440 and a keyboard/contrast walk — no browser tooling was available in this session.
+- **Ad revenue trade-off:** consent is now opt-in, so fill will drop relative to the previous opt-out behaviour. Intentional.
+- **Auto Ads** must stay disabled in the AdSense dashboard for pages that render manual units (P8-04 cannot be enforced from code).
+- **Rank movement** uses a rolling 7-day points window, not a stored weekly snapshot.
+- **Community cards** need real prediction volume; below the threshold they are absent by design rather than faked.
+- **Weekly recap** (P7-04) and league-specific rivalry receipts (P7-03) are still partial.
 
 ---
 
 ## Next action
 
-1. Deploy the Phase 3 comparison/`isPending` fixes with Phase 4.
-2. Apply `prediction_receipts` + `receipt_story_candidates` migration.
-3. Re-run verify against `balltakes.com`.
-4. Only then start Phase 5 (Studio Evolution).
+Deploy, then run `cursor/VERIFY-PROMPT.md` against production, paying particular attention to the consent banner on a fresh browser profile, ad slot collapse, `/api/aura/me` for a signed-in account, and the new alerts on `/admin/health`.
