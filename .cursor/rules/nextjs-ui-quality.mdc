@@ -1,0 +1,13 @@
+---
+description: Next.js frontend implementation quality rules for Ball Takes
+alwaysApply: false
+globs: "**/*.{tsx,ts,jsx,js,css,scss}"
+---
+- Inspect installed Next.js/React versions and router before using version-specific APIs.
+- Prefer server-rendered/read-heavy UI where supported; use client components only for interaction/browser needs.
+- Avoid client request waterfalls; fetch independent data concurrently where practical.
+- Reserve image/media dimensions to reduce layout shift and lazy-load below-fold media.
+- Prefer next/image where appropriate and compatible with the media source.
+- Do not add a UI or animation library until existing dependencies have been evaluated.
+- Keep mobile layouts intentional; do not merely shrink desktop multi-column layouts.
+- Run repository lint/typecheck/tests/build after implementation phases.

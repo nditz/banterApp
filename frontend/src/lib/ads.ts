@@ -72,6 +72,11 @@ function slotFromEnv(name: string): string | undefined {
 /**
  * Placement keys used across the product. Every ad in the app must name one of these so
  * placements stay countable and independently configurable, rather than sharing one unit.
+ *
+ * matchweek-between-fixtures: between match <article>s on a matchweek list only.
+ * Never render this slot inside a MatchCard — not in the prediction selector, lock
+ * controls, or pundit comparison teaser. This pass does not insert the slot; keep the
+ * key for a later consented insert between articles.
  */
 export const AD_PLACEMENT_KEYS = [
   "home-feed-1",

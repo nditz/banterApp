@@ -15,7 +15,7 @@ import { TermsEntertainmentNotice } from "@/components/legal/TermsOfUseContent";
 import { SessionKeyRestore } from "@/components/session/SessionKeyRestore";
 import { AvatarPicker } from "@/components/session/AvatarPicker";
 import { SignedInNotice } from "@/components/session/SignedInNotice";
-import { TermsGate } from "@/components/session/TermsGate";
+import { TermsSaveGateProvider } from "@/components/session/TermsSaveGate";
 import { TurnstileProvider } from "@/components/security/TurnstileProvider";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import {
@@ -123,8 +123,13 @@ export function AppShell({ children }: AppShellProps) {
         setAccountOpenPath(null);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const timer = window.setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [accountOpen]);
 
   useEffect(() => {
@@ -134,9 +139,27 @@ export function AppShell({ children }: AppShellProps) {
         setMoreOpenPath(null);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const timer = window.setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [moreOpen]);
+
+  useEffect(() => {
+    if (!accountOpen && !moreOpen && !restoreOpen && !mobileMenuOpen) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setAccountOpenPath(null);
+      setMoreOpenPath(null);
+      setRestoreOpenPath(null);
+      setMobileMenuPath(null);
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [accountOpen, moreOpen, restoreOpen, mobileMenuOpen]);
 
   if (isAdminRoute) {
     return <>{children}</>;
@@ -163,15 +186,17 @@ export function AppShell({ children }: AppShellProps) {
   };
 
   return (
+    <TermsSaveGateProvider>
     <div className="stadium-bg flex min-h-screen flex-col">
       <AdSenseLoader />
       <header
         className="safe-area-top sticky top-0 z-50 text-white"
         style={{ backgroundColor: BRAND.headerBackground }}
       >
-        <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Button
+              type="button"
               variant="ghost"
               size="icon-sm"
               className="touch-target text-white hover:bg-white/10 lg:hidden"
@@ -534,7 +559,6 @@ export function AppShell({ children }: AppShellProps) {
       >
         <TurnstileProvider />
         <SignedInNotice />
-        {!isAuthRoute && <TermsGate />}
         {isAuthRoute ? children : <PageWithSideAds>{children}</PageWithSideAds>}
       </main>
 
@@ -597,5 +621,6 @@ export function AppShell({ children }: AppShellProps) {
         </SheetContent>
       </Sheet>
     </div>
+    </TermsSaveGateProvider>
   );
 }

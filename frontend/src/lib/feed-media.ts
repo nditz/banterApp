@@ -19,32 +19,25 @@ export const BANTER_REACTION_GIFS: Partial<Record<ReactionKey, string>> = {
   script_writer: "/reactions/script-writer.svg",
 };
 
-/** Default media when feed items arrive without images. */
+/**
+ * Decorative local stickers only — never stock photography.
+ * Types without an entry render a designed CSS placeholder instead.
+ */
 export const DEFAULT_FEED_MEDIA: Partial<Record<FeedItemType, FeedMedia>> = {
   banter: {
     type: "gif",
     url: BANTER_REACTION_GIFS.against_grain!,
-    alt: "Football banter reaction",
+    alt: "",
   },
   meme: {
     type: "gif",
     url: "/reactions/chaos-pick.svg",
-    alt: "Meme reaction",
+    alt: "",
   },
-  leaderboard: {
-    type: "image",
-    url: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=640&h=360&fit=crop",
-    alt: "Fans celebrating in the stands",
-  },
-  prediction_highlight: {
-    type: "image",
-    url: "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=640&h=360&fit=crop",
-    alt: "Goal celebration",
-  },
-  news: {
-    type: "image",
-    url: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=640&h=360&fit=crop",
-    alt: "Football news",
+  gif_reaction: {
+    type: "gif",
+    url: "/reactions/locked-in.svg",
+    alt: "",
   },
 };
 
@@ -54,15 +47,46 @@ export function getBanterMediaForReaction(
 ): FeedMedia {
   const gif = BANTER_REACTION_GIFS[reactionKey];
   if (gif) {
-    return { type: "gif", url: gif, alt: "Banter reaction" };
+    return { type: "gif", url: gif, alt: "" };
   }
 
-  return { type: "image", url: assetUrl, alt: "Banter reaction" };
+  return { type: "image", url: assetUrl, alt: "" };
 }
 
 /** Pass-through. Dead remote GIFs are handled by <img onError> in FeedMedia. */
 export function sanitizeMediaUrl(url: string): string {
   return url;
+}
+
+const NEXT_IMAGE_HOSTS = new Set([
+  "flagcdn.com",
+  "api.dicebear.com",
+  "media.api-sports.io",
+  "lh3.googleusercontent.com",
+]);
+
+const ANIMATED_OR_VECTOR = /\.(gif|svg)($|[?#])/i;
+
+/**
+ * next/image only for hosts in next.config remotePatterns (or same-origin raster).
+ * Giphy/Tenor/SVG/GIF stay on `<img>` so we do not break remote config or freeze GIFs.
+ */
+export function canUseNextImage(url: string): boolean {
+  if (!url || ANIMATED_OR_VECTOR.test(url)) return false;
+  if (url.startsWith("/") && !url.startsWith("//")) {
+    return true;
+  }
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname;
+    if (host.endsWith(".googleusercontent.com") || host.endsWith(".supabase.co")) {
+      return true;
+    }
+    return NEXT_IMAGE_HOSTS.has(host);
+  } catch {
+    return false;
+  }
 }
 
 export function resolveFeedMedia(item: {

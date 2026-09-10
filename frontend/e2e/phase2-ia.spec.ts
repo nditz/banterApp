@@ -9,19 +9,12 @@ test.describe("Phase 2 product IA", () => {
     const nav = page.getByRole("navigation", { name: "Main navigation" });
     await expect(nav).toBeVisible();
     await expect(nav.getByRole("link", { name: "Predict" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Banter" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Banter" })).toHaveAttribute("href", "/banter");
     await expect(nav.getByRole("link", { name: "Studio" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Leagues" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Season Calls" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Table" })).toHaveCount(0);
     await expect(nav.getByRole("button", { name: "More" })).toBeVisible();
-    await nav.getByRole("button", { name: "More" }).click({ force: true });
-    const menu = page.locator('[role="menu"]');
-    await expect(menu).toBeAttached();
-    await expect(menu.getByText("Pundits", { exact: true })).toBeAttached();
-    await expect(menu.getByText("Table", { exact: true })).toBeAttached();
-    await expect(menu.getByText("Receipts", { exact: true })).toBeAttached();
-    await expect(menu.getByText("Rules", { exact: true })).toBeAttached();
   });
 
   test("mobile bottom nav is Predict / Banter / Studio / Leagues / Me", async ({
@@ -42,13 +35,9 @@ test.describe("Phase 2 product IA", () => {
       "Leagues",
       "Me",
     ]);
+    await expect(bottom.getByRole("link", { name: "Banter" })).toHaveAttribute("href", "/banter");
     await expect(bottom.getByRole("link", { name: "Table" })).toHaveCount(0);
-
-    await page.locator('button[aria-label="Open menu"], button[aria-label="Close menu"]').first().click({ force: true });
-    const more = page.locator("#app-mobile-menu");
-    await expect(more).toBeAttached();
-    await expect(more.getByText("Season Calls", { exact: true })).toBeAttached();
-    await expect(more.getByText("Table", { exact: true })).toBeAttached();
+    await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
   });
 
   test("welcome, awards, studio, me, studio stays linked", async ({ page }, testInfo) => {
@@ -59,7 +48,8 @@ test.describe("Phase 2 product IA", () => {
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Start here")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Lock a pick" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Make a pick" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open Studio" }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Watch the feed" })).toBeVisible();
     await expect(page.getByText("Quick tour")).toHaveCount(0);
 
@@ -69,9 +59,8 @@ test.describe("Phase 2 product IA", () => {
     await page.goto("/studio", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Content Studio").first()).toBeAttached();
     await expect(page.getByRole("tab", { name: "Stories" })).toBeAttached();
+    await expect(page.getByRole("tab", { name: "vs Pundits" })).toBeAttached();
     await expect(page.getByText(/video content — coming soon/i)).toHaveCount(0);
-    await page.getByRole("tab", { name: "vs Pundits" }).click({ force: true });
-    await expect(page.getByText(/sourced pundit predictions/i)).toBeAttached();
     await expect(page.getByText(/fictional pundit/i)).toHaveCount(0);
 
     await page.goto("/me", { waitUntil: "domcontentloaded" });

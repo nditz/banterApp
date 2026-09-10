@@ -11,7 +11,7 @@ public class FootballGifQueryTests
     [InlineData("goal of the season", true)]
     [InlineData("happy birthday", false)]
     [InlineData("cat dancing", false)]
-    [InlineData("world cup celebration", false)]
+    [InlineData("world cup celebration", true)]
     [InlineData("", false)]
     public void LooksFootball_DetectsFootballPhrases(string phrase, bool expected)
     {

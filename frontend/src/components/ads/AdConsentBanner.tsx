@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAdvertisingConsentState } from "@/hooks/useAdvertisingConsent";
@@ -14,10 +15,21 @@ import { setAdvertisingConsent } from "@/lib/advertising-consent";
  */
 export function AdConsentBanner() {
   const consent = useAdvertisingConsentState();
-  // The stored choice is client-only; rendering it during hydration would mismatch.
   const hydrated = useHydrated();
+  const visible = hydrated && ADSENSE_ENABLED && consent === "unset";
 
-  if (!hydrated || !ADSENSE_ENABLED || consent !== "unset") {
+  useEffect(() => {
+    if (!visible) {
+      delete document.documentElement.dataset.adConsent;
+      return;
+    }
+    document.documentElement.dataset.adConsent = "unset";
+    return () => {
+      delete document.documentElement.dataset.adConsent;
+    };
+  }, [visible]);
+
+  if (!visible) {
     return null;
   }
 
@@ -26,7 +38,7 @@ export function AdConsentBanner() {
       role="dialog"
       aria-modal="false"
       aria-labelledby="ad-consent-title"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-sm sm:px-6"
+      className="fixed inset-x-0 bottom-[calc(3.75rem+env(safe-area-inset-bottom,0px))] z-40 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-sm sm:px-6 lg:bottom-0"
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">

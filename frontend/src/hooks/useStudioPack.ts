@@ -6,12 +6,14 @@ import { PRODUCT_METRICS, recordMetric } from "@/lib/metrics";
 import type {
   StudioContentType,
   StudioPackGenerateResponse,
+  StudioPerspective,
   StudioTone,
 } from "@/lib/types";
 
 export interface CreateStudioPackInput {
   contentType: StudioContentType;
   tone: StudioTone;
+  perspective?: StudioPerspective | null;
   receiptId?: string | null;
   feedItemId?: string | null;
   projectId?: string | null;
@@ -26,6 +28,7 @@ export function useGenerateStudioPack() {
         body: JSON.stringify({
           contentType: input.contentType,
           tone: input.tone,
+          perspective: input.perspective ?? null,
           receiptId: input.receiptId ?? null,
           feedItemId: input.feedItemId ?? null,
           projectId: input.projectId ?? null,

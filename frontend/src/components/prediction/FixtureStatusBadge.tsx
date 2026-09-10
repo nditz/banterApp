@@ -1,7 +1,7 @@
-import { Clock, Lock, Radio } from "lucide-react";
+import { CircleCheck, Clock, Lock, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type FixtureStatus = "open" | "live" | "locked";
+type FixtureStatus = "open" | "live" | "locked" | "settled";
 
 interface FixtureStatusBadgeProps {
   status: FixtureStatus;
@@ -26,6 +26,11 @@ const config: Record<
     label: "Locked in",
     icon: Lock,
     className: "border-muted-foreground/30 bg-muted/60 text-muted-foreground",
+  },
+  settled: {
+    label: "Full time",
+    icon: CircleCheck,
+    className: "border-pitch/40 bg-pitch/15 text-pitch",
   },
 };
 

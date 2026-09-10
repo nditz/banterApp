@@ -6,7 +6,7 @@ export type AppNavLink = {
 /** Desktop primary: Predict / Banter / Studio / Leagues / Season Calls. */
 export const DESKTOP_PRIMARY_NAV: readonly AppNavLink[] = [
   { href: "/matchweek", label: "Predict" },
-  { href: "/#banter-feed", label: "Banter" },
+  { href: "/banter", label: "Banter" },
   { href: "/studio", label: "Studio" },
   { href: "/leagues", label: "Leagues" },
   { href: "/awards", label: "Season Calls" },
@@ -26,7 +26,7 @@ export const DESKTOP_OVERFLOW_NAV: readonly AppNavLink[] = [
  */
 export const MOBILE_BOTTOM_NAV: readonly AppNavLink[] = [
   { href: "/matchweek", label: "Predict" },
-  { href: "/#banter-feed", label: "Banter" },
+  { href: "/banter", label: "Banter" },
   { href: "/studio", label: "Studio" },
   { href: "/leagues", label: "Leagues" },
   { href: "/me", label: "Me" },
@@ -58,8 +58,9 @@ export function isNavHrefActive(href: string, pathname: string): boolean {
   const path = navPathname(href);
   const hash = href.includes("#") ? href.slice(href.indexOf("#")) : "";
 
-  if (hash === "#banter-feed" || href === "/#banter-feed") {
-    return pathname === "/";
+  // Primary Banter dest is /banter. Homepage hash jump is not a Banter-active route.
+  if (hash === "#banter-feed" && !href.startsWith("#")) {
+    return pathname === "/banter";
   }
   if (href.startsWith("#")) {
     return pathname === "/";

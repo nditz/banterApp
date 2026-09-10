@@ -1,21 +1,17 @@
 ---
-description: Ball Takes visual and product UI rules for Next.js frontend work
-alwaysApply: false
+description: Ball Takes frontend product and visual rules
+alwaysApply: true
 ---
-# Ball Takes UI Rules
-
-- Preserve the black/green Ball Takes identity.
-- Treat green as an accent, not a default surface.
-- The shell must be clean; football, memes, GIFs and receipts provide the chaos.
-- Do not introduce glassmorphism, excessive glow, unnecessary gradients, or generic AI-dashboard styling.
-- Prefer whitespace and typography over adding borders around everything.
-- Use the existing design system first; consolidate one-off styling into shared tokens/components.
-- Do not add arbitrary Tailwind values when an existing token can express the intent.
-- Limit each screen to one dominant action and a few secondary focal points.
-- Use football visual identity: crests, scorelines, kickoff, matchweek, Aura and pundit comparisons.
-- Every asynchronous section must explicitly support loading, loaded, empty and error states.
-- Never leave empty advertisement placeholders visible.
-- Studio is a primary product destination and must never look like a generic blank AI prompt page.
-- Banter content should have multiple visual variants rather than one generic card template.
-- Respect accessibility, keyboard/focus states, contrast and reduced motion.
-- Validate 375px, 768px and 1440px layouts before declaring UI work complete.
+- Preserve the core loop: Discover -> Follow pundits -> Predict -> Compare -> Receipt -> Banter -> Studio -> Export.
+- Studio is a primary destination. Never remove or demote it without explicit instruction.
+- Pundit comparison and receipts are core differentiators.
+- Prefer existing design primitives and dependencies before adding new ones.
+- Every async UI touched must handle loading, loaded, empty, stale and error states.
+- Never render a blank section for a failed data dependency.
+- Never fabricate pundit quotes, football facts, production feed content or engagement metrics.
+- Keep the application shell restrained; derive visual energy from football context, media, receipts and state changes.
+- Ball Takes green is an accent/action/status color, not a default background for everything.
+- Avoid gratuitous gradients, glow, glassmorphism, oversized radii and perpetual animation.
+- Respect prefers-reduced-motion and visible keyboard focus.
+- Do not weaken or bypass GDPR consent, CAPTCHA, bot checks, WAF or other security controls.
+- Ad placements must not disrupt prediction controls or split a receipt comparison; collapse unavailable/non-consented slots.

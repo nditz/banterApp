@@ -809,6 +809,10 @@
     @apply cursor-pointer rounded-md border border-border bg-card text-[11px] font-semibold uppercase tracking-wide transition-all duration-200;
   }
 
+  .pick-btn:focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+
   .pick-btn:hover:not(:disabled) {
     @apply border-pitch/50 bg-pitch/5;
   }
@@ -860,6 +864,16 @@
 
   .main-with-bottom-nav {
     @apply pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0;
+  }
+
+  html[data-ad-consent="unset"] .main-with-bottom-nav {
+    padding-bottom: calc(12.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 1024px) {
+    html[data-ad-consent="unset"] .main-with-bottom-nav {
+      padding-bottom: 7rem;
+    }
   }
 
   .feed-card {

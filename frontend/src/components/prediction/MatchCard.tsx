@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Calendar, MapPin } from "lucide-react";
 import { FixtureStatusBadge } from "@/components/prediction/FixtureStatusBadge";
 import { PredictionButtons } from "@/components/prediction/PredictionButtons";
@@ -8,12 +9,15 @@ import { TeamFlag } from "@/components/brackets/TeamFlag";
 import { MatchPunditComparison } from "@/components/prediction/MatchPunditComparison";
 import { isMatchLocked } from "@/lib/anonymous";
 import { usePredictionHistory } from "@/hooks/usePredictions";
+import { useReceipts } from "@/hooks/useReceipts";
 import type { Match, StudioMatchComparison } from "@/lib/types";
 
 interface MatchCardProps {
   match: Match;
   comparison?: StudioMatchComparison;
   filteringToFollows?: boolean;
+  comparisonStatus?: "loading" | "ready" | "error";
+  onRetryComparison?: () => void;
 }
 
 function formatKickoff(iso: string): string {
@@ -45,16 +49,38 @@ function shortName(name: string): string {
   return last ?? name;
 }
 
-export function MatchCard({ match, comparison, filteringToFollows }: MatchCardProps) {
+function isMatchSettled(status?: string): boolean {
+  const normalized = status?.toUpperCase();
+  return normalized === "FT" || normalized === "AET" || normalized === "PEN";
+}
+
+export function MatchCard({
+  match,
+  comparison,
+  filteringToFollows,
+  comparisonStatus = "ready",
+  onRetryComparison,
+}: MatchCardProps) {
   const [selectedPrediction, setSelectedPrediction] = useState<string | null>(null);
   const { data: predictions } = usePredictionHistory();
+  const { data: receipts } = useReceipts();
   const matchPredictions = useMemo(
     () => predictions?.filter((p) => p.matchId === match.id) ?? [],
     [predictions, match.id]
   );
+  const matchReceipt = useMemo(
+    () => receipts?.find((receipt) => receipt.matchId === match.id),
+    [receipts, match.id]
+  );
   const locked = isMatchLocked(match);
+  const settled = isMatchSettled(match.status);
   const hasScore = match.homeScore != null && match.awayScore != null;
   const live = match.status === "LIVE" || match.status === "1H" || match.status === "2H" || match.status === "HT";
+  const punditPicks = comparison?.picks.filter((pick) => pick.role === "pundit") ?? [];
+  const hasLockedPick = matchPredictions.length > 0 || Boolean(matchReceipt);
+  const studioHref = matchReceipt
+    ? `/studio?receipt=${matchReceipt.id}`
+    : "/predictions/history";
 
   return (
     <article className="match-card match-card-featured">
@@ -63,7 +89,9 @@ export function MatchCard({ match, comparison, filteringToFollows }: MatchCardPr
           {match.matchweekNumber ? (
             <span className="page-kicker">MW {match.matchweekNumber}</span>
           ) : null}
-          <FixtureStatusBadge status={live ? "live" : locked ? "locked" : "open"} />
+          <FixtureStatusBadge
+            status={live ? "live" : settled ? "settled" : locked ? "locked" : "open"}
+          />
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
           <span className="inline-flex items-center gap-1">
@@ -142,12 +170,29 @@ export function MatchCard({ match, comparison, filteringToFollows }: MatchCardPr
           homeLogoUrl={match.homeLogoUrl}
           awayLogoUrl={match.awayLogoUrl}
           isLocked={locked}
+          isSettled={settled}
           existingPredictions={matchPredictions}
           selectedValue={selectedPrediction}
           onSelect={setSelectedPrediction}
+          punditPicks={punditPicks}
         />
+        {settled && hasLockedPick ? (
+          <p className="mt-2">
+            <Link
+              href={studioHref}
+              className="text-xs font-semibold text-foreground hover:underline"
+            >
+              Open in Studio
+            </Link>
+          </p>
+        ) : null}
       </div>
-      <MatchPunditComparison comparison={comparison} filteringToFollows={filteringToFollows} />
+      <MatchPunditComparison
+        comparison={comparison}
+        filteringToFollows={filteringToFollows}
+        status={comparisonStatus}
+        onRetry={onRetryComparison}
+      />
     </article>
   );
 }

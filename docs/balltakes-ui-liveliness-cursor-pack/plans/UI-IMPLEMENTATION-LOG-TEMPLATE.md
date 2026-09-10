@@ -1,19 +1,25 @@
 # UI Implementation Log
 
-## Date / phase
+## Phase
 
-### Goal
+## Date
 
-### Changed
+## Tasks completed
 
-### Reused/refactored components
+## Files changed
 
-### New components
+## Tests/checks
+- lint:
+- typecheck:
+- tests:
+- build:
+- mobile visual QA:
+- desktop visual QA:
 
-### Validation run
+## Before/after observations
 
-### Responsive checks
+## Data-dependent blockers
 
-### Accessibility checks
+## Known issues
 
-### Remaining issues / dependencies
+## Acceptance criteria result

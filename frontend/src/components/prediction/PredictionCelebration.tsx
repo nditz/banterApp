@@ -29,6 +29,7 @@ interface PredictionCelebrationProps {
   pick: string;
   probabilityContext?: string;
   leagueName?: string;
+  punditTeaser?: string | null;
 }
 
 function formatReceiptTimestamp(date = new Date()): string {
@@ -48,6 +49,7 @@ export function PredictionCelebration({
   pick,
   probabilityContext,
   leagueName,
+  punditTeaser,
 }: PredictionCelebrationProps) {
   const reduceMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -117,8 +119,12 @@ export function PredictionCelebration({
           {emoji}
         </motion.span>
         <div className="min-w-0">
-          <p className={cn("text-sm font-bold", theme.text)}>Receipt secured.</p>
-          <p className="text-xs text-muted-foreground">Your ball takes are on record.</p>
+          <p className={cn("text-sm font-bold", theme.text)}>
+            Locked. We&apos;ll keep the receipt.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            After full time this becomes a settled receipt — not before.
+          </p>
         </div>
       </motion.div>
 
@@ -270,6 +276,12 @@ export function PredictionCelebration({
         </motion.div>
       )}
 
+      {punditTeaser ? (
+        <p className="text-[11px] text-muted-foreground">
+          Sourced desks on this fixture: {punditTeaser}
+        </p>
+      ) : null}
+
       <motion.div
         initial={reduceMotion ? false : { opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -291,16 +303,17 @@ export function PredictionCelebration({
           onClick={() => setReceiptOpen(true)}
         >
           <Receipt className="size-3.5" aria-hidden />
-          Share receipt
+          Share this lock
         </Button>
       </motion.div>
 
       <Dialog open={receiptOpen} onOpenChange={setReceiptOpen}>
         <DialogContent className="max-w-md border-none bg-transparent p-0 shadow-none ring-0 sm:max-w-md">
           <DialogHeader className="sr-only">
-            <DialogTitle>Prediction receipt</DialogTitle>
+            <DialogTitle>Share this lock</DialogTitle>
           </DialogHeader>
           <PredictionReceiptCard
+            variant="lock"
             fixture={fixture}
             pick={pick}
             reaction={reaction}

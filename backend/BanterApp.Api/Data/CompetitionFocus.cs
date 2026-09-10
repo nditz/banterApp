@@ -1,8 +1,8 @@
 namespace BanterApp.Api.Data;
 
 /// <summary>
-/// The live product's active competition. Prompts, YouTube search, GIF queries, and
-/// ingest filters read this so World Cup leftovers do not keep driving AI output.
+/// The live product's active competition. Prompts and YouTube search read this
+/// so generated copy stays on Premier League 2026/27.
 /// Swap <see cref="PremierLeagueCatalog"/> when the product adds another league.
 /// </summary>
 public static class CompetitionFocus
@@ -34,34 +34,6 @@ public static class CompetitionFocus
         }
 
         return PromptDirective + "\n\n" + systemPrompt.Trim();
-    }
-
-    public static bool LooksLikeOffFocus(params string?[] values)
-    {
-        foreach (var value in values)
-        {
-            if (LooksLikeOffFocus(value))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public static bool LooksLikeOffFocus(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        var text = value.Trim();
-        return text.Contains("world cup", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("world-cup", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("worldcup", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("fifa.com", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("/world-cup", StringComparison.OrdinalIgnoreCase);
     }
 
     public static IReadOnlyList<string> YouTubeSearchQueries { get; } =

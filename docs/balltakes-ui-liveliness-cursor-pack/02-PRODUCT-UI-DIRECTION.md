@@ -1,44 +1,31 @@
 # Product UI Direction
 
-## Desired personality
-Premium football editorial product + Gen-Z group-chat energy + creator tooling.
+## Core experience
+1. **Discover** — public live banter timeline hooks visitors.
+2. **Follow** — select teams/pundits whose takes matter.
+3. **Predict** — make match and season calls quickly.
+4. **Compare** — user vs pundit vs friends vs actual result.
+5. **Receipt** — persist the before/after story.
+6. **Banter** — generate funny/editorial angles from the receipt.
+7. **Studio** — transform a story into a structured content pack.
+8. **Export** — copy scripts/prompts/assets/context into external AI/media tools.
 
-## Brand principle
-Ball Takes should feel confident and fast, not like a generic AI dashboard.
+## Brand behavior
+- Black/off-black shell.
+- Off-white primary text.
+- Ball Takes green = action, selection, success, Aura, active state.
+- Club colors = contextual accents only.
+- Drip/paint brand treatment = hero, major milestones, share cards and branded transitions; not every component.
+- Avoid generic AI-dashboard visual language.
 
-## Visual hierarchy
-Every screen should have:
-- one dominant action
-- no more than 2-3 secondary focal points
-- supporting information that visually recedes
+## Navigation target
+Desktop: `Predict | Banter | Studio | Leagues | Season Calls` with Studio visually distinct but not gimmicky.
+Mobile: bottom navigation is acceptable; Studio can be the central creation action if it remains accessible and does not obscure content.
 
-## Color strategy
-- Black/off-black: primary shell
-- Off-white: primary text
-- Ball Takes green: active states, primary CTA, Aura, progress, success
-- Muted neutral surfaces: cards/panels
-- Club colors: contextual accents only
-- Red/orange: loss/error/roast contexts, sparingly
-
-## Typography
-Use a strong display face already available in the project or a licensed/free web-safe equivalent for headlines, plus a highly readable UI/body face.
-
-Rules:
-- Max 3 text sizes within a card
-- Max 2 font weights within a compact card
-- Avoid tiny gray text for important football data
-- Numeric data should be visually strong
-
-## Motion
-Motion should communicate state:
-- pick locked
-- score changed
-- Aura gained/lost
-- new receipt generated
-- Studio content generated
-- feed item entered
-
-Avoid constant decorative animation.
-
-## Radius/shadow
-Reduce over-rounded 'AI dashboard' styling. Use a small radius scale and restrained shadows. Prefer spacing, surface contrast and typography to separate content.
+## Audience-state layouts
+### Anonymous
+Show entertainment first, then prediction interaction, pundit discovery and Studio demonstration.
+### New registered user
+Guide pundit/team following and first predictions. Avoid dashboards full of zeros.
+### Returning user
+Show unfinished picks, new receipts, followed-pundit clashes, Aura movement, leagues and Studio-ready stories.

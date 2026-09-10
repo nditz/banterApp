@@ -5,11 +5,10 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { PartyPopper, Trophy, Users } from "lucide-react";
 import { SessionKeyNotice } from "@/components/session/SessionKeyNotice";
-import { TermsAcceptPanel } from "@/components/session/TermsAcceptPanel";
+import { useTermsSaveGate } from "@/components/session/TermsSaveGate";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJoinLeague, useLeaguePreview } from "@/hooks/useLeaderboard";
-import { useNeedsTerms } from "@/hooks/useNeedsTerms";
 import { getApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +18,7 @@ interface JoinLeagueLandingProps {
 
 export function JoinLeagueLanding({ inviteCode }: JoinLeagueLandingProps) {
   const { data: preview, isLoading, isError } = useLeaguePreview(inviteCode);
-  const { needsTerms, isLoading: sessionLoading } = useNeedsTerms();
+  const { requireTerms } = useTermsSaveGate();
   const joinLeague = useJoinLeague();
   const queryClient = useQueryClient();
 
@@ -31,6 +30,8 @@ export function JoinLeagueLanding({ inviteCode }: JoinLeagueLandingProps) {
     setError(null);
     setJoining(true);
     try {
+      const accepted = await requireTerms();
+      if (!accepted) return;
       const league = await joinLeague(inviteCode);
       setJoinedName(league.myDisplayName ?? "Player");
       queryClient.invalidateQueries({ queryKey: ["leagues"] });
@@ -121,19 +122,11 @@ export function JoinLeagueLanding({ inviteCode }: JoinLeagueLandingProps) {
             league — it only takes a minute.
           </p>
         </div>
-      ) : !sessionLoading && needsTerms ? (
-        <div className="space-y-3">
-          <p className="text-center text-sm text-muted-foreground">
-            No signup needed — accept the terms, grab your session key, and
-            you&apos;re in.
-          </p>
-          <TermsAcceptPanel variant="compact" />
-        </div>
       ) : (
         <div className="space-y-4 rounded-lg border border-border bg-card/85 p-5 backdrop-blur">
           <p className="text-sm text-muted-foreground">
-            Join with your league username — pick one after accepting terms (shown below
-            your recovery key). It appears on standings across every league you play in.
+            Join with your league username. Accepting terms is only required when you
+            tap join — you can read the invite first.
           </p>
           {error && (
             <p className="text-sm text-destructive" role="alert">

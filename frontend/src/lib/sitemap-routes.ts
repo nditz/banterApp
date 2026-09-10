@@ -7,6 +7,7 @@ export const SITEMAP_ROUTES: Array<{
 }> = [
   { path: "/", changeFrequency: "daily", priority: 1 },
   { path: "/matchweek", changeFrequency: "daily", priority: 0.9 },
+  { path: "/banter", changeFrequency: "daily", priority: 0.9 },
   { path: "/studio", changeFrequency: "weekly", priority: 0.9 },
   { path: "/pundits", changeFrequency: "weekly", priority: 0.8 },
   { path: "/awards", changeFrequency: "weekly", priority: 0.8 },

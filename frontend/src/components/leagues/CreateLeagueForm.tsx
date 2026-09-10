@@ -3,11 +3,10 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Link2 } from "lucide-react";
-import { TermsAcceptPanel } from "@/components/session/TermsAcceptPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCreateLeague } from "@/hooks/useLeaderboard";
-import { useNeedsTerms } from "@/hooks/useNeedsTerms";
+import { useTermsSaveGate } from "@/components/session/TermsSaveGate";
 import { getApiErrorMessage } from "@/lib/api";
 import type { League } from "@/lib/types";
 
@@ -26,7 +25,7 @@ export function CreateLeagueForm() {
   const [copied, setCopied] = useState(false);
   const createLeague = useCreateLeague();
   const queryClient = useQueryClient();
-  const { needsTerms } = useNeedsTerms();
+  const { requireTerms } = useTermsSaveGate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +38,8 @@ export function CreateLeagueForm() {
 
     setLoading(true);
     try {
+      const accepted = await requireTerms();
+      if (!accepted) return;
       const league = await createLeague(name.trim());
       setCreated(league);
       setName("");
@@ -56,18 +57,6 @@ export function CreateLeagueForm() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  if (needsTerms) {
-    return (
-      <div className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          To create a league you first onboard as the league admin — no signup
-          needed, just accept the terms and keep your session key.
-        </p>
-        <TermsAcceptPanel variant="compact" />
-      </div>
-    );
-  }
 
   if (created) {
     return (

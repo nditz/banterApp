@@ -10,6 +10,12 @@ export function StudioSummaryBar({ data }: StudioSummaryBarProps) {
     (sum, m) => sum + m.picks.filter((p) => p.role === "me").length,
     0
   );
+  const hasActivity =
+    data.myTotalPoints > 0 || Boolean(data.myLeagueRank) || totalPicks > 0;
+
+  if (!hasActivity) {
+    return null;
+  }
 
   return (
     <div className="flex flex-wrap gap-3">

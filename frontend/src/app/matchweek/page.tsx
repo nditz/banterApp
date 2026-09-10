@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { MatchweekBoard } from "@/components/home/MatchweekBoard";
+import { PageContainer, SectionHeader } from "@/components/ui/section-header";
 
 export const metadata: Metadata = {
   title: "Matchweek picks",
@@ -10,16 +11,14 @@ export const metadata: Metadata = {
 
 export default function MatchweekPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-        <header>
-          <p className="page-kicker">Premier League 2026/27</p>
-          <h1 className="mt-3 text-2xl font-bold sm:text-3xl">Matchweek picks</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Lock every fixture this week. Result +3, exact score +7, double chance +2. Nail the
-            lot and take the perfect matchweek bonus.
-          </p>
-        </header>
-        <MatchweekBoard />
-      </div>
+    <PageContainer width="narrow">
+      <SectionHeader
+        as="h1"
+        eyebrow="Premier League 2026/27"
+        title="Matchweek picks"
+        description="Lock every fixture this week. Result +3, exact score +7, double chance +2. Nail the lot and take the perfect matchweek bonus."
+      />
+      <MatchweekBoard />
+    </PageContainer>
   );
 }

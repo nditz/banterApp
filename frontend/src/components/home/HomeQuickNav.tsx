@@ -21,7 +21,7 @@ const icons = {
 export function HomeQuickNav() {
   return (
     <nav
-      className="mb-5 -mx-1 flex gap-2 overflow-x-auto pb-1 scrollbar-none sm:flex-wrap sm:overflow-visible"
+      className="mb-5 flex flex-wrap gap-2"
       aria-label="Jump to a section"
     >
       {HOME_QUICK_NAV.map(({ href, label }) => {

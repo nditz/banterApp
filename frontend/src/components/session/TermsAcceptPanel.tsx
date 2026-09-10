@@ -35,11 +35,15 @@ interface TermsAcceptPanelProps {
 
   className?: string;
 
+  /** Fired after a successful accept or session restore. */
+
+  onComplete?: () => void;
+
 }
 
 
 
-export function TermsAcceptPanel({ variant = "inline", className }: TermsAcceptPanelProps) {
+export function TermsAcceptPanel({ variant = "inline", className, onComplete }: TermsAcceptPanelProps) {
 
   const acceptTerms = useAcceptTerms();
 
@@ -72,6 +76,7 @@ export function TermsAcceptPanel({ variant = "inline", className }: TermsAcceptP
       setCountryCode(chosen);
 
       await acceptTerms.mutateAsync({ turnstileToken, countryCode: chosen });
+      onComplete?.();
 
     } catch (err) {
 
@@ -100,6 +105,7 @@ export function TermsAcceptPanel({ variant = "inline", className }: TermsAcceptP
       });
 
       setShowRecover(false);
+      onComplete?.();
 
     } catch (err) {
 

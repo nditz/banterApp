@@ -81,10 +81,25 @@ export function TurnstileWidget({ onToken, theme = "auto" }: TurnstileWidgetProp
     <div>
       <div ref={containerRef} className="min-h-[65px]" />
       {errorCode && (
-        <p className="mt-1 text-[11px] text-destructive" role="alert">
-          Verification could not load (error {errorCode}). Refresh and try again — if it
-          persists, this domain may not be authorized for the site key.
-        </p>
+        <div className="mt-1 space-y-1" role="alert">
+          <p className="text-[11px] text-destructive">
+            Verification could not load{errorCode !== "unknown" ? ` (error ${errorCode})` : ""}.
+            Try again — if it persists, this domain may not be authorized for the site key.
+          </p>
+          <button
+            type="button"
+            className="text-[11px] font-semibold text-foreground underline-offset-2 hover:underline"
+            onClick={() => {
+              setErrorCode(null);
+              onTokenRef.current(null);
+              if (widgetIdRef.current && window.turnstile) {
+                window.turnstile.reset(widgetIdRef.current);
+              }
+            }}
+          >
+            Retry verification
+          </button>
+        </div>
       )}
     </div>
   );

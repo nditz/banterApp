@@ -1,5 +1,3 @@
-using BanterApp.Api.Data;
-
 namespace BanterApp.Api.Integrations.Media;
 
 /// <summary>
@@ -65,7 +63,7 @@ public static class FootballGifQuery
 
     public static bool LooksFootball(string? phrase)
     {
-        if (string.IsNullOrWhiteSpace(phrase) || CompetitionFocus.LooksLikeOffFocus(phrase))
+        if (string.IsNullOrWhiteSpace(phrase))
         {
             return false;
         }

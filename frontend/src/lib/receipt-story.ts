@@ -12,3 +12,14 @@ export function formatReceiptStoryType(type?: string | null): string {
   if (!type) return "Receipt";
   return RECEIPT_STORY_LABELS[type] ?? type.replaceAll("_", " ");
 }
+
+/** Label a classified story candidate. Uses RECEIPT_STORY_LABELS; never invents a type. */
+export function formatReceiptStoryCandidate(candidate: {
+  storyType: string;
+  summary?: string | null;
+}): string {
+  const label = formatReceiptStoryType(candidate.storyType);
+  const summary = candidate.summary?.trim();
+  if (!summary || summary === label) return label;
+  return `${label} · ${summary}`;
+}

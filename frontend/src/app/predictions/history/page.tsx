@@ -18,7 +18,7 @@ import { PredictionReceiptCard } from "@/components/PredictionReceiptCard";
 import { useBanterMode } from "@/hooks/useBanterMode";
 import { usePredictionHistory } from "@/hooks/usePredictions";
 import { useReceipts } from "@/hooks/useReceipts";
-import { formatReceiptStoryType } from "@/lib/receipt-story";
+import { formatReceiptStoryCandidate, formatReceiptStoryType } from "@/lib/receipt-story";
 import {
   formatPickLabel,
   getFinishedMatchReaction,
@@ -192,6 +192,7 @@ function SettledReceipt({
       <CardContent className="space-y-3">
         {reaction ? (
           <PredictionReceiptCard
+            variant="settled"
             fixture={fixture}
             pick={pick}
             reaction={reaction}
@@ -201,6 +202,19 @@ function SettledReceipt({
 
         {scoreline ? (
           <p className="text-xs font-medium text-pitch">Final {scoreline}</p>
+        ) : null}
+
+        {(receipt.storyCandidates ?? []).length > 0 ? (
+          <ul className="flex flex-wrap gap-1.5">
+            {(receipt.storyCandidates ?? []).map((candidate) => (
+              <li
+                key={`${candidate.storyType}-${candidate.rank}`}
+                className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground"
+              >
+                {formatReceiptStoryCandidate(candidate)}
+              </li>
+            ))}
+          </ul>
         ) : null}
 
         {beaten ? (

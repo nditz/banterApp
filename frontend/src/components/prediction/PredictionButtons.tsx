@@ -7,6 +7,8 @@ import { ScoreCounter } from "@/components/prediction/ScoreCounter";
 import { useBanterMode } from "@/hooks/useBanterMode";
 import { useMyLeagues } from "@/hooks/useLeaderboard";
 import { usePredictions } from "@/hooks/usePredictions";
+import { useTermsSaveGate } from "@/components/session/TermsSaveGate";
+import { getApiErrorMessage } from "@/lib/api";
 import { PRODUCT_METRICS, recordMetric } from "@/lib/metrics";
 import {
   estimateFixtureProbabilities,
@@ -21,7 +23,7 @@ import {
 import type { PredictionReaction } from "@/lib/reactionEngine";
 import { Button } from "@/components/ui/button";
 import { TeamFlag } from "@/components/brackets/TeamFlag";
-import type { Prediction } from "@/lib/types";
+import type { Prediction, StudioPickEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface PredictionButtonsProps {
@@ -33,9 +35,11 @@ interface PredictionButtonsProps {
   homeLogoUrl?: string;
   awayLogoUrl?: string;
   isLocked?: boolean;
+  isSettled?: boolean;
   existingPredictions?: Prediction[];
   selectedValue?: string | null;
   onSelect?: (value: string) => void;
+  punditPicks?: StudioPickEntry[];
 }
 
 type Mode = "result" | "correct_score" | "double_chance";
@@ -134,14 +138,18 @@ export function PredictionButtons({
   homeLogoUrl,
   awayLogoUrl,
   isLocked = false,
+  isSettled = false,
   existingPredictions = [],
   selectedValue,
   onSelect,
+  punditPicks = [],
 }: PredictionButtonsProps) {
   const [mode, setMode] = useState<Mode>("result");
   const [savedReaction, setSavedReaction] = useState<SavedReactionState | null>(null);
   const [justSelected, setJustSelected] = useState<string | null>(null);
   const { savePrediction, isSaving } = usePredictions();
+  const { requireTerms } = useTermsSaveGate();
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const existingByType = useMemo(() => {
     const map = new Map<Mode, Prediction>();
@@ -197,10 +205,12 @@ export function PredictionButtons({
 
   const handleSubmit = async (value: string, type: Mode) => {
     const previousValue = savedValueForMode(type) ?? selectedValue;
+    setSaveError(null);
+    const accepted = await requireTerms();
+    if (!accepted) return;
+
     onSelect?.(value);
     setJustSelected(value);
-
-    showReaction(value, type);
 
     try {
       await savePrediction({
@@ -208,21 +218,48 @@ export function PredictionButtons({
         predictionType: type,
         predictionValue: value,
       });
-    } catch {
+      showReaction(value, type);
+    } catch (error) {
       if (previousValue) onSelect?.(previousValue);
       setJustSelected(null);
+      setSavedReaction(null);
+      setSaveError(
+        `Could not lock this pick. ${getApiErrorMessage(error)}`
+      );
     }
   };
 
   const activeValue = savedValueForMode(mode) ?? selectedValue;
+  const hasSavedPick = existingPredictions.length > 0 || savedReaction != null;
+  const punditTeaser =
+    hasSavedPick && punditPicks.length > 0
+      ? punditPicks
+          .filter((pick) => pick.name && pick.prediction)
+          .map((pick) => `${pick.name}: ${pick.prediction}`)
+          .join(" · ")
+      : null;
 
   return (
     <div className="space-y-2.5">
       {isLocked ? (
-        <p className="flex items-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
-          <Lock className="size-3.5 shrink-0" aria-hidden />
-          Receipts closed — this match has kicked off.
-        </p>
+        <div className="space-y-2">
+          <p className="flex items-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
+            <Lock className="size-3.5 shrink-0" aria-hidden />
+            {isSettled
+              ? "Full time — picks are locked."
+              : "Picks locked — this match has kicked off."}
+          </p>
+          {hasSavedPick && !isSettled ? (
+            <p className="text-xs font-medium text-foreground">
+              Locked. We&apos;ll keep the receipt.
+            </p>
+          ) : null}
+          {punditTeaser ? (
+            <p className="text-[11px] text-muted-foreground">
+              Sourced desks on this fixture: {punditTeaser}
+            </p>
+          ) : null}
+        </div>
       ) : (
         <>
           <div
@@ -358,6 +395,24 @@ export function PredictionButtons({
             </div>
           )}
 
+          {saveError ? (
+            <p role="alert" className="text-xs text-destructive">
+              {saveError}
+            </p>
+          ) : null}
+
+          {hasSavedPick && !savedReaction ? (
+            <p className="text-xs font-medium text-foreground">
+              Locked. We&apos;ll keep the receipt.
+            </p>
+          ) : null}
+
+          {punditTeaser && !savedReaction ? (
+            <p className="text-[11px] text-muted-foreground">
+              Sourced desks on this fixture: {punditTeaser}
+            </p>
+          ) : null}
+
           {savedReaction && (
             <PredictionCelebration
               key={`${matchId}-${savedReaction.pickLabel}`}
@@ -367,6 +422,7 @@ export function PredictionButtons({
               pick={savedReaction.pickLabel}
               probabilityContext={savedReaction.probabilityContext}
               leagueName={savedReaction.leagueName}
+              punditTeaser={punditTeaser}
             />
           )}
         </>

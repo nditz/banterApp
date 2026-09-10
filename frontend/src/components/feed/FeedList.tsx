@@ -2,11 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { Flame, Loader2 } from "lucide-react";
+import { Flame, Loader2, RefreshCw } from "lucide-react";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { FeedItemCard } from "@/components/feed/FeedItem";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FreshnessBadge } from "@/components/ui/freshness-badge";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useFeed } from "@/hooks/useFeed";
 
@@ -17,9 +18,20 @@ interface FeedListProps {
 }
 
 export function FeedList({ embedded = false, autoLoad = false }: FeedListProps) {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } =
-    useFeed();
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetching,
+    isLoading,
+    isError,
+    isStale,
+    dataUpdatedAt,
+    refetch,
+  } = useFeed();
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const isRefreshing = isFetching && !isFetchingNextPage && !isLoading;
 
   useEffect(() => {
     const element = loadMoreRef.current;
@@ -48,16 +60,42 @@ export function FeedList({ embedded = false, autoLoad = false }: FeedListProps) 
     );
   }
 
-  const items =
-    data?.pages.flatMap((page) => page.items).filter(Boolean) ?? [];
+  const items = data?.pages.flatMap((page) => page.items).filter(Boolean) ?? [];
 
   return (
     <div className="space-y-3">
-      {!embedded && (
-        <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
-          <h2 className="text-sm font-semibold">Latest</h2>
+      <div
+        className={
+          embedded
+            ? "mb-3 flex items-center justify-end gap-2"
+            : "mb-3 flex items-center justify-between border-b border-border pb-2"
+        }
+      >
+        {!embedded && <h2 className="text-sm font-semibold">Latest</h2>}
+        <div className="flex items-center gap-2">
+          {dataUpdatedAt ? (
+            <FreshnessBadge
+              status={isStale ? "stale" : "ok"}
+              updatedAt={dataUpdatedAt}
+            />
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => void refetch()}
+            disabled={isRefreshing}
+            aria-label="Refresh feed"
+          >
+            <RefreshCw
+              className={isRefreshing ? "size-3 animate-spin motion-reduce:animate-none" : "size-3"}
+              aria-hidden
+            />
+            Refresh
+          </Button>
         </div>
-      )}
+      </div>
 
       {isError && (
         <ErrorState
@@ -104,7 +142,10 @@ export function FeedList({ embedded = false, autoLoad = false }: FeedListProps) 
 
       <div ref={loadMoreRef} className="flex justify-center pt-2">
         {isFetchingNextPage && (
-          <Loader2 className="size-5 animate-spin text-muted-foreground" aria-label="Loading more" />
+          <Loader2
+            className="size-5 animate-spin text-muted-foreground motion-reduce:animate-none"
+            aria-label="Loading more"
+          />
         )}
         {hasNextPage && !isFetchingNextPage && !autoLoad && (
           <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => fetchNextPage()}>

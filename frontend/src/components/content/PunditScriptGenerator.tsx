@@ -93,6 +93,9 @@ export function PunditScriptGenerator({ className }: PunditScriptGeneratorProps)
 
   return (
     <div className={cn("space-y-3", className)}>
+      <p className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+        Legacy persona export — parody voice, not a sourced pundit quote. For a receipt-backed pack, use the Stories tab.
+      </p>
       <div className="inline-flex rounded-md border border-border bg-muted/50 p-0.5">
         {(
           [

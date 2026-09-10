@@ -1,28 +1,27 @@
-# Ball Takes UI Liveliness + Frontend Remediation Pack
+# Ball Takes UI Remediation Pack — Live Re-Audit v2
 
-This package is designed to be copied into the Ball Takes repository (or into your project plans folder first, then selected files copied to repo root).
+This pack replaces the previous UI-liveliness plan. It reflects the current Ball Takes product direction after the latest live-site scan.
 
-## Primary goal
-Make Ball Takes feel like a finished, energetic football-content product without rebuilding the application or destabilising working backend/data flows.
+## Product truth
+Ball Takes is a football-content creation product, not only a prediction game. The core loop is:
 
-The product loop that the UI must communicate is:
+**Discover banter → Follow pundits → Predict → Compare user vs pundit vs reality → Create receipt/story → Studio → Export content pack → External AI/media tools → Social post → Return.**
 
-**Discover banter -> Follow pundits -> Predict -> Compare -> Receipt -> Studio -> Export content pack -> Create media externally -> Share**
+Studio is a primary destination. Pundit comparison is a core differentiator. The homepage must demonstrate the entertainment/content output before asking a new visitor to understand the mechanics.
 
-Studio is the destination, not a secondary utility.
+## How to use
+1. Copy this folder under the repository `plans/` folder, replacing the previous UI pack.
+2. Copy the included `.cursor/` directory to the repository root. Merge it with an existing `.cursor/` directory rather than deleting unrelated rules/skills.
+3. Start Cursor Agent with `prompts/MASTER-KICKOFF-PROMPT.md`.
+4. The first run is audit-only. Review `plans/UI-AUDIT-RESULTS.md` and `plans/UI-IMPLEMENTATION-BACKLOG.md` before implementation.
+5. Execute one phase at a time using `prompts/IMPLEMENT-PHASE-PROMPT.md` and verify each phase with `prompts/VERIFY-UI-PROMPT.md`.
 
-## Important workflow
-1. Run the audit prompt first.
-2. Cursor must inspect the existing Next.js implementation before editing.
-3. Create a visual/component inventory and implementation backlog.
-4. Implement one phase at a time.
-5. Verify desktop + mobile after each phase.
-6. Do not redesign backend contracts unless required to fix a broken user-facing state.
-
-## Copy these into the repository root
-- `.cursor/rules/*`
-- `.cursor/skills/balltakes-frontend-polish/*`
-
-The `plans/`, `prompts/`, and `checklists/` folders can remain in your existing project plans directory.
-
-Start with `prompts/MASTER-KICKOFF-PROMPT.md`.
+## Non-negotiables
+- Do not rebuild the app.
+- Do not break existing backend/data contracts to achieve a visual redesign.
+- Do not remove Studio or demote it.
+- Do not hide missing data behind fake production content.
+- Do not use animation, glow, gradients or green everywhere as a substitute for product energy.
+- Design every async surface for loading, loaded, empty, stale and error states.
+- Preserve GDPR/advertising consent architecture; improve its UX without weakening consent.
+- Treat robot/security checks as production controls, not UI elements to bypass.

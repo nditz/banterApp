@@ -468,7 +468,7 @@ public sealed class MediaIngestJob
         CancellationToken cancellationToken)
     {
         var externalId = ExternalIdNormalizer.Normalize(item.ExternalId);
-        if (string.IsNullOrWhiteSpace(externalId))
+        if (string.IsNullOrWhiteSpace(externalId) || !source.IsActive)
         {
             return (0, 0, 0);
         }

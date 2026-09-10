@@ -1,24 +1,25 @@
-Implement the next approved Ball Takes UI remediation phase from `plans/UI-IMPLEMENTATION-BACKLOG.md`.
+Implement ONLY Phase <PHASE_NUMBER> from the approved Ball Takes v2 UI backlog.
 
-Before editing:
-1. Load the `balltakes-frontend-polish` skill.
-2. Read applicable `.cursor/rules`.
-3. Read the audit findings for this phase.
-4. Inspect the existing components and dependencies.
+Before coding:
+1. Read the v2 plan and `.cursor/skills/balltakes-frontend-polish/SKILL.md`.
+2. Read `plans/UI-AUDIT-RESULTS.md` and `plans/UI-IMPLEMENTATION-BACKLOG.md`.
+3. List the exact tasks you will implement in this phase and the files likely affected.
+4. Confirm no task belongs to a later phase.
 
-Rules:
-- Preserve existing backend/data contracts unless the backlog explicitly approves a required change.
-- Prefer refactoring/reusing components over adding duplicate variants.
-- Design loading, loaded, empty and error states.
-- Keep the shell restrained and let football/banter create visual energy.
-- Do not introduce generic AI-dashboard effects.
-- Do not introduce a new dependency unless necessary; explain why before adding it.
-- Keep Studio central to the product journey.
+During implementation:
+- reuse/refactor existing components before creating duplicates
+- preserve contracts and existing working behavior
+- implement loading/loaded/empty/stale/error states for touched async surfaces
+- keep Studio/pundit/receipt product model intact
+- do not introduce fake production data
+- do not bypass consent/security controls
+- prefer installed dependencies
+- keep mobile/accessibility/performance in scope
 
 After implementation:
-- run the existing relevant lint/typecheck/tests/build
-- review at 375px, 768px and 1440px
-- check keyboard/focus and reduced-motion behavior
-- update `plans/UI-IMPLEMENTATION-BACKLOG.md`
-- append a concise entry to `plans/UI-IMPLEMENTATION-LOG.md`
-- list unresolved items clearly
+- run formatter/lint/typecheck/tests/build available in the repo
+- visually verify touched routes at mobile and desktop sizes using available tooling
+- update `plans/UI-IMPLEMENTATION-LOG.md`
+- list remaining failures or data-dependent blockers explicitly
+
+STOP after this phase. Do not automatically start the next phase.

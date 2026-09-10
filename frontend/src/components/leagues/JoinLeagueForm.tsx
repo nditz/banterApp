@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useJoinLeague } from "@/hooks/useLeaderboard";
+import { useTermsSaveGate } from "@/components/session/TermsSaveGate";
 import { getApiErrorMessage } from "@/lib/api";
 
 export function JoinLeagueForm() {
@@ -14,6 +15,7 @@ export function JoinLeagueForm() {
   const [loading, setLoading] = useState(false);
   const joinLeague = useJoinLeague();
   const queryClient = useQueryClient();
+  const { requireTerms } = useTermsSaveGate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +29,8 @@ export function JoinLeagueForm() {
 
     setLoading(true);
     try {
+      const accepted = await requireTerms();
+      if (!accepted) return;
       const league = await joinLeague(inviteCode.trim().toUpperCase());
       setSuccess(
         league.myDisplayName

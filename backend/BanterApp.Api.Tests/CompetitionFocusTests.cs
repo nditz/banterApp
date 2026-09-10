@@ -14,18 +14,6 @@ public class CompetitionFocusTests
         Assert.Contains("Ignore World Cup", CompetitionFocus.PromptDirective, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
-    [InlineData("World Cup hydration breaks", true)]
-    [InlineData("https://www.fifa.com/tournaments/mens/worldcup/qatar2022", true)]
-    [InlineData("https://www.theguardian.com/football/world-cup/2026", true)]
-    [InlineData("Arsenal vs Chelsea Premier League preview", false)]
-    [InlineData("FIFA 26 career mode", false)]
-    [InlineData("", false)]
-    public void LooksLikeOffFocus_DetectsWorldCupNotGenericFifa(string value, bool expected)
-    {
-        Assert.Equal(expected, CompetitionFocus.LooksLikeOffFocus(value));
-    }
-
     [Fact]
     public void ApplyToSystemPrompt_PrependsDirectiveOnce()
     {
@@ -41,9 +29,6 @@ public class CompetitionFocusTests
     {
         Assert.NotEmpty(CompetitionFocus.YouTubeSearchQueries);
         Assert.All(CompetitionFocus.YouTubeSearchQueries, q =>
-        {
-            Assert.Contains("Premier League", q, StringComparison.OrdinalIgnoreCase);
-            Assert.False(CompetitionFocus.LooksLikeOffFocus(q));
-        });
+            Assert.Contains("Premier League", q, StringComparison.OrdinalIgnoreCase));
     }
 }

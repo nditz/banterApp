@@ -36,6 +36,12 @@ describe("product navigation IA", () => {
     ]);
   });
 
+  it("routes Banter to /banter, not the homepage hash", () => {
+    expect(DESKTOP_PRIMARY_NAV.find((l) => l.label === "Banter")?.href).toBe("/banter");
+    expect(MOBILE_BOTTOM_NAV.find((l) => l.label === "Banter")?.href).toBe("/banter");
+    expect(HOME_QUICK_NAV.find((l) => l.label === "Banter")?.href).toBe("#banter-feed");
+  });
+
   it("exposes Season Calls on desktop and in mobile overflow", () => {
     expect(labels(DESKTOP_PRIMARY_NAV)).toContain("Season Calls");
     expect(labels(MOBILE_OVERFLOW_NAV)).toContain("Season Calls");
@@ -60,7 +66,6 @@ describe("product navigation IA", () => {
     );
   });
 
-
   it("demotes Table from mobile primary", () => {
     expect(labels(MOBILE_BOTTOM_NAV)).not.toContain("Table");
     expect(labels(DESKTOP_OVERFLOW_NAV)).toContain("Table");
@@ -79,10 +84,18 @@ describe("product navigation IA", () => {
 });
 
 describe("isNavHrefActive", () => {
-  it("treats the homepage as the Banter destination", () => {
-    expect(isNavHrefActive("/#banter-feed", "/")).toBe(true);
-    expect(isNavHrefActive("/#banter-feed", "/matchweek")).toBe(false);
-    expect(isNavHrefActive("/#banter-feed", "/studio")).toBe(false);
+  it("treats /banter as the Banter destination, not the homepage", () => {
+    expect(isNavHrefActive("/banter", "/banter")).toBe(true);
+    expect(isNavHrefActive("/banter", "/")).toBe(false);
+    expect(isNavHrefActive("/banter", "/matchweek")).toBe(false);
+    expect(isNavHrefActive("/#banter-feed", "/")).toBe(false);
+    expect(isNavHrefActive("/#banter-feed", "/banter")).toBe(true);
+  });
+
+  it("keeps the homepage hash jump active only as an in-page home link", () => {
+    expect(isNavHrefActive("#banter-feed", "/")).toBe(true);
+    expect(isNavHrefActive("#banter-feed", "/banter")).toBe(false);
+    expect(isNavHrefActive("#banter-feed", "/matchweek")).toBe(false);
   });
 
   it("matches Predict, Studio, Season Calls, and Me by path", () => {

@@ -34,6 +34,7 @@ export const publicRoutes = [
   { path: "/", name: "home" },
   { path: "/#predictions", name: "predictions section" },
   { path: "/#banter-feed", name: "banter feed section" },
+  { path: "/banter", name: "banter" },
   { path: "/#rankings", name: "rankings section" },
   { path: "/predictions/history", name: "prediction history" },
   { path: "/studio", name: "studio" },
