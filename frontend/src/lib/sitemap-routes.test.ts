@@ -16,4 +16,10 @@ describe("sitemap routes", () => {
     const pundits = SITEMAP_ROUTES.find((r) => r.path === "/pundits");
     expect(pundits?.priority).toBe(0.8);
   });
+
+  it("lists Banter as a primary destination", () => {
+    const banter = SITEMAP_ROUTES.find((r) => r.path === "/banter");
+    expect(banter?.changeFrequency).toBe("daily");
+    expect(banter?.priority).toBe(0.9);
+  });
 });

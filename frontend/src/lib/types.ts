@@ -69,13 +69,23 @@ export interface PredictionReceipt {
   match?: Match;
 }
 
-export type FeedItemType =
-  | "banter"
-  | "meme"
-  | "news"
-  | "leaderboard"
-  | "prediction_highlight"
-  | "pundit_quote";
+export const FEED_ITEM_TYPES = [
+  "banter",
+  "meme",
+  "news",
+  "leaderboard",
+  "prediction_highlight",
+  "pundit_quote",
+  "gif_reaction",
+  "pundit_receipt",
+  "user_pundit_compare",
+  "community_receipt",
+  "trending_take",
+  "match_event",
+  "studio_story",
+] as const;
+
+export type FeedItemType = (typeof FEED_ITEM_TYPES)[number];
 
 export type FeedMediaType = "image" | "gif" | "video" | "clip";
 
@@ -103,10 +113,14 @@ export interface FeedItem {
   author?: string;
   source?: string;
   sourceUrl?: string;
-  publishedAt: string;
+  publishedAt?: string;
   likes?: number;
   reactions?: FeedReactions;
   contentLabel?: string;
+  receiptId?: string;
+  storyId?: string;
+  feedItemId?: string;
+  matchId?: string;
 }
 
 export interface LeaderboardEntry {
@@ -249,6 +263,13 @@ export type StudioTone =
   | "self_roast"
   | "pundit"
   | "explainer";
+
+export type StudioPerspective =
+  | "me_vs_pundit"
+  | "my_take"
+  | "pundit_receipt"
+  | "match_story"
+  | "league_story";
 
 export interface StudioStoryCard {
   id: string;

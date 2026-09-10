@@ -11,6 +11,7 @@ export function PredictionReceiptCard({
   probabilityContext,
   leagueName,
   className,
+  variant = 'settled',
 }: {
   fixture: string;
   pick: string;
@@ -19,8 +20,11 @@ export function PredictionReceiptCard({
   probabilityContext?: string;
   leagueName?: string;
   className?: string;
+  /** Pre-FT share card is a locked pick, not a settled receipt. */
+  variant?: 'lock' | 'settled';
 }) {
   const theme = getThemeForReaction(reaction.key);
+  const isLock = variant === 'lock';
 
   return (
     <div
@@ -31,15 +35,22 @@ export function PredictionReceiptCard({
     >
       <div className="rounded-2xl bg-gradient-to-br from-brand to-brand-muted p-6 text-brand-foreground">
         <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-brand-foreground/60">
-          Prediction Receipt
+          {isLock ? 'Locked pick' : 'Settled receipt'}
         </div>
-        <h2 className="mt-3 font-display text-2xl font-semibold">Your pick</h2>
+        <h2 className="mt-3 font-display text-2xl font-semibold">
+          {isLock ? 'Your lock' : 'Your pick'}
+        </h2>
         <div className="mt-4 rounded-xl bg-card p-4 text-card-foreground shadow-inner">
           <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{fixture}</div>
           <div className="mt-1 font-display text-3xl font-semibold">{pick}</div>
           {probabilityContext && (
             <p className="mt-2 text-xs text-muted-foreground">{probabilityContext}</p>
           )}
+          {isLock ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              We&apos;ll keep the receipt after full time.
+            </p>
+          ) : null}
         </div>
         <div className={cn('mt-4 text-xl font-semibold', theme.text)}>
           <span aria-hidden>{reaction.emoji.split('')[0]} </span>

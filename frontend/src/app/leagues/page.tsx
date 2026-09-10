@@ -10,6 +10,7 @@ import { CreateLeagueForm } from "@/components/leagues/CreateLeagueForm";
 import { JoinLeagueForm } from "@/components/leagues/JoinLeagueForm";
 import { LeaguesList } from "@/components/leagues/LeaguesList";
 import { SessionKeyNotice } from "@/components/session/SessionKeyNotice";
+import { PageContainer, SectionHeader } from "@/components/ui/section-header";
 
 export const metadata: Metadata = {
   title: "Leagues",
@@ -20,20 +21,13 @@ export const metadata: Metadata = {
 
 export default function LeaguesPage() {
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
-      <div>
-        <p className="page-kicker">Beat your mates</p>
-        <h1 className="mt-3 text-2xl font-bold sm:text-3xl">
-          Leagues
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          Create private leagues for office mates, family or friends — up to 50
-          players per league. You can belong to up to 3 custom leagues (5 total
-          including the Global and Country leagues you join automatically).
-          Private leagues with at least 3 members unlock season calls
-          (league winner, Golden Boot, and more). No signup required.
-        </p>
-      </div>
+    <PageContainer>
+      <SectionHeader
+        as="h1"
+        eyebrow="Beat your mates"
+        title="Leagues"
+        description="Create private leagues for office mates, family or friends — up to 50 players per league. You can belong to up to 3 custom leagues (5 total including the Global and Country leagues you join automatically). Private leagues with at least 3 members unlock season calls (league winner, Golden Boot, and more). No signup required."
+      />
 
       <SessionKeyNotice />
 
@@ -67,6 +61,6 @@ export default function LeaguesPage() {
       </div>
 
       <LeaguesList />
-    </div>
+    </PageContainer>
   );
 }

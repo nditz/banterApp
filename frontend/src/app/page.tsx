@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { BanterFeedPanel } from "@/components/home/BanterFeedPanel";
+import { HomePunditStrip } from "@/components/home/HomePunditStrip";
 import { HomeQuickNav } from "@/components/home/HomeQuickNav";
+import { HomeReturningPanel } from "@/components/home/HomeReturningPanel";
 import { HomeStatsBar } from "@/components/home/HomeStatsBar";
+import { HomeStudioDemo } from "@/components/home/HomeStudioDemo";
 import { HomeWelcomePanel } from "@/components/home/HomeWelcomePanel";
 import { LeagueTable } from "@/components/home/LeagueTable";
 import { PredictionCenter } from "@/components/home/PredictionCenter";
@@ -30,28 +33,34 @@ export default function HomePage() {
     <>
       <HomeWelcomePanel />
       <HomeStatsBar />
+      <HomeReturningPanel />
       <HomeQuickNav />
 
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-4">
-        <div id="predictions" className={cn(stickySideClass, "lg:col-span-6 xl:col-span-4")}>
-          <p className="home-section-label">Lock in</p>
-          <PredictionCenter />
-        </div>
-
-        <div id="banter-feed" className="scroll-mt-14 lg:col-span-6 xl:col-span-4">
-          <p className="home-section-label">Watch the chaos</p>
+        <div id="banter-feed" className="scroll-mt-14 min-w-0 lg:col-span-7">
+          <p className="home-section-label">Live takes</p>
           <BanterFeedPanel />
         </div>
 
-        <div
-          id="rankings"
-          className={cn(stickyScrollSideClass, "lg:col-span-12 xl:col-span-4")}
-        >
-          <p className="home-section-label">Ball takes board</p>
-          <div className="space-y-4">
-            <LeagueTable compact />
-            <RankingsPanel />
-          </div>
+        <div id="predictions" className={cn(stickySideClass, "min-w-0 lg:col-span-5")}>
+          <p className="home-section-label">Make a pick</p>
+          <PredictionCenter />
+        </div>
+      </div>
+
+      <div className="mt-5 min-w-0 space-y-5">
+        <HomePunditStrip />
+        <HomeStudioDemo />
+      </div>
+
+      <div
+        id="rankings"
+        className={cn(stickyScrollSideClass, "mt-5 min-w-0")}
+      >
+        <p className="home-section-label">Ball takes board</p>
+        <div className="space-y-4">
+          <LeagueTable compact />
+          <RankingsPanel />
         </div>
       </div>
     </>

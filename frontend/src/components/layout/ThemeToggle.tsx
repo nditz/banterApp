@@ -2,30 +2,16 @@
 
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-
-function subscribeHydration() {
-  return () => {};
-}
-
-function getHydratedSnapshot() {
-  return true;
-}
-
-function getServerHydratedSnapshot() {
-  return false;
-}
+import { useHydrated } from "@/hooks/useHydrated";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
-  const mounted = useSyncExternalStore(
-    subscribeHydration,
-    getHydratedSnapshot,
-    getServerHydratedSnapshot
-  );
+  const hydrated = useHydrated();
 
   useEffect(() => {
+    if (!hydrated) return;
     const color = resolvedTheme === "light" ? "#f4f2ec" : "#0c0d10";
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) {
@@ -34,9 +20,10 @@ export function ThemeToggle({ className }: { className?: string }) {
       document.head.appendChild(meta);
     }
     meta.setAttribute("content", color);
-  }, [resolvedTheme]);
+  }, [hydrated, resolvedTheme]);
 
-  const isDark = resolvedTheme !== "light";
+  // Paper-light is the default. Until hydrated, match SSR (not inverted).
+  const isDark = hydrated && resolvedTheme === "dark";
 
   return (
     <Button
@@ -47,9 +34,9 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Light mode" : "Dark mode"}
-      disabled={!mounted}
+      disabled={!hydrated}
     >
-      {mounted && isDark ? (
+      {isDark ? (
         <Sun className="size-4" aria-hidden />
       ) : (
         <Moon className="size-4" aria-hidden />

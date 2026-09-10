@@ -1,72 +1,27 @@
 # Implementation Phases
 
-## Phase 0 - Audit only
-- inspect current design tokens, Tailwind/theme, dependencies, components and routes
-- identify duplicate one-off UI
-- identify data/loading/empty/error states
-- identify existing animation/media libraries
-- produce `plans/UI-AUDIT-RESULTS.md`
-- produce `plans/UI-IMPLEMENTATION-BACKLOG.md`
-- STOP
+## Phase 0 — Repository audit and baseline
+No UI changes. Inventory routes, components, dependencies, current responsive behavior, failing/empty states and baseline screenshots/performance.
 
-## Phase 1 - Design foundation
-- tokens
-- typography hierarchy
-- spacing
-- radii
-- surfaces
-- buttons
-- badges
-- inputs
-- skeletons
-- empty/error states
-- page container
+## Phase 1 — Foundations and state safety
+Design tokens/primitives, navigation consistency, skeleton/empty/error/stale states, consent/ad slot behavior. Do not redesign every page yet.
 
-## Phase 2 - Navigation + shell
-- simplify navigation
-- emphasize Studio
-- responsive mobile nav
-- footer cleanup
+## Phase 2 — Homepage live product experience
+Compact hero, mixed Live Takes timeline, first prediction interaction, pundit discovery, Studio demonstration and anonymous/returning-user variants.
 
-## Phase 3 - Homepage
-- compact hero
-- living Banter timeline
-- matchweek preview
-- user-vs-pundit preview
-- Studio transformation teaser
-- 3-step explanation
+## Phase 3 — Matchweek/prediction experience
+Fixture cards, prediction selector, matchweek progress, lock feedback, pundit comparison teaser and data-failure resilience.
 
-## Phase 4 - Matchweek
-- fixture card redesign
-- loading/error states
-- pick progress
-- lock interactions
-- pundit teaser
+## Phase 4 — Pundit discovery and receipts
+Follow/unfollow UX, pundit activity, user-vs-pundit comparison, receipt component system, attribution/source presentation.
 
-## Phase 5 - Studio
-- workspace layout
-- story-source cards
-- content type/tone controls
-- content pack result view
-- export/copy actions
+## Phase 5 — Studio creator workspace
+Story inbox, format/tone/perspective flow, structured content pack, copy/export actions, mobile workflow and trustworthy source/fact display.
 
-## Phase 6 - Banter
-- mixed card variants
-- media behavior
-- create-from-this actions
+## Phase 6 — Banter feed and retention surfaces
+Feed pagination/refresh, varied cards, leagues/Aura integration, returning-user story resurfacing.
 
-## Phase 7 - Leagues/Aura/Awards
-- stronger leaderboard hierarchy
-- Aura progression treatment
-- rename/reframe where product team approves
+## Phase 7 — Polish
+Responsive QA, accessibility, reduced motion, media performance, SEO, visual regression and removal of obsolete/duplicated UI.
 
-## Phase 8 - Ads + monetization UI
-- shared AdSlot
-- consent/fill/collapse behavior
-
-## Phase 9 - polish
-- motion
-- responsive QA
-- accessibility
-- performance
-- visual regression/manual screenshots
+Each phase requires build/lint/test success plus visual verification before proceeding.

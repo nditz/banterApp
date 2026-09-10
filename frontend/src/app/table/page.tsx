@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LeagueTable } from "@/components/home/LeagueTable";
+import { PageContainer, SectionHeader } from "@/components/ui/section-header";
 
 export const metadata: Metadata = {
   title: "Premier League table",
@@ -9,16 +10,14 @@ export const metadata: Metadata = {
 
 export default function TablePage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-        <header>
-          <p className="page-kicker">2026/27 standings</p>
-          <h1 className="mt-3 text-2xl font-bold sm:text-3xl">Premier League table</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Ranked the Premier League way: points, then goal difference, then goals scored. Use it
-            when you call the title, top four, and relegation.
-          </p>
-        </header>
-        <LeagueTable />
-      </div>
+    <PageContainer width="narrow">
+      <SectionHeader
+        as="h1"
+        eyebrow="2026/27 standings"
+        title="Premier League table"
+        description="Ranked the Premier League way: points, then goal difference, then goals scored. Use it when you call the title, top four, and relegation."
+      />
+      <LeagueTable />
+    </PageContainer>
   );
 }

@@ -5,13 +5,15 @@ import Link from "next/link";
 import { Lock, Sparkles } from "lucide-react";
 import { Panel } from "@/components/ui/panel";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState, ErrorState } from "@/components/ui/states";
+import { useTermsSaveGate } from "@/components/session/TermsSaveGate";
 import {
   useSaveTournamentBonusPick,
   useTournamentBonuses,
   type TournamentBonusCategoryInfo,
 } from "@/hooks/useTournamentBonuses";
 import { ApiError, getApiErrorMessage } from "@/lib/api";
-import { TermsAcceptPanel } from "@/components/session/TermsAcceptPanel";
 import { useNeedsTerms } from "@/hooks/useNeedsTerms";
 import { TOURNAMENT_BONUS_ELIGIBILITY } from "@/lib/scoring-rules";
 import { cn } from "@/lib/utils";
@@ -45,6 +47,7 @@ function BonusCategoryCard({
   onSaved: () => void;
 }) {
   const savePick = useSaveTournamentBonusPick();
+  const { requireTerms } = useTermsSaveGate();
   const slotCount = Math.max(1, category.slotCount ?? 1);
   const savedPicks = category.picks ?? (category.pick ? [category.pick] : []);
   const [values, setValues] = useState<string[]>(() =>
@@ -81,6 +84,8 @@ function BonusCategoryCard({
     }
 
     try {
+      const accepted = await requireTerms();
+      if (!accepted) return;
       setSavingSlot(slotIndex);
       await savePick.mutateAsync({
         category: category.category,
@@ -208,13 +213,12 @@ function BonusCategoryCard({
 }
 
 export function TournamentBonusBoard({ embedded = false }: { embedded?: boolean }) {
-  const { needsTerms, isLoading: sessionLoading } = useNeedsTerms();
+  const { isLoading: sessionLoading } = useNeedsTerms();
   const { data, isLoading, isError, error, refetch } = useTournamentBonuses();
   const [savedFlash, setSavedFlash] = useState(false);
+  const { requireTerms } = useTermsSaveGate();
 
-  const termsRequired =
-    needsTerms ||
-    (error instanceof ApiError && (error.status === 401 || error.status === 403));
+  const authBlocked = error instanceof ApiError && (error.status === 401 || error.status === 403);
 
   const totalPossible =
     data?.categories.reduce((sum, c) => sum + c.points * Math.max(1, c.slotCount ?? 1), 0) ?? 0;
@@ -227,20 +231,40 @@ export function TournamentBonusBoard({ embedded = false }: { embedded?: boolean 
   const content = (
     <>
       {(sessionLoading || isLoading) && (
-        <p className="text-sm text-muted-foreground">Loading season calls…</p>
+        <div className="space-y-3" aria-busy="true" aria-label="Loading season calls">
+          <Skeleton className="h-24 w-full rounded-md" />
+          <Skeleton className="h-24 w-full rounded-md" />
+        </div>
       )}
 
-      {termsRequired && !sessionLoading && (
-        <TermsAcceptPanel className="max-w-lg" />
+      {isError && !authBlocked && !isLoading && (
+        <ErrorState
+          dense
+          title="Season calls could not be loaded"
+          description="This is not an empty board — the request failed. Try again, or check that the API is reachable."
+          onRetry={() => void refetch()}
+        />
       )}
 
-      {isError && !termsRequired && (
-        <p className="text-sm text-muted-foreground">
-          Could not load bonus picks. Make sure the backend is running and refresh the page.
-        </p>
+      {authBlocked && !sessionLoading && !data && (
+        <EmptyState
+          dense
+          title="Accept terms to lock season calls"
+          description="You can browse Ball Takes first. Saving a title, Golden Boot or relegation call needs the terms gate."
+          action={
+            <Button
+              type="button"
+              size="sm"
+              className="btn-tournament h-8 text-xs"
+              onClick={() => void requireTerms()}
+            >
+              Accept terms to save
+            </Button>
+          }
+        />
       )}
 
-      {data && !termsRequired && (
+      {data && (
         <div className="space-y-4">
           {!data.isEligible && (
             <div className="rounded-md border border-gold/30 bg-gold/5 p-3 text-sm">

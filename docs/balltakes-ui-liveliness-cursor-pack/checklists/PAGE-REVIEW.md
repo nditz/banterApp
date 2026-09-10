@@ -1,34 +1,21 @@
 # Page Review Template
 
-For each page, Cursor must record:
-
-## Route
-
-## User goal
-
-## Primary CTA
-
-## Top 5 visual/UX problems
-
-## Existing reusable components
-
-## Proposed changes
-
-## Data states
-- loading
-- empty
-- error
-- populated
-
-## Responsive notes
-
-## Accessibility notes
-
-## Performance notes
-
-## Screens/viewport checks
-- 375px
-- 768px
-- 1440px
-
-## Completion result
+For each route record:
+- User type: anonymous / new / returning
+- User goal
+- Primary CTA
+- Secondary CTA
+- What makes the page uniquely Ball Takes?
+- Top five visual/UX problems
+- Loading state
+- Loaded state
+- Empty state
+- Stale state
+- Error state
+- Mobile issues
+- Accessibility issues
+- Performance/media issues
+- Shared components to extract
+- Data dependencies
+- Screenshot before
+- Screenshot after

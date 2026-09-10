@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Clapperboard, History, Mic2, Sparkles, Table2, Trophy } from "lucide-react";
 import { RankingsPanel } from "@/components/home/RankingsPanel";
 import { buttonVariants } from "@/components/ui/button";
+import { SectionHeader } from "@/components/ui/section-header";
+import { usePunditDirectory } from "@/hooks/usePundits";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { cn } from "@/lib/utils";
 
@@ -47,13 +49,16 @@ export function MeHub() {
   return (
     <div className="mx-auto max-w-4xl space-y-5">
       <header>
-        <p className="page-kicker">Your board</p>
-        <h1 className="mt-3 text-2xl font-bold sm:text-3xl">Me</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          {isSignedIn && greeting
-            ? `Signed in as ${greeting}. Receipts, season calls and Aura live here.`
-            : "Guest play is saved to this device. Receipts, season calls and Aura still count."}
-        </p>
+        <SectionHeader
+          as="h1"
+          eyebrow="Your board"
+          title="Me"
+          description={
+            isSignedIn && greeting
+              ? `Signed in as ${greeting}. Receipts, season calls and Aura live here.`
+              : "Guest play is saved to this device. Receipts, season calls and Aura still count."
+          }
+        />
         {!isSignedIn && (
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href="/auth/login" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 text-xs")}>
@@ -65,6 +70,8 @@ export function MeHub() {
           </div>
         )}
       </header>
+
+      <FollowOnboardingCta />
 
       <nav aria-label="Personal shortcuts" className="grid gap-2 sm:grid-cols-2">
         {links.map(({ href, label, description, icon: Icon }) => (
@@ -98,5 +105,26 @@ export function MeHub() {
         private leagues live under Leagues.
       </p>
     </div>
+  );
+}
+
+function FollowOnboardingCta() {
+  const { data, isPending } = usePunditDirectory();
+  const followedCount = (data ?? []).filter((pundit) => pundit.isFollowed).length;
+  if (!isPending && followedCount > 0) return null;
+
+  return (
+    <section className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card px-4 py-3 shadow-sm">
+      <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">
+        Follow a sourced desk so their picks sit next to yours on Matchweek. Optional — you can
+        lock a pick without following anyone.
+      </p>
+      <Link
+        href="/pundits"
+        className={cn(buttonVariants({ size: "sm" }), "h-8 shrink-0 text-xs")}
+      >
+        Follow pundits
+      </Link>
+    </section>
   );
 }

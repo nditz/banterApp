@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 namespace BanterApp.Api.Data;
 
 /// <summary>
-/// One-shot helper to remove stub extractions, World Cup leftovers, and pundit
-/// rows invented from titles/descriptions. Not invoked on API startup.
+/// One-shot helper to remove stub extractions and pundit rows invented from
+/// titles/descriptions. Not invoked on API startup.
 /// </summary>
 public static class UnsourcedPunditPurge
 {
@@ -40,8 +40,7 @@ public static class UnsourcedPunditPurge
         var junkFeed = await db.NewsFeedItems
             .Where(n =>
                 n.Category == PunditOpinionFeedMapper.FeedCategory &&
-                (feedIds.Contains(n.Id) ||
-                 CompetitionFocus.LooksLikeOffFocus(n.Title, n.Url, n.Summary)))
+                feedIds.Contains(n.Id))
             .ToListAsync(cancellationToken);
 
         db.NewsFeedItems.RemoveRange(junkFeed);
@@ -99,8 +98,7 @@ public static class UnsourcedPunditPurge
 
         var source = opinion.SourceItem;
         if (source is not null &&
-            (CompetitionFocus.LooksLikeOffFocus(source.Title, source.SourceUrl, source.Description) ||
-             (source.ProcessingError?.Contains("Transcript incomplete", StringComparison.OrdinalIgnoreCase) ?? false) ||
+            ((source.ProcessingError?.Contains("Transcript incomplete", StringComparison.OrdinalIgnoreCase) ?? false) ||
              SourceTextQuality.IsTitleDescriptionFallback(source.Title, source.Description, source.RawText)))
         {
             return true;

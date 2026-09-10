@@ -1,54 +1,54 @@
 # Homepage Redesign
 
 ## Goal
-The homepage must demonstrate the product before explaining it.
+The homepage must be entertaining before registration and useful immediately after registration.
 
-## Proposed structure
+## Recommended anonymous order
+1. Compact hero
+2. Live Takes timeline preview
+3. Current/next fixture prediction interaction
+4. Pundits to follow / recent pundit receipts
+5. “From take to content” Studio demonstration
+6. Leagues/social proof
+7. Secondary product explanation/legal footer
 
-### A. Hero
-Short copy only:
-- Football keeps the score. We keep the receipts.
-- Make your calls. Challenge the pundits. Turn the receipts into content.
+## Hero
+Suggested structure:
+- Headline: `Football keeps the score. We keep the receipts.`
+- Supporting line: `Make your calls. Challenge the pundits. Turn what happens into content.`
+- Primary CTA: `Make a pick`
+- Secondary CTA: `Open Studio` or `See how Studio works` for anonymous users.
 
-Primary CTA: Make your picks
-Secondary CTA: Open Studio
+Do not consume a full viewport with the hero.
 
-Include compact social proof/product facts, not an 8-screen tutorial.
+## Live Takes timeline
+Mix content types; do not render ten identical cards.
+- `PunditReceiptCard`
+- `GeneralMemeCard`
+- `GifReactionCard`
+- `UserVsPunditCard`
+- `CommunityReceiptCard`
+- `TrendingTakeCard`
+- `MatchEventBanterCard`
+- `ExactScoreHeroCard`
+- `StudioReadyStoryCard`
 
-### B. Live Takes Timeline
-Directly below hero.
+Every card should answer at least one: what was said, what happened, why is it funny/interesting, what can I do next?
 
-Mixed cards:
-1. Funny GIF reaction
-2. Pundit-vs-community receipt
-3. User exact-score example
-4. Meme
-5. Trending football story with 'Make a take'
-6. Pundit quote card
-7. Match result + reaction
+## Returning-user home
+Replace generic public onboarding with:
+- matchweek progress
+- next fixture requiring a pick
+- new receipts since last visit
+- followed pundit activity
+- Aura/rank movement
+- Studio-ready stories
+- league movement
 
-Desktop: asymmetric grid / editorial feed.
-Mobile: vertical feed with occasional horizontal carousels.
-
-### C. This Matchweek
-- current matchweek
-- 3-5 featured fixtures
-- progress indicator for returning users
-- CTA to full board
-
-### D. You vs the pundits
-Show an example even to logged-out visitors.
-
-### E. Studio teaser
-Show the actual transformation:
-Prediction + pundit take + result -> content pack.
-
-### F. Leagues/Aura
-Compact retention block.
-
-### G. 3-step explanation
-Only now:
-Predict -> Compare -> Create
-
-## Homepage requirement
-A logged-out user should understand the product in 10 seconds without reading more than 2 short paragraphs.
+## Avoid
+- walls of explanatory cards
+- four zero-stat cards above real content
+- auto-scrolling content that cannot be paused
+- fake engagement counts
+- infinite motion
+- excessive marquee/ticker use

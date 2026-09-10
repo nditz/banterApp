@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function Studio() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-[820px] py-10 text-sm text-muted-foreground">Loading Studio…</div>}>
+    <Suspense fallback={<div className="mx-auto max-w-[1400px] py-10 text-sm text-muted-foreground">Loading Studio…</div>}>
       <StudioPage />
     </Suspense>
   );

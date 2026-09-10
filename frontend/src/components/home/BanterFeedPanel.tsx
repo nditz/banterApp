@@ -5,9 +5,9 @@ import { Panel } from "@/components/ui/panel";
 import { useFeed } from "@/hooks/useFeed";
 
 const FEED_SUBTITLES = {
-  personal: "Your picks vs reality — plus spicy pundit takes with GIFs",
-  pundit: "Real pundit heat, Gen Z banter, memes & source tags",
-  default: "RSS + YouTube + AI banter — GIFs, memes & football jokes",
+  personal: "Your picks vs the result — plus sourced pundit desks",
+  pundit: "Sourced pundit heat, GIFs, and matchday chaos",
+  default: "Sourced RSS, YouTube, and matchday banter",
 } as const;
 
 export function BanterFeedPanel() {
@@ -17,7 +17,7 @@ export function BanterFeedPanel() {
   return (
     <Panel
       id="banter-feed-heading"
-      title="Banter feed"
+      title="Live takes"
       subtitle={FEED_SUBTITLES[feedMode ?? "default"]}
       accent="flare"
     >

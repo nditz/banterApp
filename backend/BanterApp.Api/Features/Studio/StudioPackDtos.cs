@@ -51,7 +51,8 @@ public sealed record CreateStudioPackRequest(
     string Tone,
     Guid? ReceiptId = null,
     string? FeedItemId = null,
-    Guid? ProjectId = null);
+    Guid? ProjectId = null,
+    string? Perspective = null);
 
 public sealed record StudioPackGenerateResponse(
     StudioContentPack Pack,

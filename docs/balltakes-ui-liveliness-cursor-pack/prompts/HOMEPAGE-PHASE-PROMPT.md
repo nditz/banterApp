@@ -1,18 +1,13 @@
-Implement the approved homepage remediation only.
+Implement the approved Homepage phase only. The homepage must SHOW Ball Takes rather than explain it.
 
-Target experience:
+Priority order:
 1. compact hero
-2. immediately visible mixed Banter/Receipts timeline
-3. current matchweek preview
-4. user-vs-pundit example
-5. Studio transformation teaser
-6. leagues/Aura retention teaser
-7. short 3-step explanation
+2. varied live-takes content
+3. immediate prediction interaction
+4. pundit discovery/receipts
+5. Studio transformation demo
+6. anonymous vs returning-user relevance
 
-The homepage must demonstrate Ball Takes before explaining it.
+Do not fabricate feed items in production. If live content is unavailable, create a designed empty/error state and keep demo/example content clearly labelled only where the product intentionally supports demonstrations.
 
-Use a varied editorial feed, not a wall of identical rounded cards.
-Use real data where existing APIs provide it; otherwise use existing safe demo/sample content only if the product already supports demo states. Do not fabricate production football facts as real data.
-
-Ensure every data-driven block has loading, empty and error states.
-Do not implement unrelated route changes.
+Use varied card types; avoid a feed of identical containers. Keep motion purposeful and reduced-motion safe. Verify 375/390px and desktop.

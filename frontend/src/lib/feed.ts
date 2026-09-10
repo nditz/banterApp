@@ -1,9 +1,12 @@
-import type {
-  FeedItem,
-  FeedMedia,
-  FeedMediaType,
-  FeedReactions,
-  PaginatedResponse,
+import { stripHtml } from "./strip-html";
+import {
+  FEED_ITEM_TYPES,
+  type FeedItem,
+  type FeedItemType,
+  type FeedMedia,
+  type FeedMediaType,
+  type FeedReactions,
+  type PaginatedResponse,
 } from "./types";
 
 type ApiFeedItem = {
@@ -33,18 +36,30 @@ type ApiFeedItem = {
     disagree?: number;
   };
   contentLabel?: string;
+  receiptId?: string;
+  storyId?: string;
+  feedItemId?: string;
+  matchId?: string;
 };
 
+const RECEIPT_LIKE_TYPES = new Set<FeedItemType>([
+  "pundit_receipt",
+  "user_pundit_compare",
+  "community_receipt",
+  "studio_story",
+  "prediction_highlight",
+]);
+
 function isGifUrl(url: string): boolean {
-  return /\.gif($|[?#])/i.test(url) ||
+  return (
+    /\.gif($|[?#])/i.test(url) ||
     url.includes("giphy.com") ||
     url.includes("tenor.com") ||
-    url.startsWith("/reactions/");
+    url.startsWith("/reactions/")
+  );
 }
 
-function mapReactions(
-  raw: ApiFeedItem["reactions"]
-): FeedReactions | undefined {
+function mapReactions(raw: ApiFeedItem["reactions"]): FeedReactions | undefined {
   if (!raw) return undefined;
   return {
     agree: raw.agree ?? 0,
@@ -53,10 +68,21 @@ function mapReactions(
   };
 }
 
+function optionalId(value?: string): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function optionalPublishedAt(value?: string): string | undefined {
+  if (!value) return undefined;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? value : undefined;
+}
+
 function mapFeedItem(raw: ApiFeedItem, index: number): FeedItem | null {
   const id = raw.id ?? `feed-${index}`;
-  const title = raw.title?.trim();
-  const body = (raw.body ?? raw.summary)?.trim();
+  const title = stripHtml(raw.title);
+  const body = stripHtml(raw.body ?? raw.summary);
 
   if (!title || !body) {
     return null;
@@ -94,10 +120,14 @@ function mapFeedItem(raw: ApiFeedItem, index: number): FeedItem | null {
     source: raw.source,
     sourceUrl: raw.sourceUrl ?? raw.url,
     author: raw.author,
-    publishedAt: raw.publishedAt ?? new Date().toISOString(),
+    publishedAt: optionalPublishedAt(raw.publishedAt),
     likes: raw.likes ?? raw.viewCount,
     reactions: mapReactions(raw.reactions),
     contentLabel: raw.contentLabel,
+    receiptId: optionalId(raw.receiptId),
+    storyId: optionalId(raw.storyId),
+    feedItemId: optionalId(raw.feedItemId),
+    matchId: optionalId(raw.matchId),
   };
 }
 
@@ -105,15 +135,52 @@ function isFeedMediaType(value: string | undefined): value is FeedMediaType {
   return value === "image" || value === "gif" || value === "video" || value === "clip";
 }
 
-function isFeedItemType(value: string): value is FeedItem["type"] {
-  return [
-    "banter",
-    "meme",
-    "news",
-    "leaderboard",
-    "prediction_highlight",
-    "pundit_quote",
-  ].includes(value);
+export function isFeedItemType(value: string): value is FeedItem["type"] {
+  return (FEED_ITEM_TYPES as readonly string[]).includes(value);
+}
+
+/** Relative label for a real publishedAt. Missing/invalid → null (never "Just now"). */
+export function formatFeedPublishedAt(
+  iso?: string | null
+): { label: string; dateTime: string } | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  const time = date.getTime();
+  if (!Number.isFinite(time)) return null;
+
+  const diff = Date.now() - time;
+  if (!Number.isFinite(diff) || diff < 0) {
+    return { label: "Time unknown", dateTime: date.toISOString() };
+  }
+
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 60) {
+    const shown = Math.max(1, mins);
+    return { label: `${shown}m ago`, dateTime: date.toISOString() };
+  }
+
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) {
+    return { label: `${hours}h ago`, dateTime: date.toISOString() };
+  }
+
+  return { label: `${Math.floor(hours / 24)}d ago`, dateTime: date.toISOString() };
+}
+
+export function isReceiptLikeFeedType(type: FeedItemType): boolean {
+  return RECEIPT_LIKE_TYPES.has(type);
+}
+
+/** Studio accepts `/studio?receipt=` when the API sent a receipt/story id. Never uses item.id. */
+export function studioHrefForFeedItem(item: FeedItem): string | null {
+  if (!isReceiptLikeFeedType(item.type)) return null;
+  const id = item.receiptId || item.storyId || item.feedItemId;
+  if (!id) return null;
+  return `/studio?receipt=${encodeURIComponent(id)}`;
+}
+
+export function pickHrefForFeedItem(item: FeedItem): string | null {
+  return item.matchId ? "/matchweek" : null;
 }
 
 export function normalizeFeedResponse(

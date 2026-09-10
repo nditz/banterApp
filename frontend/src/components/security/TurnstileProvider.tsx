@@ -19,6 +19,7 @@ export function TurnstileProvider() {
         execution: "execute",
         callback: (token) => resolveTurnstileToken(token),
         "expired-callback": () => resolveTurnstileToken(null),
+        "error-callback": () => resolveTurnstileToken(null),
       });
     };
 

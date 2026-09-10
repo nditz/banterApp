@@ -1,8 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
 import { Volume2, VolumeX } from "lucide-react";
+import { FeedMediaPlaceholder } from "@/components/feed/FeedMediaPlaceholder";
 import { Button } from "@/components/ui/button";
+import { canUseNextImage } from "@/lib/feed-media";
 import type { FeedMedia as FeedMediaType } from "@/lib/types";
 import { isSafeMediaUrl } from "@/lib/safe-url";
 import { cn } from "@/lib/utils";
@@ -12,16 +15,17 @@ interface FeedMediaProps {
   className?: string;
 }
 
-/** Local, always-available image shown when a remote GIF/image URL fails (e.g. expired). */
-const FALLBACK_MEDIA_SRC = "/images/banter-feed-hero.png";
-
 export function FeedMedia({ media, className }: FeedMediaProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
   const [failed, setFailed] = useState(false);
 
   if (!isSafeMediaUrl(media.url) || (media.posterUrl && !isSafeMediaUrl(media.posterUrl))) {
-    return null;
+    return <FeedMediaPlaceholder className={className} />;
+  }
+
+  if (failed) {
+    return <FeedMediaPlaceholder className={className} />;
   }
 
   if (media.type === "gif" || media.type === "image") {
@@ -30,23 +34,41 @@ export function FeedMedia({ media, className }: FeedMediaProps) {
       (media.url.includes("giphy.com") ||
         media.url.includes("tenor.com") ||
         /\.gif($|[?#])/i.test(media.url));
+    const decorative = !media.alt;
+    const maxHeightClass = isAnimatedGif ? "max-h-56 sm:max-h-72" : "max-h-48 sm:max-h-64";
+    const useOptimized = !isAnimatedGif && canUseNextImage(media.url);
 
     return (
       <div className={cn("overflow-hidden rounded-md border border-border", className)}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={failed ? FALLBACK_MEDIA_SRC : media.url}
-          alt={media.alt ?? "Feed media"}
-          className={cn(
-            "w-full object-contain",
-            isAnimatedGif ? "max-h-56 sm:max-h-72" : "max-h-48 sm:max-h-64 sm:object-cover"
-          )}
-          loading="lazy"
-          decoding="async"
-          onError={() => {
-            if (!failed) setFailed(true);
-          }}
-        />
+        {useOptimized ? (
+          <div className={cn("relative aspect-video w-full", maxHeightClass)}>
+            <Image
+              src={media.url}
+              alt={media.alt ?? ""}
+              aria-hidden={decorative || undefined}
+              fill
+              sizes="(max-width: 640px) 100vw, 640px"
+              className="object-contain sm:object-cover"
+              onError={() => {
+                if (!failed) setFailed(true);
+              }}
+            />
+          </div>
+        ) : (
+          // Giphy/Tenor/GIF/unknown hosts — not in next.config remotePatterns.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={media.url}
+            alt={media.alt ?? ""}
+            aria-hidden={decorative || undefined}
+            className={cn("w-full object-contain", maxHeightClass, !isAnimatedGif && "sm:object-cover")}
+            loading="lazy"
+            decoding="async"
+            onError={() => {
+              if (!failed) setFailed(true);
+            }}
+          />
+        )}
       </div>
     );
   }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Table2 } from "lucide-react";
 import { Panel } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FreshnessBadge } from "@/components/ui/freshness-badge";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { TeamFlag } from "@/components/brackets/TeamFlag";
 import { useLeagueTable } from "@/hooks/useMatches";
@@ -53,10 +54,15 @@ export function LeagueTable({ compact = false }: { compact?: boolean }) {
       ) : (
         <>
           {status === "stale" && (
-            <p role="status" className="mb-3 text-sm text-muted-foreground">
-              {data?.error ??
-                "Standings may be behind — some fixtures are overdue without results."}
-            </p>
+            <FreshnessBadge
+              status="stale"
+              className="mb-3"
+              label={
+                data?.error ??
+                "Standings may be behind — some fixtures are overdue without results."
+              }
+              updatedAt={data?.lastSyncedAt}
+            />
           )}
         <div className="min-w-0 w-full max-w-full" role="table" aria-label="Premier League table">
           <div className={cn(grid, "pb-2")} role="row">

@@ -1,23 +1,21 @@
 # UI Acceptance Checklist
 
-- [ ] Product purpose is understandable within first viewport
-- [ ] Studio is visibly a primary destination
-- [ ] Homepage shows real/lively product examples
-- [ ] No 8-step onboarding before useful content
-- [ ] Green is an accent, not every surface
+- [ ] Clear primary action above the fold
+- [ ] Studio is visibly a primary product destination
+- [ ] Pundit comparison is discoverable without reading documentation
+- [ ] Homepage contains real useful content when user has no history
+- [ ] No blank async sections
+- [ ] Loading, empty, stale and error states are distinct
+- [ ] No fake production data or fake engagement metrics
+- [ ] Mobile 375/390px has no horizontal overflow
+- [ ] Tablet and 1440px desktop checked
+- [ ] Keyboard focus visible
+- [ ] Reduced-motion behavior checked
+- [ ] Media has reserved dimensions
+- [ ] No autoplay audio
+- [ ] Green is an accent, not the entire interface
 - [ ] No unnecessary gradients/glow/glassmorphism
-- [ ] Shared spacing/radius/type tokens used
-- [ ] No arbitrary Tailwind values without reason
-- [ ] Every async section has loading/loaded/empty/error states
-- [ ] Empty ad slots collapse
-- [ ] Club crests/football identity used appropriately
-- [ ] Banter feed has visibly distinct content variants
-- [ ] One primary CTA per major screen/section
-- [ ] Mobile checked around 375px
-- [ ] Tablet checked around 768px
-- [ ] Desktop checked around 1440px
-- [ ] No horizontal overflow
-- [ ] Keyboard/focus states work
-- [ ] Reduced-motion preference respected
-- [ ] GIF/media below fold is lazy/responsible
-- [ ] Build/typecheck/tests pass
+- [ ] Ad slots collapse correctly
+- [ ] Consent remains optional where legally/architecturally optional
+- [ ] Core Web Vitals not materially regressed
+- [ ] Existing product flows remain functional

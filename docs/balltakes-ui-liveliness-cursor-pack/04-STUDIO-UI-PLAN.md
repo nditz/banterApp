@@ -1,85 +1,72 @@
-# Studio UI Plan
+# Studio — Primary Creator Workspace
 
-## Studio is the core destination
-Do not treat it as a generic text-generation page.
+## Studio opening state
+Never start with a blank prompt. Start with story candidates Ball Takes already understands.
 
-## Desktop layout
-Use a creator-workspace layout:
+### Story sources
+- user beat a pundit
+- pundit beat the user
+- exact-score hit
+- terrible user prediction / self-roast
+- league rank movement
+- Aura milestone
+- season-call movement
+- followed pundit hot take
+- trending football story
+- match event/storyline
 
-Left rail:
-- Story sources
-- Recent receipts
-- Pundit clashes
-- Trending stories
-- Saved creations
+## Workspace flow
+### Step 1 — Choose story
+Cards show source, match/context, why it matters and freshness.
 
-Center:
-- selected story context
-- content type
-- tone
-- generation controls
-- generated output
+### Step 2 — Choose format
+- short-video script
+- podcast segment
+- Reel/TikTok outline
+- meme concept
+- Instagram carousel
+- X/thread
+- caption
 
-Right rail (optional on wide screens):
-- source facts
-- related statistics
-- pundit/user comparison
-- copy/export actions
+### Step 3 — Choose energy
+- funny
+- ruthless
+- analytical
+- rant
+- victory lap
+- self roast
+- pundit-style
 
-## Mobile
-Use staged flow:
-1. Select story
-2. Select format
-3. Select energy
-4. Generate
-5. Review/copy/export
+### Step 4 — Choose perspective
+- me vs pundit
+- my take
+- pundit receipt
+- match story
+- league/friends story
 
-## Story cards
-Examples:
-- You beat Gary Neville
-- Your Manchester derby call aged terribly
-- Your private league moved you #7 -> #1
-- Pundit take aged badly
-- Trending football story
+### Step 5 — Generate content pack
+Content pack should expose structured sections rather than one blob:
+- title
+- hook
+- narrative/script
+- verified football facts used
+- user prediction
+- pundit take + attribution/source metadata
+- actual result
+- suggested visual beats
+- meme/GIF direction
+- external AI prompt
+- voiceover prompt where relevant
+- caption
+- hashtags
+- source/fact notes
 
-## Content types
-- Short video script
-- Podcast segment
-- Meme concept
-- Instagram carousel outline
-- X thread
-- Caption
+### Step 6 — Export
+Offer granular copy actions and `Copy content pack`. External-provider integrations may be added later, but Studio must be useful without them.
 
-## Energy/tone
-- Funny
-- Ruthless
-- Analytical
-- Rant
-- Victory lap
-- Self roast
-- Pundit-style
+## Layout
+Desktop: story/context rail + creator workspace + preview/output panel where width allows.
+Mobile: stepper/sheets; never compress a three-column desktop editor into tiny columns.
 
-## Generated content pack
-Must support:
-- Hook
-- Script
-- Key facts
-- Suggested visual plan
-- AI media prompt
-- Voiceover prompt
-- Caption
-- Hashtags
-- source/context metadata
-
-Actions:
-- Copy script
-- Copy AI prompt
-- Copy full content pack
-- Regenerate angle
-- Save
-
-## Do not
-- start with blank prompt
-- hide source context
-- generate huge undifferentiated text blocks
-- make export a secondary afterthought
+## Trust
+Clearly distinguish sourced facts/quotes, user-created takes and AI-generated copy. Never fabricate a pundit quote to make a better story.

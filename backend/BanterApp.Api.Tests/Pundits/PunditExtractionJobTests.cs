@@ -121,48 +121,6 @@ public class PunditExtractionJobTests
         Assert.True(usage.CircuitOpened);
     }
 
-    [Fact]
-    public async Task ExtractAsync_SkipsWorldCupItemsWithoutCallingOpenAi()
-    {
-        await using var db = TestDbContextFactory.Create();
-        var source = new MediaSource
-        {
-            Id = Guid.NewGuid(),
-            Name = "Sky",
-            SourceType = "rss",
-            ExtractPredictions = true,
-            IsActive = true,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-        db.MediaSources.Add(source);
-        var item = EnrichedItem(source.Id, "wc");
-        item.Title = "World Cup hydration breaks";
-        item.SourceUrl = "https://www.theguardian.com/football/world-cup/2026";
-        db.MediaItems.Add(item);
-        await db.SaveChangesAsync();
-
-        var extractor = new RateLimitExtractor();
-        var tracking = new RecordingErrorTracking();
-        var usage = new RecordingUsageGuard();
-        var job = new PunditExtractionJob(
-            db,
-            extractor,
-            persistence: null!,
-            Options.Create(new PunditIngestOptions { Enabled = true, ExtractionBatchSize = 5, MinSourceTextLength = 20 }),
-            new SyncRunTracker(db, tracking, NullLogger<SyncRunTracker>.Instance),
-            new StubRecurringJobs(),
-            usage,
-            tracking,
-            NullLogger<PunditExtractionJob>.Instance);
-
-        await job.ExtractAsync(CancellationToken.None);
-
-        Assert.Equal(0, extractor.Calls);
-        var stored = Assert.Single(db.MediaItems);
-        Assert.Equal(MediaItemProcessingStatus.Skipped, stored.ProcessingStatus);
-        Assert.Contains("Off-focus", stored.ProcessingError, StringComparison.OrdinalIgnoreCase);
-    }
-
     private static MediaItem EnrichedItem(Guid sourceId, string suffix) => new()
     {
         Id = Guid.NewGuid(),

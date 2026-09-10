@@ -76,7 +76,7 @@ public sealed class PunditMediaItemService
 
         var hash = ContentHashHelper.Compute(externalId, item.SourceUrl, item.Title);
 
-        if (CompetitionFocus.LooksLikeOffFocus(item.Title, item.SourceUrl, item.Description, item.FullText))
+        if (!source.IsActive)
         {
             return (0, 0, 1, false);
         }

@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useCurrentMatchweek, useMatches } from "@/hooks/useMatches";
 import { useStudio } from "@/hooks/useStudio";
+import { FreshnessBadge } from "@/components/ui/freshness-badge";
 import { datasetStatusFromMatchweek, isUnofficialMatchweek } from "@/lib/football-dataset";
 import { isMatchLocked } from "@/lib/anonymous";
 import type { Match } from "@/lib/types";
@@ -46,11 +47,24 @@ export function PredictionCenter() {
   }, [weekMatches, upcoming]);
 
   const comparisonIds = useMemo(() => openMatches.map((m) => m.id), [openMatches]);
-  const { data: comparison } = useStudio(comparisonIds);
+  const {
+    data: comparison,
+    isPending: comparisonLoading,
+    isError: comparisonError,
+    refetch: refetchComparison,
+  } = useStudio(comparisonIds);
   const comparisonById = useMemo(
     () => new Map((comparison?.matches ?? []).map((row) => [row.matchId, row])),
     [comparison]
   );
+  const comparisonStatus = comparisonLoading ? "loading" : comparisonError ? "error" : "ready";
+
+  const weekList = weekMatches ?? [];
+  const lockedCount = weekList.filter((match) => isMatchLocked(match)).length;
+  const progressLabel =
+    !isLoading && weekStatus !== "error" && weekList.length > 0
+      ? `${lockedCount} of ${weekList.length} locked`
+      : undefined;
 
   const pages = useMemo(
     () => chunk<Match>(openMatches, MATCHES_PER_PAGE),
@@ -85,6 +99,13 @@ export function PredictionCenter() {
       title={currentWeek?.number ? `Matchweek ${currentWeek.number}` : "Matchweek picks"}
       subtitle="Premier League fixtures — lock in before kickoff"
       accent="pitch"
+      action={
+        progressLabel ? (
+          <p className="text-[11px] font-semibold tabular-nums text-muted-foreground">
+            {progressLabel}
+          </p>
+        ) : undefined
+      }
       className="xl:flex xl:max-h-[calc(100vh-6.5rem)] xl:min-h-[34rem] xl:flex-col"
       bodyClassName="xl:flex xl:min-h-0 xl:flex-1 xl:flex-col"
     >
@@ -97,10 +118,14 @@ export function PredictionCenter() {
         </p>
       )}
       {weekStatus === "stale" && (
-        <p role="status" className="mb-3 shrink-0 text-sm text-muted-foreground">
-          {currentWeek?.error ??
-            "These kickoffs are overdue without results. Score sync may be failing."}
-        </p>
+        <FreshnessBadge
+          status="stale"
+          className="mb-3 shrink-0"
+          label={
+            currentWeek?.error ??
+            "These kickoffs are overdue without results. Score sync may be failing."
+          }
+        />
       )}
       {isUnofficialMatchweek(currentWeek) && weekStatus !== "error" && (
         <p className="mb-3 shrink-0 text-xs text-muted-foreground">
@@ -152,6 +177,8 @@ export function PredictionCenter() {
                       match={match}
                       comparison={comparisonById.get(match.id)}
                       filteringToFollows={comparison?.filteringToFollows}
+                      comparisonStatus={comparisonStatus}
+                      onRetryComparison={() => void refetchComparison()}
                     />
                   ))}
                 </div>

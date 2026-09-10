@@ -64,38 +64,38 @@ export function WelcomeSlideBody({
       }
       transition={{ duration: 0.45, ease: motionEase }}
     >
-        <span
-          className={cn(
-            "inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em]",
-            accentChip[slide.accent]
-          )}
-        >
-          {slide.subtitle}
-        </span>
-
-        <div className="space-y-1.5">
-          <h2 className="font-display text-lg leading-[0.95] tracking-wide sm:text-xl">
-            {slide.title}
-          </h2>
-          <p className="max-w-xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
-            {slide.body}
-          </p>
-        </div>
-
-        {slide.highlights && slide.highlights.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5 pt-0.5" aria-label="Highlights">
-            {slide.highlights.map((item) => (
-              <li
-                key={item}
-                className="rounded-full border border-border/80 bg-background/70 px-2.5 py-1 text-[10px] font-semibold text-foreground sm:text-[11px]"
-              >
-                {item}
-              </li>
-            ))}
-          </ul>
+      <span
+        className={cn(
+          "inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em]",
+          accentChip[slide.accent]
         )}
+      >
+        {slide.subtitle}
+      </span>
 
-        {footer}
+      <div className="space-y-1.5">
+        <h2 className="font-display text-lg leading-[0.95] tracking-wide sm:text-xl">
+          {slide.title}
+        </h2>
+        <p className="max-w-xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
+          {slide.body}
+        </p>
+      </div>
+
+      {slide.highlights && slide.highlights.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5 pt-0.5" aria-label="Highlights">
+          {slide.highlights.map((item) => (
+            <li
+              key={item}
+              className="rounded-full border border-border/80 bg-background/70 px-2.5 py-1 text-[10px] font-semibold text-foreground sm:text-[11px]"
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {footer}
     </motion.div>
   );
 }

@@ -1,25 +1,36 @@
-# Banter Timeline Components
+# Banter Timeline Component System
 
-Create a normalized feed model and reusable visual variants rather than one generic card.
+## Feed architecture
+Use a discriminated content model and a renderer registry rather than a single mega-card with dozens of conditionals.
 
-Recommended variants:
-- `GifReactionCard`
-- `MemeCard`
-- `PunditReceiptCard`
-- `UserVsPunditCard`
-- `ExactScoreHeroCard`
-- `AgedBadlyCard`
-- `CommunityTakeCard`
-- `TrendingStoryCard`
-- `MatchPulseCard`
-- `AuraMovementCard`
+Suggested feed item types:
+`meme`, `gif_reaction`, `pundit_receipt`, `user_pundit_compare`, `community_receipt`, `trending_take`, `match_event`, `studio_story`.
 
-Shared anatomy where relevant:
-- source badge
-- timestamp/match context
-- visual/media
-- short copy
-- receipt/context facts
-- engagement/share/create actions
+## Shared anatomy
+Each card can draw from:
+- eyebrow/type
+- timestamp/freshness
+- football context
+- primary statement
+- media
+- before/after comparison
+- attribution
+- reaction/engagement controls if real
+- Studio CTA
 
-Every feed card should have one clear next action, often `Create from this`.
+## Motion
+Use motion to communicate state:
+- receipt stamp on reveal
+- score/result transition
+- Aura/rank delta
+- subtle card entrance on newly fetched content
+- media crossfade
+Respect `prefers-reduced-motion`. No perpetual bouncing CTAs.
+
+## Feed behavior
+- SSR/server-render initial useful content where practical.
+- Client enhancement for refresh/reactions.
+- Stable card heights where possible to avoid layout shift.
+- Media lazy-loading below fold.
+- Provide pause controls for any automatically moving carousel/ticker.
+- Do not autoplay audio.

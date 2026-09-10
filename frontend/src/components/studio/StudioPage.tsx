@@ -15,8 +15,10 @@ import { StudioStoryWorkspace } from "@/components/studio/StudioStoryWorkspace";
 import { StudioSummaryBar } from "@/components/studio/StudioSummaryBar";
 import { CumulativeScriptExport } from "@/components/content/CumulativeScriptExport";
 import { PunditScriptGenerator } from "@/components/content/PunditScriptGenerator";
+import { Panel } from "@/components/ui/panel";
+import { PageContainer, SectionHeader } from "@/components/ui/section-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/states";
+import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useStudio } from "@/hooks/useStudio";
 import { PRODUCT_METRICS, recordMetric } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
@@ -24,36 +26,48 @@ import type { StudioPickRole } from "@/lib/types";
 
 type Tab = "stories" | "my_picks" | "vs_league" | "vs_pundits" | "script";
 
-const tabs: { id: Tab; label: string; icon: React.ReactNode; description: string }[] = [
+const tabs: {
+  id: Tab;
+  label: string;
+  shortLabel: string;
+  icon: React.ReactNode;
+  description: string;
+}[] = [
   {
     id: "stories",
     label: "Stories",
-    icon: <Clapperboard className="size-3.5" />,
+    shortLabel: "Stories",
+    icon: <Clapperboard className="size-3.5" aria-hidden />,
     description: "Pick a receipt, pundit clash, or sourced story — then export a content pack",
   },
   {
     id: "my_picks",
     label: "My Picks",
-    icon: <FileText className="size-3.5" />,
+    shortLabel: "Picks",
+    icon: <FileText className="size-3.5" aria-hidden />,
     description: "A full breakdown of every prediction you've made",
   },
   {
     id: "vs_league",
     label: "vs League",
-    icon: <Users className="size-3.5" />,
+    shortLabel: "League",
+    icon: <Users className="size-3.5" aria-hidden />,
     description: "How your calls stack up against your league mates",
   },
   {
     id: "vs_pundits",
     label: "vs Pundits",
-    icon: <Mic2 className="size-3.5" />,
+    shortLabel: "Pundits",
+    icon: <Mic2 className="size-3.5" aria-hidden />,
     description: "Your picks side-by-side with sourced pundit predictions",
   },
   {
     id: "script",
-    label: "Script",
-    icon: <Sparkles className="size-3.5" />,
-    description: "Generate pundit match analysis scripts and prediction recap exports",
+    label: "Legacy export / persona",
+    shortLabel: "Legacy",
+    icon: <Sparkles className="size-3.5" aria-hidden />,
+    description:
+      "Legacy persona scripts and recap exports. Stories is the Studio home — start from a receipt or sourced headline.",
   },
 ];
 
@@ -69,7 +83,7 @@ export function StudioPage() {
   const searchParams = useSearchParams();
   const receiptId = searchParams.get("receipt");
   const [tab, setTab] = useState<Tab>("stories");
-  const { data, isLoading } = useStudio();
+  const { data, isLoading, isError, refetch } = useStudio();
 
   const activeTab = tabs.find((t) => t.id === tab)!;
   const filter = roleFilter[tab];
@@ -79,20 +93,13 @@ export function StudioPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-[820px] space-y-5">
-      <div className="rounded-xl border border-gold/30 bg-gradient-to-br from-brand/80 to-brand/60 px-5 py-4 text-brand-foreground shadow-md">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="flex items-center gap-2 text-lg font-bold">
-              <Sparkles className="size-5 text-gold" aria-hidden />
-              Content Studio
-            </h1>
-            <p className="mt-0.5 text-sm text-brand-foreground/70">
-              Pick a story · lock the facts · export a pack for your editor or AI tool
-            </p>
-          </div>
-        </div>
-      </div>
+    <PageContainer width="wide" className="space-y-5">
+      <SectionHeader
+        as="h1"
+        eyebrow="Creator workspace"
+        title="Content Studio"
+        description="Pick a story · lock the facts · export a pack for your editor or AI tool"
+      />
 
       {isLoading ? (
         <div className="flex gap-3">
@@ -100,34 +107,45 @@ export function StudioPage() {
             <Skeleton key={i} className="h-16 flex-1 rounded-xl" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState
+          dense
+          title="Studio comparison unavailable"
+          description="Stories still load below. League and pundit comparison totals will return when this request succeeds."
+          onRetry={() => void refetch()}
+        />
       ) : (
         data && <StudioSummaryBar data={data} />
       )}
 
-      <div
-        className="flex gap-1 rounded-xl border border-border bg-muted/40 p-1"
-        role="tablist"
-        aria-label="Studio sections"
-      >
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition-all duration-200",
-              tab === t.id
-                ? "bg-card text-foreground shadow-sm ring-1 ring-border"
-                : "text-muted-foreground hover:bg-card/60 hover:text-foreground"
-            )}
-          >
-            {t.icon}
-            <span className="hidden sm:inline">{t.label}</span>
-            <span className="sr-only sm:hidden">{t.label}</span>
-          </button>
-        ))}
+      <div className="-mx-1 overflow-x-auto">
+        <div
+          className="flex min-w-max gap-1 rounded-xl border border-border bg-muted/40 p-1 sm:min-w-0"
+          role="tablist"
+          aria-label="Studio sections"
+        >
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-label={t.label}
+              aria-selected={tab === t.id}
+              onPointerDown={() => setTab(t.id)}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:flex-1 [&_svg]:pointer-events-none",
+                tab === t.id
+                  ? "bg-card text-foreground shadow-sm ring-1 ring-border"
+                  : "text-muted-foreground hover:bg-card/60 hover:text-foreground"
+              )}
+            >
+              {t.icon}
+              <span aria-hidden="true" className="sm:hidden">{t.shortLabel}</span>
+              <span aria-hidden="true" className="hidden sm:inline">{t.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <p className="text-sm text-muted-foreground">{activeTab.description}</p>
@@ -165,29 +183,22 @@ export function StudioPage() {
       ) : (
         <StudioTabEmpty tab={tab} />
       )}
-    </div>
+    </PageContainer>
   );
 }
 
 function ScriptTab() {
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-gold/30 bg-gold/5 p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-full bg-gold/20">
-            <Mic2 className="size-4 text-gold" aria-hidden />
-          </span>
-          <div>
-            <p className="text-sm font-semibold">Pundit Match Analysis</p>
-            <p className="text-[11px] text-muted-foreground">
-              Pick a match and persona — get an 8-scene video-ready script with visual cues for HeyGen, Synthesia, or DALL-E.
-            </p>
-          </div>
-        </div>
+      <Panel
+        title="Legacy export / persona"
+        subtitle="Parody persona scripts are not sourced pundit quotes. For a receipt-backed pack, stay on Stories."
+        accent="gold"
+      >
         <PunditScriptGenerator />
-      </div>
+      </Panel>
 
-      <div className="rounded-xl border border-border bg-card p-4">
+      <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4">
         <p className="text-xs font-semibold">How to use with AI video tools</p>
         <ol className="mt-2 space-y-1.5 text-[11px] text-muted-foreground">
           <li className="flex gap-2">
@@ -205,20 +216,12 @@ function ScriptTab() {
         </ol>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-full bg-muted">
-            <FileText className="size-4 text-muted-foreground" aria-hidden />
-          </span>
-          <div>
-            <p className="text-sm font-semibold">Prediction Recap Export</p>
-            <p className="text-[11px] text-muted-foreground">
-              Cumulative script from your prediction picks — pre-match picks or post-match praise/burn cuts.
-            </p>
-          </div>
-        </div>
+      <Panel
+        title="Prediction recap export"
+        subtitle="Cumulative script from your prediction picks — pre-match picks or post-match praise/burn cuts."
+      >
         <CumulativeScriptExport minimal={false} />
-      </div>
+      </Panel>
     </div>
   );
 }

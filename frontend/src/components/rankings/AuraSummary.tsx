@@ -2,6 +2,7 @@
 
 import { Flame, Sparkles, TrendingUp, Trophy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useAura } from "@/hooks/useAura";
 import { cn } from "@/lib/utils";
 
@@ -38,10 +39,30 @@ function Stat({
  * there is no separate client-side total.
  */
 export function AuraSummary() {
-  const { summary, isLoading } = useAura();
+  const { summary, isLoading, isError } = useAura();
 
   if (isLoading) {
     return <Skeleton className="h-16 w-full rounded-xl" />;
+  }
+
+  if (isError) {
+    return (
+      <ErrorState
+        dense
+        title="Aura unavailable"
+        description="Settled points will show here when the request succeeds."
+      />
+    );
+  }
+
+  if (summary.settledPicks === 0 && summary.total === 0) {
+    return (
+      <EmptyState
+        dense
+        title="Aura lands when results settle"
+        description="Lock picks first — this board stays empty until a matchweek pays out. It is not a zero score."
+      />
+    );
   }
 
   const accuracy =

@@ -1,24 +1,53 @@
+"use client";
+
 import Link from "next/link";
+import { PunditInlineFollow } from "@/components/pundits/PunditInlineFollow";
 import { comparisonPhase } from "@/lib/comparison-phase";
 import { formatSourcePlatformLabel } from "@/lib/pundits";
+import { ErrorState } from "@/components/ui/states";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { StudioMatchComparison, StudioPickEntry } from "@/lib/types";
 
 interface MatchPunditComparisonProps {
   comparison?: StudioMatchComparison;
   filteringToFollows?: boolean;
+  status?: "loading" | "ready" | "error";
+  onRetry?: () => void;
 }
 
 export function MatchPunditComparison({
   comparison,
   filteringToFollows,
+  status = "ready",
+  onRetry,
 }: MatchPunditComparisonProps) {
-  if (!comparison) {
-    return null;
+  if (status === "loading") {
+    return (
+      <div className="border-t border-border bg-muted/20 px-3.5 py-2.5" aria-busy="true">
+        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+          You vs pundits
+        </p>
+        <Skeleton className="h-8 w-full rounded-md" />
+      </div>
+    );
   }
 
-  const you = comparison.picks.filter((p) => p.role === "me");
-  const pundits = comparison.picks.filter((p) => p.role === "pundit");
-  const phase = comparisonPhase(comparison);
+  if (status === "error") {
+    return (
+      <div className="border-t border-border bg-muted/20 px-3.5 py-2.5">
+        <ErrorState
+          dense
+          title="Pundit comparison unavailable"
+          description="Your fixture is still here. We couldn't load sourced takes for this match."
+          onRetry={onRetry}
+        />
+      </div>
+    );
+  }
+
+  const you = comparison?.picks.filter((p) => p.role === "me") ?? [];
+  const pundits = comparison?.picks.filter((p) => p.role === "pundit") ?? [];
+  const phase = comparison ? comparisonPhase(comparison) : "before";
 
   return (
     <div className="border-t border-border bg-muted/20 px-3.5 py-2.5">
@@ -37,7 +66,8 @@ export function MatchPunditComparison({
           <Link href="/pundits" className="font-semibold text-foreground hover:underline">
             Follow pundits
           </Link>{" "}
-          so their picks land here when ingest links them.
+          so their picks land here when ingest links them. Following is optional — lock a pick
+          above either way.
         </p>
       ) : (
         <div className="space-y-1.5">
@@ -47,15 +77,19 @@ export function MatchPunditComparison({
             <p className="text-[11px] text-muted-foreground">Lock your pick above to compare.</p>
           )}
           {pundits.length > 0 ? (
-            <PickRow label="Pundits" picks={pundits} phase={phase} />
+            <PickRow label="Pundits" picks={pundits} phase={phase} showFollow />
           ) : (
             <p className="text-[11px] text-muted-foreground">
               {filteringToFollows
                 ? "None of the desks you follow have a sourced pick for this fixture."
-                : "No reviewed pundit pick is linked to this fixture yet."}
+                : "No reviewed pundit pick is linked to this fixture yet."}{" "}
+              <Link href="/pundits" className="font-semibold text-foreground hover:underline">
+                Follow pundits
+              </Link>
+              {" — optional, never required to predict."}
             </p>
           )}
-          {comparison.actualResult ? (
+          {comparison?.actualResult ? (
             <p className="text-[11px] font-semibold text-pitch">Final {comparison.actualResult}</p>
           ) : null}
         </div>
@@ -68,10 +102,12 @@ function PickRow({
   label,
   picks,
   phase,
+  showFollow = false,
 }: {
   label: string;
   picks: StudioPickEntry[];
   phase: "before" | "after";
+  showFollow?: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-start gap-x-2 gap-y-1 text-[11px]">
@@ -101,6 +137,7 @@ function PickRow({
                 {formatSourcePlatformLabel(p.sourcePlatform) ?? "Source"}
               </a>
             ) : null}
+            {showFollow ? <PunditInlineFollow name={p.name} /> : null}
           </span>
         ))}
       </div>

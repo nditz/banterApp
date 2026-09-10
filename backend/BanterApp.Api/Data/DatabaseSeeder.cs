@@ -70,11 +70,6 @@ public static class DatabaseSeeder
             var articles = await news.GetLatestArticlesAsync(20, cancellationToken);
             foreach (var article in articles)
             {
-                if (CompetitionFocus.LooksLikeOffFocus(article.Title, article.Url, article.Summary))
-                {
-                    continue;
-                }
-
                 db.NewsFeedItems.Add(new NewsFeedItem
                 {
                     Id = article.Id,
