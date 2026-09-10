@@ -1,5 +1,6 @@
 import type { PredictionReaction } from '@/lib/reactionEngine';
 import { getThemeForReaction } from '@/lib/predictionThemes';
+import { formatTakeVibe } from '@/reactions/reactionContent';
 import { cn } from '@/lib/utils';
 
 export function PredictionReceiptCard({
@@ -48,8 +49,7 @@ export function PredictionReceiptCard({
         <div className="mt-5 flex items-center justify-between border-t border-brand-foreground/15 pt-4 text-xs text-brand-foreground/70">
           <span>{createdAt}</span>
           <span className={cn('rounded-full px-2 py-0.5 font-bold', theme.bg, theme.text)}>
-            {reaction.auraDelta > 0 ? '+' : ''}
-            {reaction.auraDelta} aura
+            {formatTakeVibe(reaction.auraDelta)}
           </span>
         </div>
         {leagueName && (

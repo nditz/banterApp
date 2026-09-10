@@ -152,7 +152,8 @@ public static class ServiceCollectionExtensions
         if ((aiProvider is "openai" or "chatgpt") && !string.IsNullOrWhiteSpace(aiApiKey))
         {
             services.AddHttpClient<IContentGenerator, OpenAiContentGenerator>();
-            services.AddHttpClient<IPunditOpinionExtractor, OpenAiPunditOpinionExtractor>();
+            services.AddHttpClient<IPunditOpinionExtractor, OpenAiPunditOpinionExtractor>()
+                .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(120));
             services.AddHttpClient<IRssUrlDiscovery, OpenAiRssUrlDiscovery>()
                 .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(30));
         }

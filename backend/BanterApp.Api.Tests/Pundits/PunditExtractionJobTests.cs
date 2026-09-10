@@ -65,6 +65,62 @@ public class PunditExtractionJobTests
         Assert.False(PunditExtractionJob.IsOpenAiRateLimit(new InvalidOperationException("boom")));
     }
 
+    [Fact]
+    public void IsOpenAiTimeout_DetectsMapped408()
+    {
+        var ex = ProviderErrorMapper.MapOpenAi(408, "opinion.extract", sourceUrl: "https://www.skysports.com/report");
+        Assert.True(PunditExtractionJob.IsOpenAiTimeout(ex));
+        Assert.False(PunditExtractionJob.IsOpenAiTimeout(ProviderErrorMapper.MapOpenAi(429, "opinion.extract")));
+    }
+
+    [Fact]
+    public async Task ExtractAsync_Timeout_MarksItemFailedAndStopsAfterTwo()
+    {
+        await using var db = TestDbContextFactory.Create();
+        var source = new MediaSource
+        {
+            Id = Guid.NewGuid(),
+            Name = "Sky",
+            SourceType = "rss",
+            ExtractPredictions = true,
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        db.MediaSources.Add(source);
+        db.MediaItems.AddRange(
+            EnrichedItem(source.Id, "one"),
+            EnrichedItem(source.Id, "two"),
+            EnrichedItem(source.Id, "three"));
+        await db.SaveChangesAsync();
+
+        var extractor = new TimeoutExtractor();
+        var tracking = new RecordingErrorTracking();
+        var usage = new RecordingUsageGuard();
+        var job = new PunditExtractionJob(
+            db,
+            extractor,
+            persistence: null!,
+            Options.Create(new PunditIngestOptions { Enabled = true, ExtractionBatchSize = 5, MinSourceTextLength = 20 }),
+            new SyncRunTracker(db, tracking, NullLogger<SyncRunTracker>.Instance),
+            new StubRecurringJobs(),
+            usage,
+            tracking,
+            NullLogger<PunditExtractionJob>.Instance);
+
+        await job.ExtractAsync(CancellationToken.None);
+
+        Assert.Equal(2, extractor.Calls);
+        Assert.Equal(2, db.MediaItems.Count(i => i.ProcessingStatus == MediaItemProcessingStatus.Failed));
+        Assert.Equal(1, db.MediaItems.Count(i => i.ProcessingStatus == MediaItemProcessingStatus.Enriched));
+        Assert.Contains(tracking.Requests, r =>
+            r.ErrorCode == ErrorCodes.JobFailed &&
+            r.MessageSafe == "AI service timed out." &&
+            r.Metadata is not null &&
+            r.Metadata.ContainsKey("entity_id"));
+        Assert.DoesNotContain(tracking.Requests, r => r.ErrorCode == ErrorCodes.ExternalApiError);
+        Assert.True(usage.CircuitOpened);
+    }
+
     private static MediaItem EnrichedItem(Guid sourceId, string suffix) => new()
     {
         Id = Guid.NewGuid(),
@@ -97,6 +153,25 @@ public class PunditExtractionJobTests
         }
     }
 
+    private sealed class TimeoutExtractor : IPunditOpinionExtractor
+    {
+        public int Calls { get; private set; }
+
+        public Task<PunditExtractionResult?> ExtractAsync(
+            string sourceType,
+            string sourceName,
+            string sourceUrl,
+            string sourceTitle,
+            DateTimeOffset? publishedAt,
+            string? author,
+            string sourceText,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            throw ProviderErrorMapper.MapOpenAi(408, "opinion.extract", sourceUrl: sourceUrl);
+        }
+    }
+
     private sealed class RecordingUsageGuard : IProviderUsageGuard
     {
         public bool CircuitOpened { get; private set; }
@@ -107,7 +182,11 @@ public class PunditExtractionJobTests
         public Task RecordSuccessAsync(string provider, int estimatedUnits = 1, int latencyMs = 0, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task RecordFailureAsync(string provider, string message, CancellationToken ct = default) =>
+        public Task RecordFailureAsync(
+            string provider,
+            string message,
+            CancellationToken ct = default,
+            bool trackOperationalError = true) =>
             Task.CompletedTask;
 
         public Task<ProviderUsageSummary> GetTodaySummaryAsync(string provider, CancellationToken ct = default) =>

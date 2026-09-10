@@ -1,26 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
+  Clapperboard,
   FileText,
   Mic2,
   Sparkles,
   Users,
-  Video,
 } from "lucide-react";
 import { MatchComparisonCard } from "@/components/studio/MatchComparisonCard";
+import { StudioStoryWorkspace } from "@/components/studio/StudioStoryWorkspace";
 import { StudioSummaryBar } from "@/components/studio/StudioSummaryBar";
 import { CumulativeScriptExport } from "@/components/content/CumulativeScriptExport";
 import { PunditScriptGenerator } from "@/components/content/PunditScriptGenerator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/states";
 import { useStudio } from "@/hooks/useStudio";
+import { PRODUCT_METRICS, recordMetric } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
 import type { StudioPickRole } from "@/lib/types";
 
-type Tab = "my_picks" | "vs_league" | "vs_pundits" | "script";
+type Tab = "stories" | "my_picks" | "vs_league" | "vs_pundits" | "script";
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode; description: string }[] = [
+  {
+    id: "stories",
+    label: "Stories",
+    icon: <Clapperboard className="size-3.5" />,
+    description: "Pick a receipt, pundit clash, or sourced story — then export a content pack",
+  },
   {
     id: "my_picks",
     label: "My Picks",
@@ -48,6 +58,7 @@ const tabs: { id: Tab; label: string; icon: React.ReactNode; description: string
 ];
 
 const roleFilter: Record<Tab, StudioPickRole[] | undefined> = {
+  stories: undefined,
   my_picks: ["me"],
   vs_league: ["me", "league"],
   vs_pundits: ["me", "pundit"],
@@ -55,15 +66,20 @@ const roleFilter: Record<Tab, StudioPickRole[] | undefined> = {
 };
 
 export function StudioPage() {
-  const [tab, setTab] = useState<Tab>("my_picks");
+  const searchParams = useSearchParams();
+  const receiptId = searchParams.get("receipt");
+  const [tab, setTab] = useState<Tab>("stories");
   const { data, isLoading } = useStudio();
 
   const activeTab = tabs.find((t) => t.id === tab)!;
   const filter = roleFilter[tab];
 
+  useEffect(() => {
+    recordMetric(PRODUCT_METRICS.studioOpened);
+  }, []);
+
   return (
     <div className="mx-auto max-w-[820px] space-y-5">
-      {/* Page header */}
       <div className="rounded-xl border border-gold/30 bg-gradient-to-br from-brand/80 to-brand/60 px-5 py-4 text-brand-foreground shadow-md">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -72,13 +88,12 @@ export function StudioPage() {
               Content Studio
             </h1>
             <p className="mt-0.5 text-sm text-brand-foreground/70">
-              Review your predictions · compare with your league & the pros · generate your broadcast script
+              Pick a story · lock the facts · export a pack for your editor or AI tool
             </p>
           </div>
         </div>
       </div>
 
-      {/* Summary stats */}
       {isLoading ? (
         <div className="flex gap-3">
           {[0, 1, 2].map((i) => (
@@ -89,9 +104,8 @@ export function StudioPage() {
         data && <StudioSummaryBar data={data} />
       )}
 
-      {/* Tabs */}
       <div
-        className="flex gap-1 rounded-xl border border-border bg-muted/40 p-1 backdrop-blur-sm"
+        className="flex gap-1 rounded-xl border border-border bg-muted/40 p-1"
         role="tablist"
         aria-label="Studio sections"
       >
@@ -111,11 +125,11 @@ export function StudioPage() {
           >
             {t.icon}
             <span className="hidden sm:inline">{t.label}</span>
+            <span className="sr-only sm:hidden">{t.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Tab description */}
       <p className="text-sm text-muted-foreground">{activeTab.description}</p>
       {tab === "vs_pundits" && (
         <p className="text-xs text-muted-foreground">
@@ -128,8 +142,9 @@ export function StudioPage() {
         </p>
       )}
 
-      {/* Tab content */}
-      {tab === "script" ? (
+      {tab === "stories" ? (
+        <StudioStoryWorkspace receiptId={receiptId} />
+      ) : tab === "script" ? (
         <ScriptTab />
       ) : isLoading ? (
         <div className="space-y-4">
@@ -148,18 +163,11 @@ export function StudioPage() {
           ))}
         </div>
       ) : (
-        <EmptyState tab={tab} />
-      )}
-
-      {/* Video placeholder — coming soon */}
-      {tab !== "script" && (
-        <ComingSoonVideoSection />
+        <StudioTabEmpty tab={tab} />
       )}
     </div>
   );
 }
-
-// ─── Script tab ───────────────────────────────────────────────────────────────
 
 function ScriptTab() {
   return (
@@ -215,25 +223,8 @@ function ScriptTab() {
   );
 }
 
-// ─── Coming Soon: Video section ───────────────────────────────────────────────
-
-function ComingSoonVideoSection() {
-  return (
-    <div className="rounded-xl border border-dashed border-border bg-muted/20 px-5 py-6 text-center">
-      <Video className="mx-auto mb-2 size-8 text-muted-foreground/50" aria-hidden />
-      <p className="text-sm font-semibold text-muted-foreground">Video content — coming soon</p>
-      <p className="mt-1 text-[11px] text-muted-foreground/70">
-        Attach your prediction video, browse trending clips from online personalities, and use the
-        same lingo as your favourite pundits.
-      </p>
-    </div>
-  );
-}
-
-// ─── Empty state ──────────────────────────────────────────────────────────────
-
-function EmptyState({ tab }: { tab: Tab }) {
-  const messages: Record<Tab, { title: string; body: string }> = {
+function StudioTabEmpty({ tab }: { tab: Exclude<Tab, "stories" | "script"> }) {
+  const messages: Record<Exclude<Tab, "stories" | "script">, { title: string; body: string }> = {
     my_picks: {
       title: "No predictions yet",
       body: "Head to the home page and pick some matches — your full record will appear here.",
@@ -246,14 +237,8 @@ function EmptyState({ tab }: { tab: Tab }) {
       title: "No picks to compare",
       body: "Make a few predictions, then follow sourced pundits so Studio can line up your calls against theirs.",
     },
-    script: { title: "", body: "" },
   };
 
   const msg = messages[tab];
-  return (
-    <div className="rounded-xl border border-border bg-card px-6 py-10 text-center">
-      <p className="text-sm font-semibold text-muted-foreground">{msg.title}</p>
-      <p className="mt-1 text-[11px] text-muted-foreground/80">{msg.body}</p>
-    </div>
-  );
+  return <EmptyState title={msg.title} description={msg.body} />;
 }

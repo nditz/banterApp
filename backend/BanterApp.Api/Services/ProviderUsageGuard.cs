@@ -1,5 +1,7 @@
+using BanterApp.Api.Common;
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Integrations.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace BanterApp.Api.Services;
@@ -8,7 +10,11 @@ public interface IProviderUsageGuard
 {
     Task<bool> CanInvokeAsync(string provider, int estimatedUnits = 1, CancellationToken ct = default);
     Task RecordSuccessAsync(string provider, int estimatedUnits = 1, int latencyMs = 0, CancellationToken ct = default);
-    Task RecordFailureAsync(string provider, string message, CancellationToken ct = default);
+    Task RecordFailureAsync(
+        string provider,
+        string message,
+        CancellationToken ct = default,
+        bool trackOperationalError = true);
     Task<ProviderUsageSummary> GetTodaySummaryAsync(string provider, CancellationToken ct = default);
     bool IsCircuitOpen(string provider);
     void OpenCircuit(string provider);
@@ -25,7 +31,7 @@ public sealed record ProviderUsageSummary(
 public sealed class ProviderUsageGuard(
     AppDbContext db,
     IConfiguration configuration,
-    IApplicationErrorLogger errorLogger) : IProviderUsageGuard
+    IErrorTrackingService errorTracking) : IProviderUsageGuard
 {
     private readonly Dictionary<string, CircuitState> _circuits = new(StringComparer.OrdinalIgnoreCase);
 
@@ -55,14 +61,33 @@ public sealed class ProviderUsageGuard(
         ResetCircuit(provider);
     }
 
-    public async Task RecordFailureAsync(string provider, string message, CancellationToken ct = default)
+    public async Task RecordFailureAsync(
+        string provider,
+        string message,
+        CancellationToken ct = default,
+        bool trackOperationalError = true)
     {
         await UpsertUsageAsync(provider, success: false, units: 0, latencyMs: 0, ct);
-        await errorLogger.LogAsync(
-            "provider",
-            message,
-            category: "provider_failure",
-            ct: ct);
+        if (trackOperationalError)
+        {
+            var ambient = HangfireJobAmbientContext.Current;
+            await errorTracking.TrackAsync(new ErrorTrackRequest
+            {
+                Source = "provider",
+                ErrorCode = ErrorCategoryMapper.Map("provider", provider),
+                MessageSafe = ProviderErrorMapper.SafeProviderFailureMessage(message),
+                MessageInternal = message,
+                Severity = "warning",
+                Provider = provider,
+                JobKey = ambient?.JobKey ?? provider,
+                IsRetryable = true,
+                Metadata = new Dictionary<string, object?>
+                {
+                    ["hangfire_job_id"] = ambient?.HangfireJobId,
+                    ["job_type"] = ambient?.JobTypeName
+                }
+            }, ct);
+        }
 
         var threshold = configuration.GetValue($"ProviderUsage:{provider}:FailureThreshold", 5);
         var windowMinutes = configuration.GetValue($"ProviderUsage:{provider}:FailureWindowMinutes", 5);

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LeaderboardTable } from "@/components/rankings/LeaderboardTable";
+import { ErrorState } from "@/components/ui/states";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLeaderboard, type LeaderboardTab } from "@/hooks/useLeaderboard";
 import { cn } from "@/lib/utils";
@@ -28,7 +29,7 @@ export function LeaderboardTabs({ embedded = false, punditsOnly = false }: Leade
   const [activeTab, setActiveTab] = useState<LeaderboardTab>(
     punditsOnly ? "pundits" : "league"
   );
-  const { data, isLoading, isError } = useLeaderboard(activeTab);
+  const { data, isLoading, isError, refetch } = useLeaderboard(activeTab);
 
   return (
     <div>
@@ -67,15 +68,21 @@ export function LeaderboardTabs({ embedded = false, punditsOnly = false }: Leade
                 you&apos;re up against.
               </p>
             )}
-            {isError && tab.value === activeTab && (
-              <p className="mb-2 text-xs text-muted-foreground">Demo data shown</p>
+            {isError && tab.value === activeTab ? (
+              <ErrorState
+                dense
+                title="Couldn't load this board"
+                description="Standings are served live — no sample rows are shown."
+                onRetry={() => refetch()}
+              />
+            ) : (
+              <LeaderboardTable
+                entries={tab.value === activeTab ? (data?.entries ?? []) : []}
+                me={tab.value === activeTab ? data?.me : null}
+                totalPlayers={tab.value === activeTab ? data?.totalPlayers : undefined}
+                isLoading={tab.value === activeTab && isLoading}
+              />
             )}
-            <LeaderboardTable
-              entries={tab.value === activeTab ? (data?.entries ?? []) : []}
-              me={tab.value === activeTab ? data?.me : null}
-              totalPlayers={tab.value === activeTab ? data?.totalPlayers : undefined}
-              isLoading={tab.value === activeTab && isLoading}
-            />
           </TabsContent>
         ))}
       </Tabs>

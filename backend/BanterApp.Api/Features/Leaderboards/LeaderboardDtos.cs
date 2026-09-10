@@ -6,7 +6,10 @@ public sealed record LeaderboardEntry(
     int TotalPoints,
     int PredictionsCount,
     int Rank,
-    bool IsCurrentUser = false);
+    bool IsCurrentUser = false,
+    /// <summary>Places gained since last week. Positive is upward movement.</summary>
+    int RankDelta = 0,
+    int WeeklyPoints = 0);
 
 public sealed record LeaderboardView(
     IReadOnlyList<LeaderboardEntry> Top,

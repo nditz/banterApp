@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { normalizeLeaderboardView } from "@/lib/leaderboard";
+import { PRODUCT_METRICS, recordMetric } from "@/lib/metrics";
 import { detectCountryCode, getStoredCountryCode } from "@/lib/country";
 import { useSession } from "@/hooks/useSession";
 import type {
@@ -181,9 +182,11 @@ export function useCreateLeague() {
 
 export function useJoinLeague() {
   return async (inviteCode: string) => {
-    return await apiFetch<League>("/api/leagues/join", {
+    const league = await apiFetch<League>("/api/leagues/join", {
       method: "POST",
       body: JSON.stringify({ inviteCode }),
     });
+    recordMetric(PRODUCT_METRICS.leagueJoined);
+    return league;
   };
 }

@@ -1,8 +1,10 @@
 "use client";
 
+import { CalendarClock } from "lucide-react";
 import { MatchCard } from "@/components/prediction/MatchCard";
 import { Panel } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useCurrentMatchweek } from "@/hooks/useMatches";
 import { useStudio } from "@/hooks/useStudio";
 import { datasetStatusFromMatchweek, isUnofficialMatchweek } from "@/lib/football-dataset";
@@ -32,9 +34,14 @@ export function MatchweekBoard() {
           <Skeleton className="h-40 w-full" />
         </div>
       ) : status === "error" ? (
-        <p role="alert" className="text-sm text-muted-foreground">
-          {data?.error ?? "Current matchweek fixtures could not be loaded. This is not an empty week."}
-        </p>
+        <ErrorState
+          dense
+          title="Fixtures could not be loaded"
+          description={
+            data?.error ??
+            "Current matchweek fixtures could not be loaded. This is not an empty week."
+          }
+        />
       ) : status === "stale" ? (
         <div className="space-y-5">
           <p role="status" className="text-sm text-muted-foreground">
@@ -58,7 +65,12 @@ export function MatchweekBoard() {
           ))}
         </div>
       ) : matches.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No fixtures in this matchweek yet.</p>
+        <EmptyState
+          dense
+          icon={CalendarClock}
+          title="No fixtures in this matchweek yet"
+          description="Kickoffs appear here as soon as the schedule is published."
+        />
       ) : (
         <div className="space-y-5">
           {days.map((day) => (

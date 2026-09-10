@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Receipt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -10,9 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState, ErrorState } from "@/components/ui/states";
+import { PageContainer, SectionHeader } from "@/components/ui/section-header";
 import { PredictionReactionCard } from "@/components/PredictionReactionCard";
 import { PredictionReceiptCard } from "@/components/PredictionReceiptCard";
-import { awardPostMatchAura } from "@/lib/aura";
 import { useBanterMode } from "@/hooks/useBanterMode";
 import { usePredictionHistory } from "@/hooks/usePredictions";
 import { useReceipts } from "@/hooks/useReceipts";
@@ -25,6 +27,7 @@ import {
 import { pickToOutcome } from "@/lib/postMatchResults";
 import type { Prediction, PredictionReceipt } from "@/lib/types";
 import { getApiErrorMessage } from "@/lib/api";
+import { PRODUCT_METRICS, recordMetric } from "@/lib/metrics";
 import { useEffect } from "react";
 
 function formatDate(iso: string): string {
@@ -72,37 +75,46 @@ export default function PredictionHistoryPage() {
     return finished && !settledIds.has(prediction.id);
   });
 
+  const hasReceipts = (receipts?.length ?? 0) > 0;
+
+  // A visit to a settled receipt is the "came back after the result" step of the funnel.
   useEffect(() => {
-    for (const receipt of receipts ?? []) {
-      if (receipt.auraDelta) {
-        awardPostMatchAura(receipt.predictionId, receipt.auraDelta);
-      }
+    recordMetric(PRODUCT_METRICS.receiptViewed);
+    if (hasReceipts) {
+      recordMetric(PRODUCT_METRICS.returnedAfterResult);
     }
-  }, [receipts]);
+  }, [hasReceipts]);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <p className="page-kicker">Take ↔ outcome</p>
-        <h1 className="mt-3 text-xl font-semibold sm:text-2xl">Receipts</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Settled picks stay here — private to you. Turn one into a script in{" "}
-          <Link href="/studio" className="font-medium text-foreground hover:underline">
-            Studio
-          </Link>
-          .
-        </p>
-      </div>
+    <PageContainer width="narrow">
+      <SectionHeader
+        as="h1"
+        eyebrow="Take ↔ outcome"
+        title="Receipts"
+        description={
+          <>
+            Settled picks stay here — private to you. Turn one into a script in{" "}
+            <Link href="/studio" className="font-medium text-foreground hover:underline">
+              Studio
+            </Link>
+            .
+          </>
+        }
+      />
 
       {receiptsError ? (
-        <p role="alert" className="text-sm text-muted-foreground">
-          {getApiErrorMessage(receiptsErr)} Receipts could not be loaded.
-        </p>
+        <ErrorState
+          dense
+          title="Receipts could not be loaded"
+          description={getApiErrorMessage(receiptsErr)}
+        />
       ) : null}
       {historyError ? (
-        <p role="alert" className="text-sm text-muted-foreground">
-          {getApiErrorMessage(historyErr)} Open picks could not be loaded.
-        </p>
+        <ErrorState
+          dense
+          title="Open picks could not be loaded"
+          description={getApiErrorMessage(historyErr)}
+        />
       ) : null}
 
       {isFetching && !receipts ? (
@@ -122,13 +134,15 @@ export default function PredictionHistoryPage() {
           ))}
 
           {(receipts?.length ?? 0) === 0 && pendingFinished.length === 0 && (
-            <p className="py-12 text-center text-muted-foreground">
-              No settled receipts yet. Lock a pick on Matchweek — they land here after full time.
-            </p>
+            <EmptyState
+              icon={Receipt}
+              title="No settled receipts yet"
+              description="Lock a pick on Matchweek. Receipts land here the moment full time hits."
+            />
           )}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -227,7 +241,10 @@ function SettledReceipt({
 
         {reaction ? <PredictionReactionCard reaction={reaction} animate={false} /> : null}
 
-        <Link href="/studio" className="text-xs font-semibold text-foreground hover:underline">
+        <Link
+          href={`/studio?receipt=${receipt.id}`}
+          className="text-xs font-semibold text-foreground hover:underline"
+        >
           Open in Studio
         </Link>
       </CardContent>

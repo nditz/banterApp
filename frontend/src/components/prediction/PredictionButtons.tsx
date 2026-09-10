@@ -4,11 +4,10 @@ import { useMemo, useState } from "react";
 import { Lock } from "lucide-react";
 import { PredictionCelebration } from "@/components/prediction/PredictionCelebration";
 import { ScoreCounter } from "@/components/prediction/ScoreCounter";
-import { useAura } from "@/hooks/useAura";
 import { useBanterMode } from "@/hooks/useBanterMode";
 import { useMyLeagues } from "@/hooks/useLeaderboard";
 import { usePredictions } from "@/hooks/usePredictions";
-import { addLocalBanterEntry, buildBanterLine } from "@/lib/banterFeed";
+import { PRODUCT_METRICS, recordMetric } from "@/lib/metrics";
 import {
   estimateFixtureProbabilities,
   formatPickOddsHint,
@@ -154,7 +153,6 @@ export function PredictionButtons({
 
   const savedValueForMode = (type: Mode) => existingByType.get(type)?.predictionValue ?? null;
 
-  const { award } = useAura();
   const banterMode = useBanterMode();
   const { data: myLeagues } = useMyLeagues();
 
@@ -184,19 +182,7 @@ export function PredictionButtons({
 
       const pickLabel = formatPickLabel(type, value, teamA, teamB);
       const probabilityContext = formatProbabilityContext(probabilities, teamA, teamB);
-      award(reaction.auraDelta);
-      for (const bonus of supplementalReactions) {
-        award(Math.round(bonus.auraDelta * 0.25));
-      }
-      addLocalBanterEntry({
-        pick: pickLabel,
-        fixture: `${teamA} vs ${teamB}`,
-        line: buildBanterLine(reaction.key, pickLabel),
-        emoji: reaction.emoji.split("")[0] ?? "⚽",
-        reactionKey: reaction.key,
-        reactionAsset: reaction.asset,
-      });
-
+      recordMetric(PRODUCT_METRICS.predictionMade);
       setSavedReaction({
         reaction,
         supplementalReactions,

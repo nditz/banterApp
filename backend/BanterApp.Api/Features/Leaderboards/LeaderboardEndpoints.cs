@@ -105,7 +105,9 @@ public static class LeaderboardEndpoints
                 s.TotalPoints,
                 s.PredictionsCount,
                 i + 1,
-                s.UserId == currentId))
+                s.UserId == currentId,
+                s.RankDelta,
+                s.WeeklyPoints))
             .ToList();
 
         var view = ToView(ranked);
@@ -201,7 +203,73 @@ public static class LeaderboardEndpoints
         return Results.Ok(entries);
     }
 
-    private static IResult GetFriendsLeaderboard() => Results.Ok(EmptyView());
+    /// <summary>
+    /// "Friends" are the people the viewer actually shares a custom league with. Members are
+    /// de-duplicated across leagues and ranked on the same points as every other board.
+    /// Returns an empty view (not sample rows) when the viewer has no custom leagues.
+    /// </summary>
+    private static async Task<IResult> GetFriendsLeaderboard(
+        AppDbContext db,
+        IUserContext userContext,
+        TournamentBonusScoringService bonusScoring,
+        CancellationToken ct)
+    {
+        var currentId = userContext.UserId ?? userContext.AnonymousUserId;
+        if (currentId is null)
+        {
+            return Results.Ok(EmptyView());
+        }
+
+        var myLeagueIds = await db.LeagueMembers
+            .AsNoTracking()
+            .Where(m => m.UserId == currentId || m.AnonymousUserId == currentId)
+            .Join(
+                db.Leagues.Where(l => l.Kind == LeagueKind.Custom),
+                m => m.LeagueId,
+                l => l.Id,
+                (m, l) => l.Id)
+            .Distinct()
+            .ToListAsync(ct);
+
+        if (myLeagueIds.Count == 0)
+        {
+            return Results.Ok(EmptyView());
+        }
+
+        var leagues = await db.Leagues
+            .Where(l => myLeagueIds.Contains(l.Id))
+            .ToListAsync(ct);
+
+        var best = new Dictionary<string, LeagueStandingEntry>();
+        foreach (var league in leagues)
+        {
+            var standings = await Leagues.LeagueEndpoints.BuildStandingsAsync(db, league, bonusScoring, ct);
+            foreach (var entry in standings)
+            {
+                var key = entry.UserId?.ToString() ?? $"guest|{entry.DisplayName}";
+                if (!best.TryGetValue(key, out var existing) || entry.TotalPoints > existing.TotalPoints)
+                {
+                    best[key] = entry;
+                }
+            }
+        }
+
+        var ranked = best.Values
+            .OrderByDescending(e => e.TotalPoints)
+            .ThenBy(e => e.DisplayName)
+            .Select((e, i) => new LeaderboardEntry(
+                e.UserId,
+                e.UserId == currentId ? "You" : e.DisplayName,
+                e.TotalPoints,
+                e.PredictionsCount,
+                i + 1,
+                e.UserId == currentId,
+                e.RankDelta,
+                e.WeeklyPoints))
+            .ToList();
+
+        return Results.Ok(ToView(ranked));
+    }
 
     private static LeaderboardView EmptyView() => new([], null, 0);
 

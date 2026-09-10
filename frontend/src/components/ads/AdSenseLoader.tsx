@@ -1,14 +1,17 @@
 "use client";
 
 import Script from "next/script";
-import { canRequestAds, ADSENSE_SCRIPT_SRC } from "@/lib/ads";
+import { useAdvertisingConsent } from "@/hooks/useAdvertisingConsent";
+import { ADSENSE_SCRIPT_SRC } from "@/lib/ads";
 
 /**
- * Loads the AdSense script once for ca-pub-5886846159925642.
- * Individual units are the "ball-take-ads" Display slot rendered by AdSlot.
+ * Injects the AdSense script, but only after advertising consent is granted. Until then no
+ * Google advertising code is requested at all.
  */
 export function AdSenseLoader() {
-  if (!canRequestAds()) {
+  const canRequest = useAdvertisingConsent();
+
+  if (!canRequest) {
     return null;
   }
 

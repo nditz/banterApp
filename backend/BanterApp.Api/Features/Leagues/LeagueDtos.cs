@@ -50,7 +50,13 @@ public sealed record LeagueStandingEntry(
     string DisplayName,
     int TotalPoints,
     int PredictionsCount,
-    int BonusPoints = 0);
+    int BonusPoints = 0,
+    int Rank = 0,
+    int PreviousRank = 0,
+    /// <summary>Places gained since last week. Positive is upward movement.</summary>
+    int RankDelta = 0,
+    /// <summary>Points scored inside the current weekly window.</summary>
+    int WeeklyPoints = 0);
 
 public sealed record LeagueStandingsResponse(
     Guid LeagueId,

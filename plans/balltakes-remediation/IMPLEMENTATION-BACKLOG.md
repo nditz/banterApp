@@ -55,15 +55,15 @@ UX/IA cleanup after Phase 1 football integrity. Studio stays central. No sports-
 
 | ID | Item | Status today | Action | Files / services |
 |---|---|---|---|---|
-| P3-01 | Follow model | **Done (local)** | `PunditFollow` on existing `Pundit`. User or anon, unique, Source only. | `PunditFollow`, migration `AddPunditFollows` |
-| P3-02 | Follow UX | **Done (local; prod first-paint bug fixed this run)** | `/pundits` browse/follow; overflow + Me. Directory uses `isPending` so SSR does not fake an empty ingest. | `PunditsDirectory`, `PunditFollowService`, `PersonalizedFeedService` |
-| P3-03 | Matchweek comparison | **Done (local; guest 500 fixed this run)** | Before/after on MatchCard via `GET /api/studio/comparison?matchIds=`. Guests without a session no longer 500. | `StudioComparisonService`, `MatchPunditComparison` |
+| P3-01 | Follow model | **Done** | `PunditFollow` on existing `Pundit`. User or anon, unique, Source only. | `PunditFollow`, migration `AddPunditFollows` |
+| P3-02 | Follow UX | **Done** | `/pundits` browse/follow; overflow + Me. Directory loading uses `isPending`. | `PunditsDirectory`, `PunditFollowService`, `PersonalizedFeedService` |
+| P3-03 | Matchweek comparison | **Done** | Guest `GET /api/studio/comparison?matchIds=` returns **200** in prod. | `StudioComparisonService`, `MatchPunditComparison` |
 | P3-04 | Attribution | **Done** | Still `PunditDisplayResolver`. Source URL on directory + picks. No fabricated quotes. | resolver, Studio/directory UI |
 | P3-05 | Ingest quality | **Done (local)** | Hide unreviewed/rejected from comparison. Approve backfills match-linked `PunditPrediction`. Health counts. Admin review stays. | `PunditMatchPredictionSync`, `AdminReviewService`, `AdminHealthService` |
 
-**Depends on:** Phase 1 matches in prod (already true). Production **migration + API deploy** required before the follow graph exists live.
+**Depends on:** Phase 1 matches in prod (already true). Follow graph is live.
 
-**Phase 3 gate:** follow + comparison + attribution in production after this run's comparison/`isPending` deploy. Phase 4 implemented in the same requested loop.
+**Phase 3 gate:** **passed in production** (`#42`). Residual ingest mix is not a P0/P1.
 
 **Out of scope:** Studio content packs (Phase 5), CMP, Aura persistence.
 
@@ -73,15 +73,15 @@ UX/IA cleanup after Phase 1 football integrity. Studio stays central. No sports-
 
 | ID | Item | Status today | Action | Files / services |
 |---|---|---|---|---|
-| P4-01 | Receipt entity | **Done (local)** | `PredictionReceipt` on existing prediction/match. Owner XOR. Unique prediction + result hash. | `PredictionReceipt`, migration `AddPredictionReceipts` |
-| P4-02 | Settlement emit | **Done (local)** | `PredictionRescoreService` emits idempotently via `ReceiptSettlementService`. | `ReceiptSettlementService`, `ScoreSyncJob` (unchanged call site) |
-| P4-03 | History UI | **Done (local)** | `/predictions/history` reframed as Receipts. Cards reused. Nav/Me label Receipts. | `predictions/history/page.tsx`, `useReceipts` |
-| P4-04 | Story candidates | **Done (local)** | Classified types + `receipt_story_candidates`. No invented quotes. | `ReceiptStoryClassifier` |
-| P4-05 | Privacy | **Done (local)** | Private by default. Owner-scoped API. Feed does not query receipts. | `ReceiptPrivacy`, `ReceiptEndpoints`, `PersonalizedFeedService` |
+| P4-01 | Receipt entity | **Done** | `PredictionReceipt` on existing prediction/match. Owner XOR. Unique prediction + result hash. | `PredictionReceipt`, migration `AddPredictionReceipts` |
+| P4-02 | Settlement emit | **Done** | `PredictionRescoreService` emits idempotently via `ReceiptSettlementService`. | `ReceiptSettlementService`, `ScoreSyncJob` (unchanged call site) |
+| P4-03 | History UI | **Done** | `/predictions/history` is Receipts in production `#42`. | `predictions/history/page.tsx`, `useReceipts` |
+| P4-04 | Story candidates | **Done** | Classified types + `receipt_story_candidates`. No invented quotes. | `ReceiptStoryClassifier` |
+| P4-05 | Privacy | **Done** | `GET /api/receipts` is 401 without session. Public feed does not list receipt ids. | `ReceiptPrivacy`, `ReceiptEndpoints`, `PersonalizedFeedService` |
 
 **Depends on:** Phase 1 settlement (already running). Vs-pundit snapshot included when reviewed Source picks exist.
 
-**Phase 4 gate:** receipts persist after FT, history is Receipts, public feed does not leak them. Start Phase 5 only after production verify.
+**Phase 4 gate:** **passed in production** (`#42`). Start Phase 5 in a new implement run.
 
 **Out of scope:** Studio content packs (Phase 5), CMP, Aura table.
 
@@ -89,27 +89,31 @@ UX/IA cleanup after Phase 1 football integrity. Studio stays central. No sports-
 
 ## Phase 5 - Studio Evolution
 
-| ID | Item | Action |
-|---|---|---|
-| P5-01 | Story workspace | Studio home sections: latest receipts, you vs pundits, trending, previous projects. **Extend `StudioPage`, do not replace.** |
-| P5-02 | Content types + tone | Short/Reel, podcast, meme, caption, thread, carousel, commentary + tone chips. |
-| P5-03 | Content pack | Structured output: title, hook, script, facts, visuals, captions, hashtags, AI prompts, source notes. Persist via `GeneratedContent` (extend types) or new pack table. |
-| P5-04 | Export | Copy script / copy pack / download JSON or text (already have copy/download — extend). |
-| P5-05 | Context assembly | Never invent structured football facts when `Match` / `Prediction` / receipt data exists. |
-| P5-06 | Video “coming soon” | Hide or implement; do not leave a dead CTA. |
+| ID | Item | Status today | Action | Files / services |
+|---|---|---|---|---|
+| P5-01 | Story workspace | **Done (local)** | Studio home sections: latest receipts, you vs pundits, trending, previous projects. Extended `StudioPage`. | `StudioStoryService`, `StudioStoryWorkspace`, `StudioPage` |
+| P5-02 | Content types + tone | **Done (local)** | Short/Reel, podcast, meme, caption, thread, carousel, commentary + tone chips. | `StudioContentCatalog`, `studio-pack.ts` |
+| P5-03 | Content pack | **Done (local)** | Structured pack persisted as `GeneratedContentType.ContentPack` JSON (no new table). | `StudioPackService`, `generated_content` |
+| P5-04 | Export | **Done (local)** | Copy script / copy prompt / copy pack / download JSON or text. | `StudioStoryWorkspace`, `formatStudioPackText` |
+| P5-05 | Context assembly | **Done (local)** | Facts copied from receipt/match/prediction or sourced headline. No invented scoreline or pundit quote. | `StudioContextAssembler`, `StudioContentPackComposer` |
+| P5-06 | Video “coming soon” | **Done (local)** | Dead CTA removed. Script tab still exports for external video tools. | `StudioPage` |
 
 **Depends on:** Phase 4 receipts for the story picker. Comparison/scripts already exist.
+
+**Phase 5 gate:** **local tests/build passed.** Production click-through of receipt → pack is the remaining verify step.
+
+**Out of scope:** OpenAI rewrite of packs, third-party Canva/CapCut, homepage timeline (Phase 6).
 
 ---
 
 ## Phase 6 - Homepage Banter Timeline
 
-| ID | Item | Action |
-|---|---|---|
-| P6-01 | Public mix | GIF / meme / pundit receipt / community highlight / match banter with designed fallbacks. |
-| P6-02 | Novelty | Reuse `BanterContentHistory` + `ReactionGifUse`. |
-| P6-03 | Personalization | Signed-in: unfinished picks, new receipts, followed pundits. Guest: public mix only. |
-| P6-04 | LocalStorage feed | Do not treat `banter_local_feed` as the product timeline. |
+| ID | Item | Status | Action |
+|---|---|---|---|
+| P6-01 | Public mix | **Done (local)** | GIF / meme / pundit receipt / community highlight / match banter with designed fallbacks. `CommunityFeedService` adds anonymised crowd cards; `RotateCardTypes` prevents same-type runs. |
+| P6-02 | Novelty | **Done (local)** | Upstream `BanterHistoryService` + `ReactionGifLedger` still own generation novelty; `DedupeAndVaryMedia` stops repeated media inside one timeline response. |
+| P6-03 | Personalization | **Done (local)** | Signed-in and anonymous identities both get personal cards (unfinished picks, receipt-coloured copy, followed pundits). Guests get the public mix. |
+| P6-04 | LocalStorage feed | **Done (local)** | `lib/banterFeed.ts` and `BanterLine.tsx` deleted; the timeline is server-owned. |
 
 **Depends on:** Phase 1 feed jobs having data; Phase 4 for receipt cards on the timeline.
 
@@ -117,13 +121,13 @@ UX/IA cleanup after Phase 1 football integrity. Studio stays central. No sports-
 
 ## Phase 7 - Leagues & Aura
 
-| ID | Item | Action |
-|---|---|---|
-| P7-01 | Aura vs points | Decide: Aura as UX label over server points, **or** persist Aura. Stop dual-truth `localStorage`. |
-| P7-02 | Rank movement | Weekly delta on league standings; Studio/receipt hooks. |
-| P7-03 | Rivalry receipts | League-specific stories from Phase 4 types. |
-| P7-04 | Retention | Unfinished picks, weekly recap. |
-| P7-05 | Mock boards | Replace `/api/leaderboards/friends` and default leagues mock with real or hidden. |
+| ID | Item | Status | Action |
+|---|---|---|---|
+| P7-01 | Aura vs points | **Decided + done (local)** | Aura is a UX label over server points. No second currency, no client store. `GET /api/aura/me` is the single source; `lib/aura.ts` deleted. |
+| P7-02 | Rank movement | **Done (local)** | `rank`, `previousRank`, `rankDelta`, `weeklyPoints` on standings and leaderboards, derived from a rolling 7-day cutoff rather than a snapshot table. |
+| P7-03 | Rivalry receipts | **Partial** | Community crowd cards cover the "you vs the crowd" story; league-specific rivalry receipts still ride on the Phase 4 receipt types. |
+| P7-04 | Retention | **Partial** | Unfinished-picks card is live on the timeline; a weekly recap digest is not built. |
+| P7-05 | Mock boards | **Done (local)** | `/api/leaderboards/friends` aggregates the caller's leagues; `lib/mock-data.ts` deleted and demo-board messaging replaced with real empty/error states. |
 
 **Depends on:** Phase 4 events. Do not rename scoring rules.
 
@@ -131,13 +135,13 @@ UX/IA cleanup after Phase 1 football integrity. Studio stays central. No sports-
 
 ## Phase 8 - Ads & Consent
 
-| ID | Item | Action |
-|---|---|---|
-| P8-01 | CMP | GDPR/ePrivacy consent before AdSense/tracking. Terms consent ≠ ad consent. |
-| P8-02 | Slot keys | Map `home-feed-*`, rails, matchweek, table per `11-ADSENSE-CONSENT.md`. Fix `feed-1+` mapping. |
-| P8-03 | No-fill | Collapse live units that don’t fill; collapse rails (started in P1-08). |
-| P8-04 | Auto vs manual | Avoid duplicate Auto Ads + manual units. |
-| P8-05 | Placement analytics | Non-invasive fill/view metrics if CMP allows. |
+| ID | Item | Status | Action |
+|---|---|---|---|
+| P8-01 | CMP | **Done (local)** | First-party opt-in banner; nothing from Google loads until consent is granted. Terms acceptance is deliberately separate. Choice is editable at `/privacy`. |
+| P8-02 | Slot keys | **Done (local)** | `AD_PLACEMENT_KEYS` covers feed, rails, matchweek, standings, table and display, each with its own env override. |
+| P8-03 | No-fill | **Done (local)** | `AdSlot` watches `data-ad-status` and collapses on `unfilled`; rails collapse without consent. |
+| P8-04 | Auto vs manual | **Config, not code** | Nothing in the app enables Auto Ads. Auto Ads must stay off in the AdSense dashboard for pages rendering manual units. |
+| P8-05 | Placement analytics | **Done (local)** | Anonymous `ad_slot_filled` / `ad_slot_unfilled` / `ad_init_failed` counters, shown in `/admin/stats`. |
 
 **Depends on:** P1-07/P1-08 as a stopgap. Full CMP can complete here if Phase 1 only disabled ads.
 
@@ -145,12 +149,12 @@ UX/IA cleanup after Phase 1 football integrity. Studio stays central. No sports-
 
 ## Phase 9 - Observability & Admin
 
-| ID | Item | Action |
-|---|---|---|
-| P9-01 | Data-health | Counts + freshness for competitions, fixtures, standings, pundits, receipts, banter, Studio gens. Extend `/admin/health` + football-data. |
-| P9-02 | Job UX | Last run, duration, processed, last error, next run, trigger (mostly exists — fill `NextRunAt` from Phase 1). |
-| P9-03 | Product metrics | Wire `AppMetric` or remove “Not wired” cards: predict, return after result, receipt view, Studio open, generate, copy, league join, pundit follow. |
-| P9-04 | Alerts | Missing current MW, zero fixtures when expected, settlement/generation failures. |
+| ID | Item | Status | Action |
+|---|---|---|---|
+| P9-01 | Data-health | **Done (local)** | `/admin/health` now also reports receipts, Studio generations and ad-system status alongside the existing fixture/standings/pundit freshness. |
+| P9-02 | Job UX | **Already covered** | `JobRegistryService` supplies last run, average duration, success/failure counts, last error and `NextRunAt`; `/admin/jobs` renders all of them plus manual triggers. |
+| P9-03 | Product metrics | **Done (local)** | `AppMetric` wired through `ProductMetricService` + `POST /api/metrics/event`. All eight funnel events plus ad fill counters are recorded anonymously; "No data yet" only shows when nothing has ever been recorded. |
+| P9-04 | Alerts | **Done (local)** | `AdminHealthService.BuildAlerts` covers missing current matchweek, overdue fixtures, receipt backlog, repeated job failures, critical errors and ad init failures. |
 
 **Preserve:** existing admin console. Do not build a parallel ops app.
 
@@ -160,19 +164,21 @@ UX/IA cleanup after Phase 1 football integrity. Studio stays central. No sports-
 
 Only after Phases 1–6 core loops work.
 
-| ID | Item |
-|---|---|
-| P10-01 | Shared primitives: EmptyState, ErrorState, ReceiptCard, PunditCard, StoryCard (reuse `Panel`/`Card`) |
-| P10-02 | Token discipline; reduce one-off Studio/admin palettes |
-| P10-03 | Mobile 375 / 768 / 1440; ad collapse; tables |
-| P10-04 | Welcome/homepage hierarchy after content exists |
-| P10-05 | Accessibility pass |
+| ID | Item | Status |
+|---|---|---|
+| P10-01 | Shared primitives: EmptyState, ErrorState, ReceiptCard, PunditCard, StoryCard (reuse `Panel`/`Card`) | **Done (local)** — `components/ui/states.tsx` + `section-header.tsx`, adopted across feed, matchweek, table, standings, leagues, pundits, Studio and receipts |
+| P10-02 | Token discipline; reduce one-off Studio/admin palettes | **Audited — no change needed** — product surfaces already token-only; raw palette usage is confined to the deliberately zinc-themed admin console |
+| P10-03 | Mobile 375 / 768 / 1440; ad collapse; tables | **Partial** — ad collapse and responsive classes are in place; breakpoint click-through not run (no browser tooling in the session) |
+| P10-04 | Welcome/homepage hierarchy after content exists | **Done (local)** — timeline is server-backed and mixed; hierarchy follows compact hero → timeline → matchweek → comparison → Studio → leagues |
+| P10-05 | Accessibility pass | **Partial** — alt text, roles, focus-visible and a global reduced-motion safety net verified in code; keyboard/contrast click-through outstanding |
 
 ---
 
 ## Phase 11 - Final Verification
 
 Use `cursor/VERIFY-PROMPT.md` + `cursor/COMPLETION-LOOP.md`. Repeat until `16-ACCEPTANCE-CRITERIA.md` passes. Do not mark complete with open P0/P1 in the current phase.
+
+**2026-09-10 local pass:** backend 424 tests, frontend 41 tests, ESLint clean, `tsc --noEmit` clean, Next.js production build and backend Release build (0 warnings) both succeeded. See `VERIFICATION-REPORT.md`. Production verification is still outstanding for Phases 5-10.
 
 ---
 

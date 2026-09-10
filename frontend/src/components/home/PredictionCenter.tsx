@@ -2,10 +2,11 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { MatchCard } from "@/components/prediction/MatchCard";
 import { Panel } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useCurrentMatchweek, useMatches } from "@/hooks/useMatches";
 import { useStudio } from "@/hooks/useStudio";
 import { datasetStatusFromMatchweek, isUnofficialMatchweek } from "@/lib/football-dataset";
@@ -114,13 +115,18 @@ export function PredictionCenter() {
           ))}
         </div>
       ) : weekStatus === "error" && pageCount === 0 ? (
-        <p role="alert" className="py-8 text-center text-sm text-muted-foreground">
-          Fixtures are unavailable right now. This is not an empty matchweek.
-        </p>
+        <ErrorState
+          dense
+          title="Fixtures are unavailable"
+          description="This is not an empty matchweek — the fixture feed could not be reached."
+        />
       ) : pageCount === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          No open fixtures this matchweek. Check the full board for upcoming weeks.
-        </p>
+        <EmptyState
+          dense
+          icon={CalendarDays}
+          title="No open fixtures this matchweek"
+          description="Every kickoff is locked. Check the full board for upcoming weeks."
+        />
       ) : (
         <>
           {/* Sliding viewport: pages sit side by side and the track translates */}

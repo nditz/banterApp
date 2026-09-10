@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AdSlot } from "@/components/ads/AdSlot";
+import { AuraSummary } from "@/components/rankings/AuraSummary";
 import { LeaderboardTable } from "@/components/rankings/LeaderboardTable";
 import { LeaderboardTabs } from "@/components/rankings/LeaderboardTabs";
 import { LeagueSelector } from "@/components/rankings/LeagueSelector";
 import { Panel } from "@/components/ui/panel";
+import { ErrorState } from "@/components/ui/states";
 import { buttonVariants } from "@/components/ui/button";
 import {
   pickDefaultLeague,
@@ -53,15 +55,23 @@ export function RankingsPanel() {
         }
         accent="gold"
       >
-        {standingsError && (
-          <p className="mb-2 text-xs text-muted-foreground">Couldn&apos;t load standings.</p>
+        <div className="mb-3">
+          <AuraSummary />
+        </div>
+        {standingsError ? (
+          <ErrorState
+            dense
+            title="Couldn't load standings"
+            description="Ranks are served live, so nothing is shown until we reach the server."
+          />
+        ) : (
+          <LeaderboardTable
+            entries={standings?.entries ?? []}
+            me={standings?.me ?? null}
+            totalPlayers={standings?.totalPlayers}
+            isLoading={standingsLoading || leaguesLoading}
+          />
         )}
-        <LeaderboardTable
-          entries={standings?.entries ?? []}
-          me={standings?.me ?? null}
-          totalPlayers={standings?.totalPlayers}
-          isLoading={standingsLoading || leaguesLoading}
-        />
 
         <div className="mt-4 border-t border-border pt-3">
           <LeaderboardTabs embedded punditsOnly />
@@ -87,7 +97,7 @@ export function RankingsPanel() {
         />
       </Panel>
 
-      <AdSlot placement="sidebar" slotId="sidebar-main" className="mt-3" />
+      <AdSlot placement="sidebar" slotId="league-standings" className="mt-3" />
     </>
   );
 }

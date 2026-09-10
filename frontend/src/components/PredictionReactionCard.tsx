@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { motionEase } from '@/lib/motionConfig';
 import { getThemeForReaction } from '@/lib/predictionThemes';
 import type { PredictionReaction } from '@/lib/reactionEngine';
+import { formatTakeVibe } from '@/reactions/reactionContent';
 import { cn } from '@/lib/utils';
 
 export function PredictionReactionCard({
@@ -76,8 +77,7 @@ export function PredictionReactionCard({
           theme.bg,
           theme.text
         )}>
-          {reaction.auraDelta > 0 ? '+' : ''}
-          {reaction.auraDelta} aura
+          {formatTakeVibe(reaction.auraDelta)}
         </span>
       </div>
     </motion.div>

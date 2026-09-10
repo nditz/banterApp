@@ -1,4 +1,6 @@
+import { ChevronDown, ChevronUp, Trophy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/states";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { getPunditAvatarUrl, formatPunditSubtitle } from "@/lib/pundits";
 import type { LeaderboardEntry } from "@/lib/types";
@@ -24,6 +26,30 @@ function formatCount(value: number): string {
   return new Intl.NumberFormat("en-GB").format(value);
 }
 
+/** Weekly rank movement. Renders nothing when the player has not moved. */
+function RankMovement({ delta }: { delta?: number }) {
+  if (!delta) return null;
+
+  const up = delta > 0;
+  const Icon = up ? ChevronUp : ChevronDown;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center text-[10px] font-semibold tabular-nums",
+        up ? "text-pitch" : "text-destructive"
+      )}
+      title={`${up ? "Up" : "Down"} ${Math.abs(delta)} ${
+        Math.abs(delta) === 1 ? "place" : "places"
+      } this week`}
+    >
+      <Icon className="size-3" aria-hidden />
+      <span className="sr-only">{up ? "Up" : "Down"} </span>
+      {Math.abs(delta)}
+    </span>
+  );
+}
+
 function PlayerRow({ entry }: { entry: LeaderboardEntry }) {
   const displayName = entry.displayName?.trim() || "Player";
   const isMe = entry.isCurrentUser || displayName === "You";
@@ -40,7 +66,10 @@ function PlayerRow({ entry }: { entry: LeaderboardEntry }) {
       )}
     >
       <td className="px-2 py-2 tabular-nums text-muted-foreground">
-        {entry.rank}
+        <span className="inline-flex items-center gap-1">
+          {entry.rank}
+          <RankMovement delta={entry.rankDelta} />
+        </span>
       </td>
       <td className="px-2 py-2">
         <div className="flex items-center gap-2">
@@ -96,9 +125,12 @@ export function LeaderboardTable({
 
   if (entries.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        No receipts on the board yet. Time to put your ball takes on record.
-      </p>
+      <EmptyState
+        dense
+        icon={Trophy}
+        title="Nobody on the board yet"
+        description="No receipts on record. Put your ball takes down and claim rank one."
+      />
     );
   }
 

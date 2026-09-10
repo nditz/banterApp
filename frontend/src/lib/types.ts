@@ -126,6 +126,21 @@ export interface LeaderboardEntry {
   attributionNote?: string;
   sourceUrl?: string;
   isCurrentUser?: boolean;
+  /** Places gained since last week. Positive is upward movement. */
+  rankDelta?: number;
+  weeklyPoints?: number;
+}
+
+/** Server-derived Aura. Mirrors `GET /api/aura/me`. */
+export interface AuraSummary {
+  total: number;
+  weeklyChange: number;
+  streak: number;
+  settledPicks: number;
+  correctPicks: number;
+  rank: number | null;
+  totalPlayers: number | null;
+  percentile: number | null;
 }
 
 export interface LeaderboardView {
@@ -212,6 +227,82 @@ export interface StudioComparison {
   leagueTotal?: number;
   followedPunditCount?: number;
   filteringToFollows?: boolean;
+}
+
+export type StudioStoryKind = "receipt" | "vs_pundit" | "trending" | "project";
+
+export type StudioContentType =
+  | "short"
+  | "podcast"
+  | "meme"
+  | "caption"
+  | "thread"
+  | "carousel"
+  | "commentary";
+
+export type StudioTone =
+  | "funny"
+  | "ruthless"
+  | "analytical"
+  | "rant"
+  | "victory_lap"
+  | "self_roast"
+  | "pundit"
+  | "explainer";
+
+export interface StudioStoryCard {
+  id: string;
+  kind: StudioStoryKind;
+  title: string;
+  summary: string;
+  tags: string[];
+  occurredAt?: string | null;
+  receiptId?: string | null;
+  matchId?: string | null;
+  feedItemId?: string | null;
+  projectId?: string | null;
+  scoreline?: string | null;
+  storyType?: string | null;
+}
+
+export interface StudioStories {
+  latestReceipts: StudioStoryCard[];
+  youVsPundits: StudioStoryCard[];
+  trending: StudioStoryCard[];
+  previousProjects: StudioStoryCard[];
+}
+
+export interface StudioFact {
+  label: string;
+  value: string;
+  provenance: "match" | "prediction" | "receipt" | "pundit_source" | "news" | string;
+}
+
+export interface StudioContentPack {
+  id: string;
+  contentType: StudioContentType | string;
+  tone: StudioTone | string;
+  title: string;
+  hook: string;
+  script: string;
+  facts: StudioFact[];
+  visualPlan: string[];
+  memeDirection?: string | null;
+  caption: string;
+  hashtags: string[];
+  imagePrompt: string;
+  voiceoverPrompt: string;
+  sourceNotes: string[];
+  storyKind: StudioStoryKind | string;
+  receiptId?: string | null;
+  matchId?: string | null;
+  feedItemId?: string | null;
+  createdAt: string;
+}
+
+export interface StudioPackGenerateResponse {
+  pack: StudioContentPack;
+  remainingGenerations?: number | null;
 }
 
 export interface PunditDirectoryEntry {

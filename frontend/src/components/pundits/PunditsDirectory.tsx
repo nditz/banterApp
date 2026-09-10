@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Mic2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/states";
 import { getPunditAvatarUrl, formatPunditSubtitle, formatSourcePlatformLabel } from "@/lib/pundits";
 import { useFollowPundit, usePunditDirectory } from "@/hooks/usePundits";
 import type { PunditDirectoryEntry } from "@/lib/types";
@@ -50,10 +51,12 @@ export function PunditsDirectory() {
           {getApiErrorMessage(error)} Pundit list could not be loaded.
         </p>
       ) : pundits.length === 0 ? (
-        <p className="rounded-md border border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
-          No sourced pundits yet. Extract jobs and admin review fill this list — it is not empty on
-          purpose if ingest is failing.
-        </p>
+        <EmptyState
+          dense
+          icon={Mic2}
+          title="No sourced pundits yet"
+          description="Extraction jobs and admin review fill this list. An empty list can mean ingest is failing."
+        />
       ) : (
         <ul className="space-y-3">
           {pundits.map((pundit) => (

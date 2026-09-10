@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { Table2 } from "lucide-react";
 import { Panel } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState, ErrorState } from "@/components/ui/states";
 import { TeamFlag } from "@/components/brackets/TeamFlag";
 import { useLeagueTable } from "@/hooks/useMatches";
 import { rankPremierLeagueTable, type LeagueTableRow } from "@/lib/league-table";
@@ -36,13 +38,18 @@ export function LeagueTable({ compact = false }: { compact?: boolean }) {
       {isLoading ? (
         <Skeleton className="h-64 w-full" />
       ) : status === "error" ? (
-        <p role="alert" className="text-sm text-muted-foreground">
-          {data?.error ?? "Standings could not be loaded. This is not an empty table."}
-        </p>
+        <ErrorState
+          dense
+          title="Standings could not be loaded"
+          description={data?.error ?? "This is not an empty table — the request failed."}
+        />
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No standings yet — the table appears after results have been recorded.
-        </p>
+        <EmptyState
+          dense
+          icon={Table2}
+          title="No standings yet"
+          description="The table appears once results have been recorded."
+        />
       ) : (
         <>
           {status === "stale" && (

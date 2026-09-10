@@ -1,5 +1,6 @@
 using BanterApp.Api.Data;
 using BanterApp.Api.Data.Entities;
+using BanterApp.Api.Features.Metrics;
 using BanterApp.Api.Integrations;
 using BanterApp.Api.Integrations.Ai;
 using BanterApp.Api.Integrations.Jobs;
@@ -21,6 +22,7 @@ public sealed class LegalOptions
 
 public sealed class AdminOverviewService(
     AppDbContext db,
+    ProductMetricService productMetrics,
     IOptions<AiOptions> aiOptions,
     IOptions<BackgroundJobsOptions> backgroundJobsOptions)
 {
@@ -44,9 +46,10 @@ public sealed class AdminOverviewService(
             .Select(e => e.Category)
             .ToListAsync(ct);
         var openAiRequestCount = openAiRequests24h.Count(c =>
-            c.Contains("openai", StringComparison.OrdinalIgnoreCase) ||
+            c is not null &&
+            (c.Contains("openai", StringComparison.OrdinalIgnoreCase) ||
             c.Contains("pundit-extraction", StringComparison.OrdinalIgnoreCase) ||
-            c.Contains("feed-banter", StringComparison.OrdinalIgnoreCase));
+            c.Contains("feed-banter", StringComparison.OrdinalIgnoreCase)));
         var latestSuccess = await db.SyncRuns
             .Where(r => r.Status == "completed")
             .OrderByDescending(r => r.FinishedAt)
@@ -120,18 +123,34 @@ public sealed class AdminOverviewService(
             .Take(10)
             .ToListAsync(ct);
 
+        var metrics = await productMetrics.SummarizeAsync(since24h, ct);
+        var metricsWired = await productMetrics.HasAnyAsync(ct);
+
+        // Funnel counts are only meaningful once something has been recorded; distinguish a
+        // genuine zero from a pipeline that has never received an event.
+        object Funnel(string key) => new
+        {
+            available = metricsWired,
+            metricKey = key,
+            value = metrics.GetValueOrDefault(key)
+        };
+
         return new
         {
             product = new
             {
-                dailyActiveUsers = new { available = false, metricKey = "daily_active_users" },
                 totalUsers,
-                pageViews = new { available = false, metricKey = "page_views" },
-                feedImpressions = new { available = false, metricKey = "feed_impressions" },
-                feedClicks = new { available = false, metricKey = "feed_clicks" },
-                shares = new { available = false, metricKey = "shares" },
-                savedItems = new { available = false, metricKey = "saved_items" },
-                commentsReactions = new { available = false, metricKey = "comments_reactions" }
+                predictionsMade = Funnel(ProductMetrics.PredictionMade),
+                returnedAfterResult = Funnel(ProductMetrics.ReturnedAfterResult),
+                receiptViews = Funnel(ProductMetrics.ReceiptViewed),
+                studioOpens = Funnel(ProductMetrics.StudioOpened),
+                contentGenerations = Funnel(ProductMetrics.ContentGenerated),
+                contentExports = Funnel(ProductMetrics.ContentExported),
+                leagueJoins = Funnel(ProductMetrics.LeagueJoined),
+                punditFollows = Funnel(ProductMetrics.PunditFollowed),
+                adInitFailures = Funnel(ProductMetrics.AdInitFailed),
+                adSlotsFilled = Funnel(ProductMetrics.AdSlotFilled),
+                adSlotsUnfilled = Funnel(ProductMetrics.AdSlotUnfilled)
             },
             backend = new
             {

@@ -5,7 +5,8 @@ public enum GeneratedContentType
     Analyze,
     Banter,
     Meme,
-    VideoScript
+    VideoScript,
+    ContentPack
 }
 
 public class GeneratedContent

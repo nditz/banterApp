@@ -63,7 +63,7 @@ export function HomeStatsBar() {
   const { data: matches } = useMatches();
   const { data: currentWeek } = useCurrentMatchweek();
   const { data: myLeagues } = useMyLeagues();
-  const { aura } = useAura();
+  const { summary: aura } = useAura();
 
   const openFixtures = useMemo(
     () => (currentWeek?.matches ?? matches ?? []).filter((m) => !isMatchLocked(m)).length,
@@ -71,6 +71,16 @@ export function HomeStatsBar() {
   );
   const leagueCount = myLeagues?.leagues.length ?? 0;
   const matchweekLabel = currentWeek?.number ? `MW ${currentWeek.number}` : "Open picks";
+
+  // Aura is server-awarded points, so the hint reports real movement rather than a label.
+  const auraHint =
+    aura.weeklyChange > 0
+      ? `+${formatCount(aura.weeklyChange)} this week`
+      : aura.settledPicks === 0
+        ? "Settles when results land"
+        : aura.streak > 1
+          ? `${aura.streak} correct in a row`
+          : "Earned from settled picks";
 
   return (
     <section
@@ -96,8 +106,8 @@ export function HomeStatsBar() {
       <StatItem
         icon={<Sparkles className="size-4" aria-hidden />}
         label="Your aura"
-        value={formatCount(aura)}
-        hint="Ball takes points"
+        value={formatCount(aura.total)}
+        hint={auraHint}
         accent="flare"
       />
       <StatItem
